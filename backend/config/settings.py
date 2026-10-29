@@ -27,6 +27,9 @@ INSTALLED_APPS = [
     "corsheaders",
     # local
     "apps.accounts",
+    "apps.hospitals",
+    "apps.doctors",
+    "apps.appointments",
 ]
 
 MIDDLEWARE = [

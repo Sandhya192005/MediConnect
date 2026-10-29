@@ -6,9 +6,9 @@ export default function DoctorDashboard() {
       role="doctor"
       heading="Doctor dashboard"
       cards={[
-        { title: "My availability", text: "Set your weekly working hours.", phase: "Phase 2" },
-        { title: "Today's appointments", text: "Patients booked with you.", phase: "Phase 2" },
-        { title: "Profile", text: "Specialization, hospital and fee.", phase: "Phase 2" },
+        { title: "My appointments", text: "Patients booked with you.", href: "/doctor/appointments" },
+        { title: "My availability", text: "Set your weekly working hours.", href: "/doctor/availability" },
+        { title: "Profile", text: "Hospital, specialization and fee.", href: "/doctor/profile" },
       ]}
     />
   );

@@ -1,4 +1,4 @@
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class HasRole(BasePermission):
@@ -18,3 +18,12 @@ def role_required(*roles):
 IsPatient = role_required("patient")
 IsDoctor = role_required("doctor")
 IsAdminRole = role_required("admin")
+
+
+class ReadOnlyOrAdmin(BasePermission):
+    """Anyone can read; only admins can create, edit or delete."""
+
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return IsAdminRole().has_permission(request, view)

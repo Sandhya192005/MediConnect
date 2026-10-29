@@ -15,6 +15,9 @@ export default function Navbar() {
           MediConnect
         </Link>
         <div className="flex items-center gap-4 text-sm">
+          <Link href="/doctors" className="hover:text-teal-700">
+            Find doctors
+          </Link>
           {user ? (
             <>
               <Link href={dashboardFor(user.role)} className="hover:text-teal-700">

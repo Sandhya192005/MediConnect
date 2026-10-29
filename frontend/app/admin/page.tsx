@@ -1,4 +1,5 @@
 import DashboardShell from "@/components/DashboardShell";
+import { API_URL } from "@/lib/api";
 
 export default function AdminDashboard() {
   return (
@@ -6,8 +7,8 @@ export default function AdminDashboard() {
       role="admin"
       heading="Admin dashboard"
       cards={[
-        { title: "Hospitals & departments", text: "Add and manage hospitals.", phase: "Phase 2" },
-        { title: "Doctors", text: "Approve and manage doctors.", phase: "Phase 2" },
+        { title: "Hospitals", text: "Add and approve hospitals.", href: "/admin/hospitals" },
+        { title: "Doctors & appointments", text: "Full management in Django admin.", href: `${API_URL}/admin/` },
         { title: "Scrape jobs", text: "Hospitals fetched from the web.", phase: "Phase 7.5" },
       ]}
     />
