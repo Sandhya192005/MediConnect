@@ -3,11 +3,10 @@ from django.db import transaction
 
 def notify_appointment(appointment, event: str):
     """
-    Queue notifications for an appointment event.
+    Queue email + live in-app notifications for an appointment event.
     on_commit waits until the database save is final, so the worker never
     looks for an appointment that isn't saved yet (or was rolled back).
-    Phase 4 adds live in-app notifications here too.
     """
-    from .tasks import send_appointment_email_task
+    from .tasks import queue_appointment_notifications
 
-    transaction.on_commit(lambda: send_appointment_email_task.delay(appointment.id, event))
+    transaction.on_commit(lambda: queue_appointment_notifications(appointment.id, event))

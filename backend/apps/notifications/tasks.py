@@ -11,16 +11,37 @@ from django.utils import timezone
 from apps.appointments.models import Appointment
 
 from .emails import send_appointment_email
+from .realtime import notify_appointment_in_app
 
 log = logging.getLogger(__name__)
+
+
+def _load(appointment_id):
+    return (
+        Appointment.objects.select_related("patient", "doctor__user", "doctor__hospital")
+        .filter(pk=appointment_id)
+        .first()
+    )
+
+
+def queue_appointment_notifications(appointment_id: int, event: str):
+    """Email and in-app run as separate tasks, so retrying a failed email never duplicates the bell item."""
+    send_appointment_email_task.delay(appointment_id, event)
+    push_in_app_notification_task.delay(appointment_id, event)
+
+
+@shared_task
+def push_in_app_notification_task(appointment_id: int, event: str):
+    """Save a Notification row and push it over WebSocket to the user's open tabs."""
+    appointment = _load(appointment_id)
+    return notify_appointment_in_app(appointment, event) if appointment else 0
 
 
 @shared_task(bind=True, autoretry_for=(SMTPException, OSError), retry_backoff=True, max_retries=5)
 def send_appointment_email_task(self, appointment_id: int, event: str):
     """Send one appointment email. Retries with growing delays if the mail server is down."""
-    try:
-        appointment = Appointment.objects.select_related("patient", "doctor__user", "doctor__hospital").get(pk=appointment_id)
-    except Appointment.DoesNotExist:
+    appointment = _load(appointment_id)
+    if not appointment:
         return 0
     sent = send_appointment_email(appointment, event)
     log.info("Sent %s email(s) for appointment %s (%s)", sent, appointment_id, event)
@@ -46,7 +67,7 @@ def send_due_reminders():
             # ran at once, only one of them would send it.
             claimed = Appointment.objects.filter(pk=appt_id, **{f"{field}__isnull": True}).update(**{field: now})
             if claimed:
-                send_appointment_email_task.delay(appt_id, event)
+                queue_appointment_notifications(appt_id, event)
                 queued += 1
     return queued
 

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import Navbar from "@/components/Navbar";
+import NotificationToast from "@/components/NotificationToast";
 import { AuthProvider } from "@/lib/auth";
+import { NotificationProvider } from "@/lib/notifications";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -16,8 +18,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body className={`${geistSans.variable} min-h-screen bg-slate-50 text-slate-900 antialiased`}>
         <AuthProvider>
-          <Navbar />
-          <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+          <NotificationProvider>
+            <Navbar />
+            <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
+            <NotificationToast />
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>

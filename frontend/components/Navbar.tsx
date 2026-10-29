@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { dashboardFor, useAuth } from "@/lib/auth";
+import NotificationBell from "./NotificationBell";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -23,6 +24,7 @@ export default function Navbar() {
               <Link href={dashboardFor(user.role)} className="hover:text-teal-700">
                 Dashboard
               </Link>
+              <NotificationBell />
               <span className="hidden text-slate-500 sm:inline">{user.email}</span>
               <button
                 onClick={() => {

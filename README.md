@@ -21,7 +21,14 @@ docker compose exec backend python manage.py createsuperuser   # admin login
 
 - `celery_worker` sends emails (booked / confirmed / cancelled / reminders). Logs: `docker compose logs -f celery_worker`
 - `celery_beat` runs every 5 min (24h + 1h reminders) and hourly (mark past appointments completed).
-- Redis: db 0 = Celery queue, db 1 = task results, db 2 = Django cache (doctor time slots).
+- Redis: db 0 = Celery queue, db 1 = task results, db 2 = Django cache (doctor time slots), db 3 = Channels.
+
+### Live notifications (Django Channels)
+
+- The backend runs on Daphne (ASGI), so it serves HTTP and WebSockets on port 8000.
+- Browser connects to `ws://localhost:8000/ws/notifications/?token=<JWT access token>`.
+- When the Celery worker creates a notification it publishes it to Redis; Channels delivers it to every open tab of that user.
+- Messages from the server: `hello` (unread count), `notification` (new item + unread count), `pong`. Close code `4401` = token invalid → frontend refreshes and reconnects.
 
 Seeded doctor logins: `anita.rao@mediconnect.dev` (and others from `apps/doctors/management/commands/seed.py`) / `Doctor@123`.
 
@@ -36,7 +43,7 @@ docker compose exec backend pytest
 - [x] Phase 1 — Docker, JWT auth, roles (patient / doctor / admin)
 - [x] Phase 2 — Hospitals, departments, doctors, weekly hours, slot booking
 - [x] Phase 3 — Celery + Redis + email notifications
-- [ ] Phase 4 — Real-time in-app notifications (Django Channels)
+- [x] Phase 4 — Real-time in-app notifications (Django Channels)
 - [ ] Phase 5 — Elasticsearch search
 - [ ] Phase 6 — Nearby hospitals map (PostGIS + Leaflet)
 - [ ] Phase 7 — OpenAI chatbot

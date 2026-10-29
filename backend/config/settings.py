@@ -14,6 +14,7 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
 INSTALLED_APPS = [
+    "daphne",  # must be first: makes `runserver` serve ASGI (HTTP + WebSockets)
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -25,6 +26,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
+    "channels",
     # local
     "apps.accounts",
     "apps.hospitals",
@@ -112,9 +114,17 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
 
 # --- Redis ---
-# One Redis server, separate numbered databases: 0 = Celery broker, 1 = task results, 2 = cache.
+# One Redis server, separate numbered databases:
+# 0 = Celery broker, 1 = task results, 2 = cache, 3 = Channels (WebSocket messages).
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 _REDIS_BASE = REDIS_URL.rsplit("/", 1)[0]
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [f"{_REDIS_BASE}/3"]},
+    }
+}
 
 CACHES = {
     "default": {

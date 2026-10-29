@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
+import { NOTIFICATION_EVENT } from "@/lib/notifications";
 import { fmtDateTime, type Appointment } from "@/lib/types";
 import StatusBadge from "./StatusBadge";
 
@@ -21,6 +22,12 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
   }, [when, extraQuery]);
 
   useEffect(load, [load]);
+
+  // Reload when a live notification arrives (e.g. a doctor confirms, a patient books).
+  useEffect(() => {
+    window.addEventListener(NOTIFICATION_EVENT, load);
+    return () => window.removeEventListener(NOTIFICATION_EVENT, load);
+  }, [load]);
 
   async function act(id: number, action: "cancel" | "confirm" | "complete") {
     if (action === "cancel" && !window.confirm("Cancel this appointment?")) return;
