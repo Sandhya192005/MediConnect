@@ -1,0 +1,14 @@
+Hi {{ greeting_name }},
+
+{{ headline }}.
+{{ message }}
+
+Doctor:   {{ doctor }}{% if specialization %} ({{ specialization }}){% endif %}
+Hospital: {{ hospital }}
+When:     {{ when }}
+Status:   {{ status }}{% if reason %}
+Reason:   {{ reason }}{% endif %}
+
+View your appointments: {{ link }}
+
+— MediConnect

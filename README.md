@@ -14,6 +14,14 @@ docker compose exec backend python manage.py createsuperuser   # admin login
 - App: http://localhost:3000
 - API: http://localhost:8000/api/
 - Django admin: http://localhost:8000/admin/
+- Mailpit (all emails the app sends): http://localhost:8025
+- PostgreSQL from your PC (pgAdmin etc.): `localhost:5433`, db/user/password `mediconnect`
+
+### Background jobs (Celery)
+
+- `celery_worker` sends emails (booked / confirmed / cancelled / reminders). Logs: `docker compose logs -f celery_worker`
+- `celery_beat` runs every 5 min (24h + 1h reminders) and hourly (mark past appointments completed).
+- Redis: db 0 = Celery queue, db 1 = task results, db 2 = Django cache (doctor time slots).
 
 Seeded doctor logins: `anita.rao@mediconnect.dev` (and others from `apps/doctors/management/commands/seed.py`) / `Doctor@123`.
 
@@ -27,7 +35,7 @@ docker compose exec backend pytest
 
 - [x] Phase 1 — Docker, JWT auth, roles (patient / doctor / admin)
 - [x] Phase 2 — Hospitals, departments, doctors, weekly hours, slot booking
-- [ ] Phase 3 — Celery + Redis + email notifications
+- [x] Phase 3 — Celery + Redis + email notifications
 - [ ] Phase 4 — Real-time in-app notifications (Django Channels)
 - [ ] Phase 5 — Elasticsearch search
 - [ ] Phase 6 — Nearby hospitals map (PostGIS + Leaflet)

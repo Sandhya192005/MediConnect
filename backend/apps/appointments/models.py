@@ -24,6 +24,9 @@ class Appointment(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.BOOKED)
     reason = models.CharField(max_length=300, blank=True)
     cancelled_by = models.CharField(max_length=10, blank=True)
+    # Set by the reminder task so each reminder is sent only once.
+    reminder_24h_sent_at = models.DateTimeField(null=True, blank=True)
+    reminder_1h_sent_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

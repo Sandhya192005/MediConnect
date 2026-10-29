@@ -10,7 +10,7 @@ from apps.accounts.permissions import IsDoctor
 
 from .models import DoctorProfile
 from .serializers import AvailabilitySerializer, DoctorSerializer
-from .services import generate_slots
+from .services import cached_slots, invalidate_slots
 
 BASE_QS = DoctorProfile.objects.select_related("user", "hospital", "department").prefetch_related("availability")
 
@@ -55,7 +55,7 @@ class DoctorSlotsView(APIView):
             day = date.fromisoformat(request.query_params.get("date", ""))
         except ValueError:
             day = date.today()
-        slots = generate_slots(doctor, day) if doctor.is_bookable else []
+        slots = cached_slots(doctor, day) if doctor.is_bookable else []
         return Response({"date": day, "slots": slots})
 
 
@@ -68,6 +68,10 @@ class MyDoctorProfileView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         profile, _ = DoctorProfile.objects.get_or_create(user=self.request.user)
         return profile
+
+    def perform_update(self, serializer):
+        profile = serializer.save()
+        invalidate_slots(profile.id)  # slot length or hospital may have changed
 
 
 class MyAvailabilityView(APIView):
@@ -86,4 +90,5 @@ class MyAvailabilityView(APIView):
         with transaction.atomic():
             profile.availability.all().delete()
             serializer.save(doctor=profile)
+        invalidate_slots(profile.id)
         return Response(serializer.data, status=status.HTTP_200_OK)

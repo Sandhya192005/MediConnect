@@ -8,7 +8,8 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.doctors.models import DoctorProfile
-from apps.doctors.services import is_slot_available
+from apps.doctors.services import invalidate_slots, is_slot_available
+from apps.notifications.services import notify_appointment
 
 from .models import Appointment
 from .serializers import AppointmentSerializer
@@ -62,9 +63,11 @@ class AppointmentViewSet(
                 appointment = serializer.save(
                     patient=request.user, doctor=doctor, end=start + timedelta(minutes=doctor.slot_minutes)
                 )
+                notify_appointment(appointment, "booked")
         except IntegrityError:
             raise ValidationError({"start": "Someone just booked this slot. Please pick another time."})
 
+        invalidate_slots(doctor.id)
         return Response(self.get_serializer(appointment).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])
@@ -75,15 +78,20 @@ class AppointmentViewSet(
         appointment.status = Appointment.Status.CANCELLED
         appointment.cancelled_by = request.user.role
         appointment.save(update_fields=["status", "cancelled_by", "updated_at"])
+        invalidate_slots(appointment.doctor_id)
+        notify_appointment(appointment, "cancelled")
         return Response(self.get_serializer(appointment).data)
 
     @action(detail=True, methods=["post"])
     def confirm(self, request, pk=None):
-        return self._doctor_set_status(Appointment.Status.CONFIRMED, allowed_from=("booked",))
+        appointment = self._doctor_set_status(Appointment.Status.CONFIRMED, allowed_from=("booked",))
+        notify_appointment(appointment, "confirmed")
+        return Response(self.get_serializer(appointment).data)
 
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
-        return self._doctor_set_status(Appointment.Status.COMPLETED, allowed_from=("booked", "confirmed"))
+        appointment = self._doctor_set_status(Appointment.Status.COMPLETED, allowed_from=("booked", "confirmed"))
+        return Response(self.get_serializer(appointment).data)
 
     def _doctor_set_status(self, new_status, allowed_from):
         if self.request.user.role not in ("doctor", "admin"):
@@ -93,4 +101,4 @@ class AppointmentViewSet(
             raise ValidationError({"status": f"Appointment is {appointment.status}."})
         appointment.status = new_status
         appointment.save(update_fields=["status", "updated_at"])
-        return Response(self.get_serializer(appointment).data)
+        return appointment

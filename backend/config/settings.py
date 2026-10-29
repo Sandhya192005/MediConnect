@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "apps.hospitals",
     "apps.doctors",
     "apps.appointments",
+    "apps.notifications",
 ]
 
 MIDDLEWARE = [
@@ -111,4 +112,41 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
 
 # --- Redis ---
+# One Redis server, separate numbered databases: 0 = Celery broker, 1 = task results, 2 = cache.
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+_REDIS_BASE = REDIS_URL.rsplit("/", 1)[0]
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": f"{_REDIS_BASE}/2",
+        "KEY_PREFIX": "mc",
+    }
+}
+
+# --- Celery ---
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = f"{_REDIS_BASE}/1"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_ACKS_LATE = True  # if the worker crashes mid-task, the task is retried
+CELERY_TASK_DEFAULT_RETRY_DELAY = 30
+CELERY_BEAT_SCHEDULE = {
+    "send-appointment-reminders": {
+        "task": "apps.notifications.tasks.send_due_reminders",
+        "schedule": 60 * 5,  # every 5 minutes
+    },
+    "complete-past-appointments": {
+        "task": "apps.notifications.tasks.complete_past_appointments",
+        "schedule": 60 * 60,  # every hour
+    },
+}
+
+# --- Email (Mailpit catches everything locally: http://localhost:8025) ---
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "1025"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "0") == "1"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "MediConnect <no-reply@mediconnect.dev>")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
