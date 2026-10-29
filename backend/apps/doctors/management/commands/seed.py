@@ -99,3 +99,13 @@ class Command(BaseCommand):
             f"Seeded {len(DEPARTMENTS)} departments, {len(HOSPITALS)} hospitals, {len(DOCTORS)} doctors. "
             f"Doctor logins: <name>@mediconnect.dev / {DOCTOR_PASSWORD}"
         ))
+        transaction.on_commit(self._reindex)
+
+    def _reindex(self):
+        try:
+            from apps.search.documents import rebuild_all
+
+            counts = rebuild_all()
+            self.stdout.write(self.style.SUCCESS(f"Search index rebuilt: {counts}"))
+        except Exception as e:  # Elasticsearch not running yet
+            self.stdout.write(self.style.WARNING(f"Skipped search index ({e}). Run: python manage.py search_index --rebuild"))

@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.doctors",
     "apps.appointments",
     "apps.notifications",
+    "apps.search",
 ]
 
 MIDDLEWARE = [
@@ -150,6 +151,10 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": 60 * 60,  # every hour
     },
 }
+
+# --- Elasticsearch ---
+ELASTICSEARCH_URL = os.environ.get("ELASTICSEARCH_URL", "http://localhost:9200")
+ES_INDEX_PREFIX = os.environ.get("ES_INDEX_PREFIX", "mediconnect")
 
 # --- Email (Mailpit catches everything locally: http://localhost:8025) ---
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

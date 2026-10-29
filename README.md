@@ -23,6 +23,20 @@ docker compose exec backend python manage.py createsuperuser   # admin login
 - `celery_beat` runs every 5 min (24h + 1h reminders) and hourly (mark past appointments completed).
 - Redis: db 0 = Celery queue, db 1 = task results, db 2 = Django cache (doctor time slots), db 3 = Channels.
 
+### Search (Elasticsearch)
+
+- PostgreSQL is the source of truth; Elasticsearch (http://localhost:9200) keeps a search copy of doctors and hospitals.
+- Indexes are kept in sync automatically: model signals → Celery task → Elasticsearch.
+- Rebuild from scratch any time: `docker compose exec backend python manage.py search_index --rebuild` (the `seed` command does this too).
+- Features: typo tolerance (fuzzy), everyday-word synonyms ("heart" → cardiology), autocomplete, department/city facets, fee filter, highlights.
+- If Elasticsearch is down, `/api/search/` returns 503 and the frontend falls back to the basic database search.
+
+| Endpoint | What |
+|---|---|
+| `GET /api/search/?q=&department=&city=&min_fee=&max_fee=&page=` | doctor search + facets |
+| `GET /api/search/?type=hospitals&q=&city=` | hospital search |
+| `GET /api/search/suggest/?q=` | autocomplete |
+
 ### Live notifications (Django Channels)
 
 - The backend runs on Daphne (ASGI), so it serves HTTP and WebSockets on port 8000.
@@ -44,7 +58,7 @@ docker compose exec backend pytest
 - [x] Phase 2 — Hospitals, departments, doctors, weekly hours, slot booking
 - [x] Phase 3 — Celery + Redis + email notifications
 - [x] Phase 4 — Real-time in-app notifications (Django Channels)
-- [ ] Phase 5 — Elasticsearch search
+- [x] Phase 5 — Elasticsearch search
 - [ ] Phase 6 — Nearby hospitals map (PostGIS + Leaflet)
 - [ ] Phase 7 — OpenAI chatbot
 - [ ] Phase 7.5 — On-demand hospital scraper (Playwright)

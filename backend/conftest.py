@@ -9,6 +9,7 @@ def _test_settings(settings):
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
     settings.CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
     settings.CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+    settings.ES_INDEX_PREFIX = "test_mediconnect"  # never touch the real search indexes
     celery_app.conf.task_always_eager = True  # run .delay() tasks immediately, in-process
     celery_app.conf.task_eager_propagates = True
     from django.core.cache import cache
