@@ -37,6 +37,14 @@ docker compose exec backend python manage.py createsuperuser   # admin login
 | `GET /api/search/?type=hospitals&q=&city=` | hospital search |
 | `GET /api/search/suggest/?q=` | autocomplete |
 
+### Nearby hospitals (PostGIS + Leaflet)
+
+- `GET /api/hospitals/nearby/?lat=&lng=&radius_km=10&limit=20&department=`: hospitals inside the radius, nearest first, with `distance_km` and `doctor_count`. PostGIS `ST_DWithin` + `ST_Distance` on a spatially indexed `geography` column.
+- Input is validated: lat −90..90, lng −180..180, radius 0.5–50 km, limit ≤ 50.
+- `GET /api/hospitals/cities/`: browse by city without sharing your location (`/api/hospitals/?city=`).
+- `location_verified`: set by an admin (Django admin action) after checking the pin. Unverified pins show as "Approximate location". Moving a pin resets it.
+- Frontend `/hospitals` (map + list) and `/hospitals/<id>` (hospital page with its doctors). Map tiles from OpenStreetMap.
+
 ### Live notifications (Django Channels)
 
 - The backend runs on Daphne (ASGI), so it serves HTTP and WebSockets on port 8000.
@@ -59,7 +67,7 @@ docker compose exec backend pytest
 - [x] Phase 3 — Celery + Redis + email notifications
 - [x] Phase 4 — Real-time in-app notifications (Django Channels)
 - [x] Phase 5 — Elasticsearch search
-- [ ] Phase 6 — Nearby hospitals map (PostGIS + Leaflet)
+- [x] Phase 6 — Nearby hospitals map (PostGIS + Leaflet)
 - [ ] Phase 7 — OpenAI chatbot
 - [ ] Phase 7.5 — On-demand hospital scraper (Playwright)
 - [ ] Phase 8 — Playwright end-to-end tests

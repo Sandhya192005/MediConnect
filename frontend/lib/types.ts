@@ -11,10 +11,15 @@ export type Hospital = {
   website: string;
   latitude: number | null;
   longitude: number | null;
+  location_verified: boolean;
   departments: Department[];
   source: "manual" | "scraped";
   is_approved: boolean;
 };
+
+export type NearbyHospital = Hospital & { distance_km: number | null; doctor_count: number };
+
+export type LatLng = { lat: number; lng: number };
 
 export type Availability = {
   id?: number;

@@ -19,6 +19,9 @@ export default function Navbar() {
           <Link href="/doctors" className="hover:text-teal-700">
             Find doctors
           </Link>
+          <Link href="/hospitals" className="hidden hover:text-teal-700 sm:inline">
+            Hospitals near me
+          </Link>
           {user ? (
             <>
               <Link href={dashboardFor(user.role)} className="hover:text-teal-700">

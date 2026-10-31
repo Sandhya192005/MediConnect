@@ -26,6 +26,9 @@ class Hospital(models.Model):
     website = models.URLField(blank=True)
     # (longitude, latitude) in WGS84 — used for "nearby hospitals" in Phase 6
     location = models.PointField(geography=True, srid=4326, null=True, blank=True)
+    # Only an admin who has checked the address/pin sets this. Unverified locations are
+    # still shown on the map, but labelled "approximate" — never presented as confirmed.
+    location_verified = models.BooleanField(default=False)
     departments = models.ManyToManyField(Department, blank=True, related_name="hospitals")
 
     # Phase 7.5: hospitals fetched by the scraper need admin approval before booking.

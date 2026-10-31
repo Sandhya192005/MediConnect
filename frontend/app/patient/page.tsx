@@ -8,7 +8,7 @@ export default function PatientDashboard() {
       cards={[
         { title: "Book an appointment", text: "Find a doctor and pick a free slot.", href: "/doctors" },
         { title: "My appointments", text: "Upcoming and past visits.", href: "/patient/appointments" },
-        { title: "Hospitals near me", text: "See hospitals on a map.", phase: "Phase 6" },
+        { title: "Hospitals near me", text: "See hospitals on a map.", href: "/hospitals" },
       ]}
     />
   );
