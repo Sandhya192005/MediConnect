@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.appointments",
     "apps.notifications",
     "apps.search",
+    "apps.chatbot",
 ]
 
 MIDDLEWARE = [
@@ -151,6 +152,13 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": 60 * 60,  # every hour
     },
 }
+
+# --- AI chatbot (OpenAI) ---
+# The key stays on the server; the browser never sees it.
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+CHAT_RATE_LIMIT = int(os.environ.get("CHAT_RATE_LIMIT", "20"))  # messages per user…
+CHAT_RATE_WINDOW_SECONDS = 600  # …per 10 minutes
 
 # --- Elasticsearch ---
 ELASTICSEARCH_URL = os.environ.get("ELASTICSEARCH_URL", "http://localhost:9200")

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import Navbar from "@/components/Navbar";
+import ChatWidget from "@/components/ChatWidget";
 import NotificationToast from "@/components/NotificationToast";
 import { AuthProvider } from "@/lib/auth";
 import { NotificationProvider } from "@/lib/notifications";
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <Navbar />
             <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
             <NotificationToast />
+            <ChatWidget />
           </NotificationProvider>
         </AuthProvider>
       </body>

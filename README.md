@@ -45,6 +45,15 @@ docker compose exec backend python manage.py createsuperuser   # admin login
 - `location_verified`: set by an admin (Django admin action) after checking the pin. Unverified pins show as "Approximate location". Moving a pin resets it.
 - Frontend `/hospitals` (map + list) and `/hospitals/<id>` (hospital page with its doctors). Map tiles from OpenStreetMap.
 
+### AI assistant (OpenAI)
+
+- Set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`, default `gpt-4o-mini`) in `.env`, then `docker compose up -d --force-recreate backend`.
+- `POST /api/chat/` `{message, session_id?, location?: {lat, lng}}` → `{session_id, reply, proposals, emergency, emergency_notice}`; `GET /api/chat/history/`.
+- The model uses tools that run our own code: `search_doctors`, `get_available_slots`, `find_hospitals`, `my_appointments`, `propose_booking`.
+- **The assistant never books.** `propose_booking` only rechecks the slot and returns a card; the patient books with the card's Confirm button (normal `/api/appointments/` API).
+- Safety: no diagnosis or medicines (system prompt), emergency keywords always show a 112/108 banner, 1000-char message limit, 20 messages / 10 min per user (Redis), key stays on the server.
+- Tests use a scripted fake OpenAI client (no key, no cost).
+
 ### Live notifications (Django Channels)
 
 - The backend runs on Daphne (ASGI), so it serves HTTP and WebSockets on port 8000.
@@ -68,7 +77,7 @@ docker compose exec backend pytest
 - [x] Phase 4 — Real-time in-app notifications (Django Channels)
 - [x] Phase 5 — Elasticsearch search
 - [x] Phase 6 — Nearby hospitals map (PostGIS + Leaflet)
-- [ ] Phase 7 — OpenAI chatbot
+- [x] Phase 7 — OpenAI chatbot (live OpenAI call not yet verified: needs a valid API key)
 - [ ] Phase 7.5 — On-demand hospital scraper (Playwright)
 - [ ] Phase 8 — Playwright end-to-end tests
 

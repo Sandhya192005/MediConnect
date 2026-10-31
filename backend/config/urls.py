@@ -23,5 +23,6 @@ urlpatterns = [
     path("api/doctors/", include("apps.doctors.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
     path("api/search/", include("apps.search.urls")),
+    path("api/chat/", include("apps.chatbot.urls")),
     path("api/", include(router.urls)),
 ]
