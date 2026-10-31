@@ -52,6 +52,7 @@ Flow: patient looks up a hospital → served from PostgreSQL if collected < 24 h
 - `POST /api/scraper/lookup/` `{q}` or `{url}` → `{matches, job}`; `GET /api/scraper/jobs/<id>/`; `GET /api/scraper/hospitals/<id>/`; `POST /api/scraper/hospitals/<id>/refresh/` (at most hourly per hospital; 10 lookups/hour per user).
 - Scraped hospitals are `source=scraped`, `is_approved=False`: viewable for checking, not listed as partners. `ScrapedDoctor` rows are information only, never bookable slots.
 - Non-partner hospitals: the hospital's own booking link/phone, plus `POST /api/appointment-requests/` (always "Pending – not confirmed" until an admin confirms at `/admin/requests`).
+- Booked on the hospital's own website/phone? `POST /api/external-appointments/` lets the patient add it ("Booked directly with the hospital – added by you"). MediConnect only sends the 24 h / 1 h reminders; it never blocks a slot or counts as a MediConnect booking.
 - Containers: `scraper_worker` (Celery `scraper` queue, Chromium, 1 browser at a time) and `mockhospital` (fictional demo site at http://localhost:8090, `http://mockhospital/` inside Docker).
 - Real-browser test: `docker compose exec -e SCRAPER_LIVE=1 scraper_worker pytest apps/scraper/tests.py::test_live_mock_site`
 

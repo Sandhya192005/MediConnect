@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import AppointmentRequestForm from "@/components/AppointmentRequestForm";
+import ExternalAppointmentForm from "@/components/ExternalAppointmentForm";
 import LocationBadge from "@/components/LocationBadge";
 import ScrapeStatus from "@/components/ScrapeStatus";
 import { api, errorMessage } from "@/lib/api";
@@ -171,7 +172,17 @@ export default function HospitalDetailPage() {
                 )}
               </div>
               {user?.role === "patient" ? (
-                <AppointmentRequestForm key={requestDoctor ?? "any"} hospitalId={hospital.id} doctors={hospital.scraped_doctors} presetDoctor={requestDoctor} />
+                <>
+                  <AppointmentRequestForm key={requestDoctor ?? "any"} hospitalId={hospital.id} doctors={hospital.scraped_doctors} presetDoctor={requestDoctor} />
+                  <details className="rounded-xl border border-slate-200 bg-white">
+                    <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-teal-700">
+                      Already booked on their website or by phone? Add it to get reminders
+                    </summary>
+                    <div className="px-4 pb-4">
+                      <ExternalAppointmentForm hospitalId={hospital.id} hospitalName={hospital.name} doctors={hospital.scraped_doctors} />
+                    </div>
+                  </details>
+                </>
               ) : !user ? (
                 <p className="text-sm"><Link href="/login" className="text-teal-700 underline">Log in</Link> as a patient to send an appointment request.</p>
               ) : null}

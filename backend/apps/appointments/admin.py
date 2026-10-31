@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import Appointment, AppointmentRequest
+from .models import Appointment, AppointmentRequest, ExternalAppointment
+
+
+@admin.register(ExternalAppointment)
+class ExternalAppointmentAdmin(admin.ModelAdmin):
+    list_display = ["patient", "display_hospital", "doctor_name", "start", "status"]
+    list_filter = ["status"]
+    search_fields = ["patient__email", "hospital_name", "hospital__name"]
 
 
 @admin.register(AppointmentRequest)

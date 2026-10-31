@@ -40,6 +40,33 @@ EVENTS = {
 }
 
 
+def send_external_reminder_email(ext, event: str) -> int:
+    """Reminder for an appointment the patient booked directly with a hospital."""
+    user = ext.patient
+    if not user.email:
+        return 0
+    when = timezone.localtime(ext.start).strftime("%A, %d %B %Y at %I:%M %p")
+    _, subject, headline, message = EVENTS[event]
+    context = {
+        "greeting_name": user.first_name or user.email,
+        "headline": headline,
+        "message": message + " You booked this directly with the hospital, so contact them for any changes.",
+        "doctor": ext.doctor_name or "—",
+        "specialization": "",
+        "hospital": ext.display_hospital,
+        "when": when,
+        "reason": ext.notes,
+        "status": "Booked directly with the hospital – added by you",
+        "link": f"{settings.FRONTEND_URL}/patient/appointments",
+    }
+    email = EmailMultiAlternatives(
+        f"MediConnect – {subject}", render_to_string("emails/appointment.txt", context),
+        settings.DEFAULT_FROM_EMAIL, [user.email],
+    )
+    email.attach_alternative(render_to_string("emails/appointment.html", context), "text/html")
+    return email.send()
+
+
 def send_appointment_email(appointment, event: str) -> int:
     recipients, subject, headline, message = EVENTS[event]
     patient = appointment.patient

@@ -78,6 +78,20 @@ export type AppointmentRequest = {
   created_at: string;
 };
 
+export type ExternalAppointment = {
+  id: number;
+  hospital: number | null;
+  hospital_name: string;
+  display_hospital: string;
+  doctor_name: string;
+  start: string;
+  booking_reference: string;
+  notes: string;
+  status: "upcoming" | "cancelled";
+  label: string;
+  created_at: string;
+};
+
 export function timeAgo(iso: string) {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (s < 60) return "just now";

@@ -8,9 +8,9 @@ from celery import shared_task
 from django.db.models import F
 from django.utils import timezone
 
-from apps.appointments.models import Appointment
+from apps.appointments.models import Appointment, ExternalAppointment
 
-from .emails import send_appointment_email
+from .emails import send_appointment_email, send_external_reminder_email
 from .realtime import notify_appointment_in_app
 
 log = logging.getLogger(__name__)
@@ -69,7 +69,42 @@ def send_due_reminders():
             if claimed:
                 queue_appointment_notifications(appt_id, event)
                 queued += 1
+
+        # Same reminders for appointments the patient booked directly with a hospital.
+        ext_due = ExternalAppointment.objects.filter(
+            status=ExternalAppointment.Status.UPCOMING, start__gt=now, start__lte=now + ahead,
+            **{f"{field}__isnull": True},
+        ).filter(**extra)
+        for ext_id in ext_due.values_list("id", flat=True):
+            claimed = ExternalAppointment.objects.filter(pk=ext_id, **{f"{field}__isnull": True}).update(**{field: now})
+            if claimed:
+                send_external_reminder_task.delay(ext_id, event)  # email
+                push_external_reminder_task.delay(ext_id, event)  # bell
+                queued += 1
     return queued
+
+
+@shared_task(bind=True, autoretry_for=(SMTPException, OSError), retry_backoff=True, max_retries=5)
+def send_external_reminder_task(self, ext_id: int, event: str):
+    ext = ExternalAppointment.objects.select_related("patient", "hospital").filter(pk=ext_id).first()
+    if not ext or ext.status != ExternalAppointment.Status.UPCOMING:
+        return 0
+    return send_external_reminder_email(ext, event)
+
+
+@shared_task
+def push_external_reminder_task(ext_id: int, event: str):
+    from .realtime import create_notification
+
+    ext = ExternalAppointment.objects.select_related("patient", "hospital").filter(pk=ext_id).first()
+    if not ext or ext.status != ExternalAppointment.Status.UPCOMING:
+        return 0
+    title = "Appointment tomorrow" if event == "reminder_24h" else "Appointment in 1 hour"
+    when = timezone.localtime(ext.start).strftime("%a %d %b, %I:%M %p")
+    who = f" with {ext.doctor_name}" if ext.doctor_name else ""
+    create_notification(ext.patient, event, title, f"{ext.display_hospital}{who} · {when} (booked with the hospital)",
+                        link="/patient/appointments")
+    return 1
 
 
 @shared_task

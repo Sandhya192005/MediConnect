@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import AppointmentList from "@/components/AppointmentList";
+import ExternalAppointmentList from "@/components/ExternalAppointmentList";
 import RequestList from "@/components/RequestList";
 import RoleGuard from "@/components/RoleGuard";
 
@@ -26,6 +27,7 @@ export default function PatientAppointmentsPage() {
       </Suspense>
       <AppointmentList viewer="patient" />
       <RequestList />
+      <ExternalAppointmentList />
     </RoleGuard>
   );
 }
