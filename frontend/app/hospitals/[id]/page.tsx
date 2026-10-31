@@ -42,10 +42,15 @@ export default function HospitalDetailPage() {
 
   const job = useScrapeJob(startedJob ?? hospital?.active_job ?? null, load);
 
-  const refresh = useCallback(async (silent = false) => {
+  const [pastedUrl, setPastedUrl] = useState("");
+
+  const refresh = useCallback(async (silent = false, url = "") => {
     setRefreshMsg("");
     try {
-      const r = await api<{ job: ScrapeJob }>(`/api/scraper/hospitals/${id}/refresh/`, { method: "POST" });
+      const r = await api<{ job: ScrapeJob }>(`/api/scraper/hospitals/${id}/refresh/`, {
+        method: "POST",
+        body: JSON.stringify(url ? { url } : {}),
+      });
       setStartedJob(r.job);
     } catch (e) {
       if (!silent) setRefreshMsg(errorMessage(e));
@@ -109,7 +114,27 @@ export default function HospitalDetailPage() {
                 Check details with the hospital before visiting.
               </p>
             ) : (
-              <p className="mt-1 text-sm text-slate-500">{hospital.website ? "Not collected yet." : "This hospital has no website listed."}</p>
+              <p className="mt-1 text-sm text-slate-500">{hospital.website ? "Not collected yet." : "This hospital has no website saved yet."}</p>
+            )}
+            {!hospital.website && user && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (pastedUrl.trim()) refresh(false, pastedUrl.trim());
+                }}
+                className="mt-3 flex flex-wrap gap-2"
+              >
+                <input
+                  className="input max-w-sm"
+                  value={pastedUrl}
+                  onChange={(e) => setPastedUrl(e.target.value)}
+                  placeholder="Paste the hospital's website, e.g. https://…"
+                  aria-label="Hospital website"
+                />
+                <button className="rounded-md bg-teal-600 px-3 py-2 text-sm font-medium text-white" disabled={!pastedUrl.trim()}>
+                  Read website
+                </button>
+              </form>
             )}
             <div className="mt-3 space-y-2"><ScrapeStatus job={job} />{refreshMsg && <p className="text-sm text-amber-700">{refreshMsg}</p>}</div>
 

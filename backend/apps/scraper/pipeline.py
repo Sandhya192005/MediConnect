@@ -52,7 +52,11 @@ def _resolve_target(job: ScrapeJob) -> tuple[Hospital | None, str, dict | None]:
     if not url and job.query:
         place = geocode.find_hospital(job.query)
         if not place:
-            raise JobStop(ScrapeJob.Status.FAILED, "We couldn't find that hospital on OpenStreetMap. Try adding the city.")
+            raise JobStop(
+                ScrapeJob.Status.FAILED,
+                f"We couldn't find a hospital called “{job.query}”. Check the spelling and add the city "
+                "(e.g. “Apollo Hospital Chennai”), or paste the hospital's website instead.",
+            )
         url = place["website"]
         if not hospital:
             hospital = Hospital.objects.filter(name__iexact=place["name"], city__iexact=place["city"]).first()
@@ -73,7 +77,11 @@ def run_job(job_id: int) -> str:
             # Known place but no website: save what OpenStreetMap has, and say so honestly.
             hospital = _save(job, hospital, place, None, "", "")
             job.hospital = hospital
-            raise JobStop(ScrapeJob.Status.BLOCKED, "This hospital has no website listed, so only its map details were saved.")
+            raise JobStop(
+                ScrapeJob.Status.BLOCKED,
+                "Found it on the map, but OpenStreetMap doesn't list its website, so only the location was saved. "
+                "Paste the hospital's website on the Look up page to read its doctors and timings.",
+            )
 
         try:
             url = check_public_url(url)

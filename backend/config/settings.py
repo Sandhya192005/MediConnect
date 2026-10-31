@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.gis",
+    "django.contrib.postgres",  # trigram (fuzzy) matching for hospital lookup
     # third party
     "rest_framework",
     "rest_framework_simplejwt",

@@ -1,3 +1,4 @@
+from django.contrib.postgres.search import TrigramWordSimilarity
 from django.db.models import Q
 from rest_framework import permissions, serializers, status
 from rest_framework.decorators import api_view, permission_classes
@@ -10,6 +11,9 @@ from . import services
 from .models import ScrapeJob
 from .safety import UnsafeURL, check_public_url
 from .serializers import HospitalWithScrapeSerializer, ScrapeJobSerializer
+
+
+GENERIC_WORDS = {"hospital", "hospitals", "clinic", "clinics", "the", "and", "of", "multispeciality", "multispecialty", "medical", "centre", "center"}
 
 
 class LookupSerializer(serializers.Serializer):
@@ -58,6 +62,16 @@ def lookup(request):
         for w in words:
             qs = qs.filter(Q(name__icontains=w) | Q(city__icontains=w))
         matches = list(qs[:10])
+        distinctive = " ".join(w for w in services.normalize_query(q).split() if w not in GENERIC_WORDS)
+        if not matches and distinctive:
+            # Typo-tolerant second try (PostgreSQL pg_trgm): "applo" still finds "Apollo Hospital".
+            # Generic words are dropped first, or "hospital" alone would match every hospital.
+            matches = list(
+                _visible_hospitals()
+                .annotate(sim=TrigramWordSimilarity(distinctive, "name"))
+                .filter(sim__gte=0.3)
+                .order_by("-sim")[:5]
+            )
     elif url:
         host = url.split("//", 1)[-1].split("/", 1)[0].removeprefix("www.")
         matches = list(_visible_hospitals().filter(website__icontains=host)[:5])
@@ -83,12 +97,20 @@ def lookup(request):
 def refresh(request, hospital_id):
     """POST /api/scraper/hospitals/<id>/refresh/ — "Refresh from website" button."""
     hospital = get_object_or_404(_visible_hospitals(), pk=hospital_id)
+    url = ""
     if not hospital.website:
-        return Response({"detail": "This hospital has no website to read."}, status=400)
+        # Found on the map without a website: the patient may paste it (saved after a successful read).
+        url = str(request.data.get("url", "")).strip()[:500]
+        if not url:
+            return Response({"detail": "This hospital has no website saved. Paste its website address to read it."}, status=400)
+        try:
+            url = check_public_url(url)
+        except UnsafeURL as e:
+            return Response({"url": [str(e)]}, status=400)
     if not services.can_force_refresh(hospital):
         return Response({"detail": "This hospital was refreshed recently. Please try again later."}, status=429)
     try:
-        job, created = services.request_scrape(request.user, hospital=hospital)
+        job, created = services.request_scrape(request.user, hospital=hospital, url=url)
     except services.TooManyJobs as e:
         return Response({"detail": str(e)}, status=429)
     return Response({"job": ScrapeJobSerializer(job).data, "job_created": created},

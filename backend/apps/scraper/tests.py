@@ -177,7 +177,7 @@ def test_hospital_without_website_saves_map_info_only(patient, monkeypatch):
     job = ScrapeJob.objects.create(query="Tiny Clinic Madurai", requested_by=patient)
     assert pipeline.run_job(job.id) == "blocked"
     job.refresh_from_db()
-    assert "no website" in job.message
+    assert "doesn't list its website" in job.message
     assert job.hospital.name == "Tiny Clinic" and job.hospital.scraped_at is None
 
 
@@ -211,6 +211,64 @@ def test_only_one_active_job_per_hospital(db):
     ScrapeJob.objects.create(hospital=h, status="running")
     with pytest.raises(IntegrityError), transaction.atomic():
         ScrapeJob.objects.create(hospital=h, status="pending")
+
+
+def _nominatim(monkeypatch, results):
+    class Resp:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return results
+
+    monkeypatch.setattr(geocode.httpx, "get", lambda *a, **k: Resp())
+
+
+ISLAND = {"name": "Äpplö", "category": "place", "type": "island", "lat": "60.3", "lon": "22.3",
+          "display_name": "Äpplö, Pargas, Finland", "address": {"town": "Pargas"}, "extratags": {}}
+APOLLO = {"name": "Apollo Hospital", "category": "amenity", "type": "hospital", "lat": "13.06", "lon": "80.25",
+          "display_name": "Apollo Hospital, Greams Road, Chennai", "address": {"city": "Chennai"},
+          "extratags": {"website": "https://www.apollohospitals.com/"}}
+
+
+def test_geocode_only_accepts_healthcare_places(monkeypatch):
+    _nominatim(monkeypatch, [ISLAND])
+    assert geocode.find_hospital("applo") is None  # a typo must not turn an island into a hospital
+    _nominatim(monkeypatch, [ISLAND, APOLLO])
+    place = geocode.find_hospital("apollo chennai")
+    assert place["name"] == "Apollo Hospital" and place["website"] == "https://www.apollohospitals.com/"
+
+
+def test_typo_lookup_finds_saved_hospital(patient):
+    Hospital.objects.create(name="Apollo Hospital", city="Chennai", source="scraped", is_approved=False,
+                            scraped_at=timezone.now())
+    Hospital.objects.create(name="MediConnect City Hospital", city="Chennai")
+    c = client_for(patient)
+    res = c.post("/api/scraper/lookup/", {"q": "applo"}, format="json").data
+    assert [m["name"] for m in res["matches"]] == ["Apollo Hospital"]
+    assert res["job"] is None
+    res = c.post("/api/scraper/lookup/", {"q": "aplo hospital"}, format="json").data
+    assert [m["name"] for m in res["matches"]] == ["Apollo Hospital"]  # "hospital" alone doesn't match others
+
+
+def test_paste_website_for_map_only_hospital(patient):
+    h = Hospital.objects.create(name="Apollo Hospital", city="Chennai", source="scraped", is_approved=False)
+    c = client_for(patient)
+    assert c.post(f"/api/scraper/hospitals/{h.id}/refresh/", {}, format="json").status_code == 400
+    assert c.post(f"/api/scraper/hospitals/{h.id}/refresh/", {"url": "http://10.0.0.1/"}, format="json").status_code == 400
+    res = c.post(f"/api/scraper/hospitals/{h.id}/refresh/", {"url": f"{SITE}/"}, format="json")
+    assert res.status_code == 202
+    job = ScrapeJob.objects.get(pk=res.data["job"]["id"])
+    assert job.hospital == h and job.url == f"{SITE}/"
+
+
+def test_pasted_website_is_saved_after_scrape(patient, fake_browser):
+    h = Hospital.objects.create(name="Apollo Hospital", city="Chennai", source="scraped", is_approved=False)
+    job = ScrapeJob.objects.create(hospital=h, url=f"{SITE}/", requested_by=patient)
+    assert pipeline.run_job(job.id) == "done"
+    h.refresh_from_db()
+    assert h.website == f"{SITE}/" and h.scraped_doctors.count() == 3
+    assert Hospital.objects.count() == 1  # same hospital, no duplicate
 
 
 # ---- lookup / refresh API ------------------------------------------------------------
