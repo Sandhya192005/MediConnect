@@ -24,5 +24,11 @@ def index_hospital_task(hospital_id: int, with_doctors: bool = True):
 
 
 @shared_task(**RETRY)
+def index_hospitals_bulk_task(hospital_ids: list[int]):
+    """Index many hospitals in one request (used after a map-tile import)."""
+    return documents.index_hospitals_bulk(hospital_ids)
+
+
+@shared_task(**RETRY)
 def delete_doc_task(kind: str, doc_id: int):
     documents.delete_doc(kind, doc_id)

@@ -39,8 +39,7 @@ class HospitalWithScrapeSerializer(HospitalSerializer):
         return is_fresh(obj)
 
     def get_has_bookable_doctors(self, obj):
-        # A "partner": approved, with at least one doctor who has a MediConnect calendar.
-        return obj.is_approved and obj.doctors.filter(is_active=True, availability__isnull=False).exists()
+        return obj.is_partner
 
     def get_active_job(self, obj):
         job = obj.scrape_jobs.filter(status__in=["pending", "running"]).first()

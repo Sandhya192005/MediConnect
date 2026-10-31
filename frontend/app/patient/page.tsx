@@ -6,9 +6,9 @@ export default function PatientDashboard() {
       role="patient"
       heading="Patient dashboard"
       cards={[
-        { title: "Book an appointment", text: "Find a doctor and pick a free slot.", href: "/doctors" },
+        { title: "Book an appointment", text: "Find a hospital or doctor, then pick a slot.", href: "/doctors" },
         { title: "My appointments", text: "Upcoming and past visits.", href: "/patient/appointments" },
-        { title: "Hospitals near me", text: "See hospitals on a map.", href: "/hospitals" },
+        { title: "Hospitals near me", text: "Every hospital around you on a map.", href: "/hospitals" },
       ]}
     />
   );

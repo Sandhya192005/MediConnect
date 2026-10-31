@@ -21,6 +21,24 @@ def _is_healthcare(r: dict) -> bool:
     )
 
 
+def find_place(name: str) -> dict | None:
+    """Centre of a city/town/area, e.g. 'Chennai' or 'T. Nagar, Chennai'. Cached for 30 days."""
+    from django.core.cache import cache
+
+    key = "geo:place:" + "".join(c for c in name.lower() if c.isalnum())[:80]
+    hit = cache.get(key)
+    if hit is not None:
+        return hit or None  # {} = cached "not found"
+    params = {"q": name, "format": "jsonv2", "limit": 1, "featureType": "settlement"}
+    resp = httpx.get(settings.NOMINATIM_URL, params=params, timeout=15, headers={"User-Agent": settings.SCRAPER_USER_AGENT})
+    resp.raise_for_status()
+    results = resp.json()
+    place = {"name": results[0].get("name") or name, "display_name": results[0].get("display_name", ""),
+             "lat": float(results[0]["lat"]), "lng": float(results[0]["lon"])} if results else {}
+    cache.set(key, place, 60 * 60 * 24 * 30)
+    return place or None
+
+
 def find_hospital(query: str) -> dict | None:
     params = {"q": query, "format": "jsonv2", "addressdetails": 1, "extratags": 1, "limit": 10}
     resp = httpx.get(settings.NOMINATIM_URL, params=params, timeout=15, headers={"User-Agent": settings.SCRAPER_USER_AGENT})

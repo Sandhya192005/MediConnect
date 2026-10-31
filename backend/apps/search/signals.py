@@ -3,6 +3,9 @@ Keep Elasticsearch in sync: whenever a doctor/hospital/department/user changes i
 queue a Celery task (after the DB transaction commits) to update the search copy.
 """
 
+from contextlib import contextmanager
+from contextvars import ContextVar
+
 from django.conf import settings
 from django.db import transaction
 from django.db.models.signals import m2m_changed, post_delete, post_save
@@ -13,8 +16,22 @@ from apps.hospitals.models import Department, Hospital
 
 from . import tasks
 
+_suspended = ContextVar("search_indexing_suspended", default=False)
+
+
+@contextmanager
+def indexing_suspended():
+    """For bulk imports: skip per-row index tasks (the caller indexes everything in one go)."""
+    token = _suspended.set(True)
+    try:
+        yield
+    finally:
+        _suspended.reset(token)
+
 
 def _later(task, *args):
+    if _suspended.get():
+        return
     transaction.on_commit(lambda: task.delay(*args))
 
 

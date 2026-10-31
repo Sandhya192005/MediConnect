@@ -57,6 +57,37 @@ def search(request):
 
 @api_view(["GET"])
 @permission_classes([permissions.AllowAny])
+def listed_doctors(request):
+    """
+    GET /api/search/listed-doctors/?q=cardio&hospital=<id>
+    Doctors found on hospitals' own websites (information only, not bookable on MediConnect).
+    Plain PostgreSQL search with a typo-tolerant fallback (pg_trgm).
+    """
+    from django.contrib.postgres.search import TrigramWordSimilarity
+    from django.db.models import Q
+
+    from apps.scraper.models import ScrapedDoctor
+
+    q = request.query_params.get("q", "").strip()[:80]
+    qs = ScrapedDoctor.objects.select_related("hospital")
+    if h := request.query_params.get("hospital"):
+        qs = qs.filter(hospital_id=h)
+    if q:
+        exact = qs.filter(Q(name__icontains=q) | Q(specialization__icontains=q) | Q(hospital__name__icontains=q))
+        qs = exact if exact.exists() else (
+            qs.annotate(sim=TrigramWordSimilarity(q, "specialization") + TrigramWordSimilarity(q, "name"))
+            .filter(sim__gte=0.35).order_by("-sim")
+        )
+    return Response({"results": [
+        {"id": d.id, "name": d.name, "specialization": d.specialization, "qualification": d.qualification,
+         "timings": d.timings, "hospital_id": d.hospital_id, "hospital_name": d.hospital.name,
+         "hospital_city": d.hospital.city, "collected_at": d.collected_at, "source_url": d.source_url}
+        for d in qs[:30]
+    ]})
+
+
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
 def suggest(request):
     q = request.query_params.get("q", "").strip()[:50]
     if len(q) < 2:

@@ -8,7 +8,7 @@ import { Circle, CircleMarker, MapContainer, Popup, TileLayer, useMap } from "re
 import type { Hospital, LatLng } from "@/lib/types";
 
 type Props = {
-  hospitals: (Hospital & { distance_km?: number | null })[];
+  hospitals: (Hospital & { distance_km?: number | null; is_partner?: boolean })[];
   user?: LatLng | null;
   radiusKm?: number;
   selectedId?: number | null;
@@ -54,16 +54,18 @@ export default function HospitalMap({ hospitals, user, radiusKm, selectedId, onS
 
       {pinned.map((h) => {
         const selected = h.id === selectedId;
+        const partner = h.is_partner !== false; // single-hospital maps don't pass the flag
         return (
           <CircleMarker
             key={h.id}
             center={[h.latitude!, h.longitude!]}
-            radius={selected ? 12 : 9}
+            radius={selected ? 12 : partner ? 9 : 7}
             eventHandlers={{ click: () => onSelect?.(h.id) }}
             pathOptions={{
               color: "#ffffff",
               weight: 2,
-              fillColor: selected ? "#b45309" : "#0d9488",
+              // teal = MediConnect partner (instant booking), grey = other hospitals
+              fillColor: selected ? "#b45309" : partner ? "#0d9488" : "#64748b",
               fillOpacity: 1,
               // Unverified pins are drawn dashed so they read as "approximate".
               dashArray: h.location_verified ? undefined : "3 3",
@@ -71,6 +73,7 @@ export default function HospitalMap({ hospitals, user, radiusKm, selectedId, onS
           >
             <Popup>
               <strong>{h.name}</strong>
+              {h.is_partner === true && <> · <em>MediConnect partner</em></>}
               <br />
               {[h.address, h.city].filter(Boolean).join(", ")}
               {h.distance_km != null && (
@@ -86,7 +89,7 @@ export default function HospitalMap({ hospitals, user, radiusKm, selectedId, onS
                 </>
               )}
               <br />
-              <a href={`/hospitals/${h.id}`}>View doctors →</a>
+              <a href={`/hospitals/${h.id}`}>View hospital →</a>
             </Popup>
           </CircleMarker>
         );

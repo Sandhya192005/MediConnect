@@ -16,6 +16,7 @@ class Hospital(models.Model):
     class Source(models.TextChoices):
         MANUAL = "manual", "Added manually"
         SCRAPED = "scraped", "Scraped from web"
+        OSM = "osm", "OpenStreetMap"
 
     name = models.CharField(max_length=200)
     address = models.CharField(max_length=300, blank=True)
@@ -33,6 +34,8 @@ class Hospital(models.Model):
 
     # Phase 7.5: hospitals fetched by the scraper need admin approval before booking.
     source = models.CharField(max_length=10, choices=Source.choices, default=Source.MANUAL)
+    # OpenStreetMap id, e.g. "way/123456". Lets us update the same hospital on the next map refresh.
+    osm_id = models.CharField(max_length=40, unique=True, null=True, blank=True)
     is_approved = models.BooleanField(default=True)
 
     # Filled by the scraper (Phase 7.5). Always shown with where/when it was collected.
@@ -47,3 +50,13 @@ class Hospital(models.Model):
 
     def __str__(self):
         return f"{self.name}, {self.city}"
+
+    @property
+    def is_partner(self) -> bool:
+        """Instant booking possible: approved, with at least one MediConnect doctor who has working hours."""
+        return self.is_approved and self.doctors.filter(is_active=True, availability__isnull=False).exists()
+
+    @property
+    def is_listed(self) -> bool:
+        """Shown to patients at all: partners, plus hospitals from OpenStreetMap / their own websites."""
+        return self.is_approved or self.source in (self.Source.OSM, self.Source.SCRAPED)

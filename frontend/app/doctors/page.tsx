@@ -21,6 +21,25 @@ type Hit = {
 
 type Facet = { value: string; count: number };
 
+type HospitalHit = {
+  id: number;
+  name: string;
+  address: string;
+  city: string;
+  is_partner?: boolean;
+  highlight: Record<string, string[]>;
+};
+
+type ListedDoctor = {
+  id: number;
+  name: string;
+  specialization: string;
+  timings: string;
+  hospital_id: number;
+  hospital_name: string;
+  hospital_city: string;
+};
+
 type SearchResponse = {
   total: number;
   results: Hit[];
@@ -81,6 +100,8 @@ export default function DoctorsPage() {
   const [maxFee, setMaxFee] = useState("");
   const [data, setData] = useState<SearchResponse | null>(null);
   const [degraded, setDegraded] = useState(false);
+  const [hospitals, setHospitals] = useState<HospitalHit[]>([]);
+  const [listed, setListed] = useState<ListedDoctor[]>([]);
 
   useEffect(() => {
     const params = new URLSearchParams({ q });
@@ -102,14 +123,34 @@ export default function DoctorsPage() {
     return () => clearTimeout(t);
   }, [q, department, city, maxFee]);
 
+  // Hospitals (all listed ones, partners first) and doctors listed on hospital websites.
+  useEffect(() => {
+    if (!q.trim()) {
+      setHospitals([]);
+      setListed([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      api<{ results: HospitalHit[] }>(`/api/search/?type=hospitals&q=${encodeURIComponent(q)}${city ? `&city=${encodeURIComponent(city)}` : ""}`)
+        .then((r) => setHospitals(r.results))
+        .catch(() => setHospitals([]));
+      api<{ results: ListedDoctor[] }>(`/api/search/listed-doctors/?q=${encodeURIComponent(q)}`)
+        .then((r) => setListed(r.results))
+        .catch(() => setListed([]));
+    }, 200);
+    return () => clearTimeout(t);
+  }, [q, city]);
+
   return (
     <div>
-      <h1 className="text-2xl font-bold">Find a doctor</h1>
-      <p className="text-sm text-slate-600">Try “heart”, “skin doctor”, “kids” or even a typo like “cardiolgist”.</p>
+      <h1 className="text-2xl font-bold">Find hospitals or doctors</h1>
+      <p className="text-sm text-slate-600">
+        Search a hospital name, a doctor, or a specialty. Try “Apollo”, “heart”, “skin doctor”, “kids”, or even a typo like “cardiolgist”.
+      </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-4">
         <div className="sm:col-span-3">
-          <SearchBox value={q} onChange={setQ} placeholder="Search name, specialty, symptom area or hospital" />
+          <SearchBox value={q} onChange={setQ} placeholder="Hospital, doctor, specialty or symptom area" />
         </div>
         <select className="input" value={maxFee} onChange={(e) => setMaxFee(e.target.value)} aria-label="Maximum fee">
           {FEE_OPTIONS.map((o) => (
@@ -131,13 +172,32 @@ export default function DoctorsPage() {
         </p>
       )}
 
+      {hospitals.length > 0 && (
+        <section className="mt-6">
+          <h2 className="text-lg font-semibold">Hospitals</h2>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {hospitals.slice(0, 9).map((h) => (
+              <Link key={h.id} href={`/hospitals/${h.id}`} className="rounded-xl border border-slate-200 bg-white p-4 hover:border-teal-400">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold"><Highlight text={h.highlight.name} fallback={h.name} /></h3>
+                  {h.is_partner && <span className="shrink-0 rounded-full bg-teal-50 px-2 py-0.5 text-xs text-teal-700">Partner</span>}
+                </div>
+                <p className="text-sm text-slate-600">{[h.address, h.city].filter(Boolean).join(", ") || "Address not listed"}</p>
+                <p className="mt-1 text-xs text-slate-500">{h.is_partner ? "Instant booking on MediConnect" : "View info from its website →"}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <h2 className="mt-8 text-lg font-semibold">MediConnect doctors <span className="text-sm font-normal text-slate-500">· book instantly</span></h2>
       {data === null ? (
-        <p className="mt-6 text-slate-500">Loading…</p>
+        <p className="mt-2 text-slate-500">Loading…</p>
       ) : data.results.length === 0 ? (
-        <p className="mt-6 text-slate-500">No doctors match your search.</p>
+        <p className="mt-2 text-slate-500">No MediConnect doctors match your search.</p>
       ) : (
         <>
-          <p className="mt-4 text-sm text-slate-500">{data.total} doctor{data.total === 1 ? "" : "s"} found</p>
+          <p className="mt-1 text-sm text-slate-500">{data.total} doctor{data.total === 1 ? "" : "s"} found</p>
           <div className="mt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.results.map((d) => (
               <Link key={d.id} href={`/doctors/${d.id}`} className="rounded-xl border border-slate-200 bg-white p-5 hover:border-teal-400 hover:shadow-sm">
@@ -157,6 +217,27 @@ export default function DoctorsPage() {
             ))}
           </div>
         </>
+      )}
+
+      {listed.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold">Doctors listed on hospital websites</h2>
+          <p className="text-sm text-slate-500">Information from each hospital&apos;s own website. Book with the hospital, or send a request.</p>
+          <ul className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+            {listed.map((d) => (
+              <li key={d.id}>
+                <Link href={`/hospitals/${d.hospital_id}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-slate-50">
+                  <span>
+                    <span className="font-medium">{d.name}</span>
+                    {d.specialization && <span className="text-slate-600"> · {d.specialization}</span>}
+                    {d.timings && <span className="block text-xs text-slate-500">As listed: {d.timings}</span>}
+                  </span>
+                  <span className="text-sm text-teal-700">{d.hospital_name}{d.hospital_city ? `, ${d.hospital_city}` : ""} →</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );

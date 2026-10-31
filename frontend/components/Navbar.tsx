@@ -17,10 +17,10 @@ export default function Navbar() {
         </Link>
         <div className="flex items-center gap-4 text-sm">
           <Link href="/doctors" className="hover:text-teal-700">
-            Find doctors
+            Find hospitals or doctors
           </Link>
           <Link href="/hospitals" className="hidden hover:text-teal-700 sm:inline">
-            Hospitals near me
+            Map
           </Link>
           {user ? (
             <>

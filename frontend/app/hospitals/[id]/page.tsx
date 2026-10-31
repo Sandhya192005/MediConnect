@@ -43,6 +43,7 @@ export default function HospitalDetailPage() {
   const job = useScrapeJob(startedJob ?? hospital?.active_job ?? null, load);
 
   const [pastedUrl, setPastedUrl] = useState("");
+  const [docQuery, setDocQuery] = useState("");
 
   const refresh = useCallback(async (silent = false, url = "") => {
     setRefreshMsg("");
@@ -69,6 +70,13 @@ export default function HospitalDetailPage() {
   const partner = hospital.has_bookable_doctors;
   const info = hospital.scraped_info;
   const hasPin = hospital.latitude != null && hospital.longitude != null;
+
+  // "Search doctors at this hospital": matches name, specialty or qualification, in both lists.
+  const dq = docQuery.trim().toLowerCase();
+  const matchDoc = (...fields: (string | null | undefined)[]) => !dq || fields.some((f) => (f ?? "").toLowerCase().includes(dq));
+  const listedDoctors = hospital.scraped_doctors.filter((d) => matchDoc(d.name, d.specialization, d.qualification));
+  const mcDoctors = (doctors ?? []).filter((d) => matchDoc(d.name, d.specialization, d.department_name));
+  const totalDoctors = hospital.scraped_doctors.length + (doctors?.length ?? 0);
 
   return (
     <div className="space-y-6">
@@ -98,6 +106,24 @@ export default function HospitalDetailPage() {
 
         {/* Right: what their website says */}
         <section className="space-y-4 lg:col-span-3">
+          {totalDoctors > 0 && (
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <label className="block text-sm font-medium">
+                Search doctors at this hospital
+                <input
+                  className="input mt-1"
+                  value={docQuery}
+                  onChange={(e) => setDocQuery(e.target.value)}
+                  placeholder="Name or specialty, e.g. cardio, skin, Dr. Raman"
+                />
+              </label>
+              {dq && (
+                <p className="mt-2 text-xs text-slate-500">
+                  {mcDoctors.length + listedDoctors.length} of {totalDoctors} doctors match “{docQuery}”.
+                </p>
+              )}
+            </div>
+          )}
           <div className="rounded-xl border border-slate-200 bg-white p-5">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <h2 className="text-lg font-semibold">From the hospital&apos;s website</h2>
@@ -114,7 +140,13 @@ export default function HospitalDetailPage() {
                 Check details with the hospital before visiting.
               </p>
             ) : (
-              <p className="mt-1 text-sm text-slate-500">{hospital.website ? "Not collected yet." : "This hospital has no website saved yet."}</p>
+              <p className="mt-1 text-sm text-slate-500">
+                {hospital.website
+                  ? user
+                    ? "Not collected yet."
+                    : "Log in to load the latest information from this hospital's website."
+                  : "This hospital has no website saved yet."}
+              </p>
             )}
             {!hospital.website && user && (
               <form
@@ -150,9 +182,10 @@ export default function HospitalDetailPage() {
 
             {hospital.scraped_doctors.length > 0 && (
               <>
-                <h3 className="mt-5 text-sm font-semibold">Doctors listed on their website ({hospital.scraped_doctors.length})</h3>
+                <h3 className="mt-5 text-sm font-semibold">Doctors listed on their website ({listedDoctors.length}{dq ? ` of ${hospital.scraped_doctors.length}` : ""})</h3>
+                {listedDoctors.length === 0 && <p className="mt-2 text-sm text-slate-500">No listed doctor matches your search.</p>}
                 <ul className="mt-2 divide-y divide-slate-100 text-sm">
-                  {hospital.scraped_doctors.map((d) => (
+                  {listedDoctors.map((d) => (
                     <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                       <div>
                         <p className="font-medium">{d.name}</p>
@@ -174,8 +207,9 @@ export default function HospitalDetailPage() {
           {partner ? (
             <div className="rounded-xl border border-slate-200 bg-white p-5">
               <h2 className="mb-3 text-lg font-semibold">Book with a MediConnect doctor</h2>
+              {mcDoctors.length === 0 && <p className="text-sm text-slate-500">No MediConnect doctor matches your search.</p>}
               <div className="grid gap-3 sm:grid-cols-2">
-                {(doctors ?? []).map((d) => (
+                {mcDoctors.map((d) => (
                   <Link key={d.id} href={`/doctors/${d.id}`} className="rounded-lg border border-slate-200 p-3 hover:border-teal-400">
                     <p className="font-semibold">Dr. {d.name}</p>
                     <p className="text-sm text-teal-700">{d.specialization}</p>

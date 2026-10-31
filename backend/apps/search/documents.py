@@ -44,6 +44,11 @@ def hospital_doc(h: Hospital) -> dict:
         "departments": [d.name for d in h.departments.all()],
         "location": _point(h.location),
         "is_approved": h.is_approved,
+        # Partners: approved and with MediConnect doctors. "listed": shown in search at all
+        # (partners, plus hospitals from OpenStreetMap / their websites, for patients to check).
+        "is_partner": h.is_partner,
+        "listed": h.is_listed,
+        "source": h.source,
     }
 
 
@@ -79,6 +84,16 @@ def index_hospital(hospital_id: int) -> None:
         delete_doc("hospitals", hospital_id)
     else:
         es().index(index=index_name("hospitals"), id=h.id, document=hospital_doc(h))
+
+
+def index_hospitals_bulk(hospital_ids: list[int]) -> int:
+    _ensure_once()
+    n, _ = bulk(
+        es(),
+        ({"_index": index_name("hospitals"), "_id": h.id, "_source": hospital_doc(h)}
+         for h in HOSPITAL_QS.filter(id__in=hospital_ids)),
+    )
+    return n
 
 
 def delete_doc(kind: str, doc_id: int) -> None:

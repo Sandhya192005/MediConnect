@@ -42,6 +42,24 @@ class ScrapeJob(models.Model):
         return f"Scrape {self.id} [{self.status}] {self.hospital or self.query or self.url}"
 
 
+class OsmTile(models.Model):
+    """
+    A ~11 × 11 km square of the map (0.1° × 0.1°). We download all hospitals in a tile from
+    OpenStreetMap at most once per SCRAPER_FRESH_HOURS, so the map is fast and we stay polite.
+    """
+
+    key = models.CharField(max_length=30, unique=True)  # e.g. "130_802" = south-west corner 13.0, 80.2
+    south = models.FloatField()
+    west = models.FloatField()
+    status = models.CharField(max_length=10, default="new")  # new, pending, running, done, failed
+    hospitals_found = models.PositiveIntegerField(default=0)
+    synced_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Tile {self.key} [{self.status}]"
+
+
 class ScrapedDoctor(models.Model):
     """
     A doctor listed on a hospital's own website. Information only: it has no MediConnect

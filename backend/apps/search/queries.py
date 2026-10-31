@@ -71,17 +71,20 @@ def search_doctors(q="", department=None, city=None, min_fee=None, max_fee=None,
 
 
 def search_hospitals(q="", city=None, page=1, size=12):
-    filters = [{"term": {"is_approved": True}}]
+    filters = [{"term": {"listed": True}}]  # partners + hospitals from OpenStreetMap / websites
     if city:
         filters.append({"term": {"city.raw": city}})
     must = (
-        [{"multi_match": {"query": q, "fields": ["name^3", "departments^2", "city^2", "address", "state"], "fuzziness": "AUTO"}}]
+        # AUTO:3,5 = allow 2 typos from 5 letters ("applo" -> "apollo"); hospital names are often misspelt.
+        [{"multi_match": {"query": q, "fields": ["name^3", "departments^2", "city^2", "address", "state"], "fuzziness": "AUTO:3,5"}}]
         if q else [{"match_all": {}}]
     )
     res = es().search(
         index=index_name("hospitals"),
         query={"bool": {"must": must, "filter": filters}},
         highlight=HIGHLIGHT,
+        # Partners first when the match is equally good.
+        sort=["_score", {"is_partner": {"order": "desc", "unmapped_type": "boolean"}}],
         from_=(page - 1) * size,
         size=size,
     )
@@ -101,12 +104,12 @@ def suggest(q: str, size: int = 5):
                 "must": [{"multi_match": {"query": q, "type": "bool_prefix", "fields": fields}}],
                 "filter": [extra_filter],
             }},
-            source=["id", "name", "specialization", "city", "hospital_name"],
+            source=["id", "name", "specialization", "city", "hospital_name", "is_partner"],
             size=size,
         )
         return [h["_source"] for h in res["hits"]["hits"]]
 
     sayt = lambda f: [f, f"{f}._2gram", f"{f}._3gram"]  # noqa: E731
     doctors = run("doctors", sayt("name") + sayt("specialization.suggest"), {"term": {"is_bookable": True}})
-    hospitals = run("hospitals", sayt("name"), {"term": {"is_approved": True}})
+    hospitals = run("hospitals", sayt("name"), {"term": {"listed": True}})
     return {"doctors": doctors, "hospitals": hospitals[:3]}

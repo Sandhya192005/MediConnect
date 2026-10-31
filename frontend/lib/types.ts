@@ -17,7 +17,22 @@ export type Hospital = {
   is_approved: boolean;
 };
 
-export type NearbyHospital = Hospital & { distance_km: number | null; doctor_count: number };
+export type NearbyHospital = Hospital & {
+  distance_km: number | null;
+  doctor_count: number;
+  is_partner: boolean;
+  has_website: boolean;
+  scraped_at: string | null;
+};
+
+export type NearbyResponse = {
+  center: LatLng;
+  radius_km: number;
+  count: number;
+  loading_more: boolean;
+  results: NearbyHospital[];
+  place?: { name: string; display_name: string; lat: number; lng: number };
+};
 
 export type ScrapeJob = {
   id: number;

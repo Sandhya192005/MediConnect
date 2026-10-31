@@ -45,6 +45,13 @@ docker compose exec backend python manage.py createsuperuser   # admin login
 - `location_verified`: set by an admin (Django admin action) after checking the pin. Unverified pins show as "Approximate location". Moving a pin resets it.
 - Frontend `/hospitals` (map + list) and `/hospitals/<id>` (hospital page with its doctors). Map tiles from OpenStreetMap.
 
+### All hospitals on the map (OpenStreetMap directory)
+
+- The map and city search show **every hospital** in the area, not only partners. `GET /api/hospitals/nearby/` and `GET /api/hospitals/city/?name=Chennai` return `is_partner`, `has_website`, and `loading_more`.
+- The map is split into ~11 km tiles (`OsmTile`). A tile not refreshed in 24 h is downloaded in the background (Celery `sync_osm_tile_task`, Overpass API, no key), saved as `source=osm` hospitals, and indexed in one bulk Elasticsearch update. Existing hospitals (same name within 300 m) are linked by `osm_id`, never duplicated or overwritten.
+- Search (`/doctors`, "Find hospitals or doctors") returns hospitals (partners first), MediConnect doctors, and doctors listed on hospital websites (`GET /api/search/listed-doctors/?q=`).
+- Opening a hospital page (logged in) reads its website with Playwright if the saved copy is older than 24 h. The page has a doctor search box.
+
 ### Hospital lookup from its own website (Playwright)
 
 Flow: patient looks up a hospital → served from PostgreSQL if collected < 24 h ago → otherwise a background job: OpenStreetMap (address, pin, website) → URL safety + robots.txt → Playwright (Chromium) reads up to 6 useful pages on that site → OpenAI extracts doctors/departments/timings/contacts (rule-based fallback without a key) → saved with source URL + time → live notification.

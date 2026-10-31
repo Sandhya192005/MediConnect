@@ -178,7 +178,7 @@ def find_hospitals(ctx, city: str | None = None, radius_km: float = 10):
             "radius_km": radius,
             "hospitals": [
                 {"hospital_id": h.id, "name": h.name, "city": h.city, "distance_km": round(h.distance.km, 1),
-                 "doctors": h.doctor_count, "location_verified": h.location_verified}
+                 "mediconnect_partner_instant_booking": h.partner, "location_verified": h.location_verified}
                 for h in rows
             ],
         }

@@ -29,7 +29,7 @@ class LookupSerializer(serializers.Serializer):
 
 def _visible_hospitals():
     # Approved hospitals plus scraped ones (shown for checking, clearly labelled as not partners).
-    return Hospital.objects.filter(Q(is_approved=True) | Q(source=Hospital.Source.SCRAPED))
+    return Hospital.objects.filter(Q(is_approved=True) | Q(source__in=[Hospital.Source.SCRAPED, Hospital.Source.OSM]))
 
 
 def _summary(h):

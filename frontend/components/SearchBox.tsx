@@ -6,7 +6,7 @@ import { api } from "@/lib/api";
 
 type Suggestions = {
   doctors: { id: number; name: string; specialization: string; city: string }[];
-  hospitals: { id: number; name: string; city: string }[];
+  hospitals: { id: number; name: string; city: string; is_partner?: boolean }[];
 };
 
 /** Search input with autocomplete suggestions (Elasticsearch search_as_you_type). */
@@ -63,15 +63,9 @@ export default function SearchBox({ value, onChange, placeholder }: { value: str
           ))}
           {sugg.hospitals.map((h) => (
             <li key={`h${h.id}`}>
-              <button
-                onClick={() => {
-                  onChange(h.name);
-                  setOpen(false);
-                }}
-                className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
-              >
+              <button onClick={() => router.push(`/hospitals/${h.id}`)} className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50">
                 <span className="font-medium">🏥 {h.name}</span>
-                <span className="text-slate-500"> · {h.city}</span>
+                <span className="text-slate-500"> · {h.city || "hospital"}{h.is_partner ? " · partner" : ""}</span>
               </button>
             </li>
           ))}

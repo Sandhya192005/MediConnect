@@ -328,8 +328,9 @@ def test_scraped_hospital_viewable_but_not_in_partner_list(db):
     detail = APIClient().get(f"/api/scraper/hospitals/{h.id}/").data
     assert detail["scraped_doctors"][0]["name"] == "Dr. A B"
     assert detail["has_bookable_doctors"] is False
-    assert APIClient().get("/api/hospitals/").data == []  # not listed as a partner
-    assert APIClient().get("/api/hospitals/nearby/?lat=13.08&lng=80.27").data["count"] == 0
+    assert APIClient().get("/api/hospitals/").data == []  # not in the partner list
+    near = APIClient().get("/api/hospitals/nearby/?lat=13.08&lng=80.27").data["results"]
+    assert [(n["name"], n["is_partner"]) for n in near] == [("Scraped H", False)]  # on the map, as non-partner
 
 
 def test_job_status_only_for_owner_or_admin(patient, admin):

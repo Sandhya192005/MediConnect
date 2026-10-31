@@ -85,6 +85,9 @@ MAPPINGS = {
             "departments": {**_text, "fields": {"raw": _keyword}},
             "location": {"type": "geo_point"},
             "is_approved": {"type": "boolean"},
+            "is_partner": {"type": "boolean"},
+            "listed": {"type": "boolean"},
+            "source": _keyword,
         }
     },
 }

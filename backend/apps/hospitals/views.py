@@ -6,7 +6,13 @@ from rest_framework.response import Response
 from apps.accounts.permissions import ReadOnlyOrAdmin
 
 from .models import Department, Hospital
-from .serializers import DepartmentSerializer, HospitalSerializer, NearbyHospitalSerializer, NearbyQuerySerializer
+from .serializers import (
+    CitySearchSerializer,
+    DepartmentSerializer,
+    HospitalSerializer,
+    NearbyHospitalSerializer,
+    NearbyQuerySerializer,
+)
 from .services import nearby_hospitals
 
 
@@ -39,14 +45,40 @@ class HospitalViewSet(viewsets.ModelViewSet):
         params = NearbyQuerySerializer(data=request.query_params)
         params.is_valid(raise_exception=True)
         p = params.validated_data
-        qs = nearby_hospitals(p["lat"], p["lng"], p["radius_km"], p["limit"], p.get("department"))
+        return Response(self._nearby_response(p["lat"], p["lng"], p))
+
+    @action(detail=False, url_path="city")
+    def city(self, request):
+        """GET /api/hospitals/city/?name=Chennai — all hospitals around a city's centre, no patient location needed."""
+        from apps.scraper.geocode import find_place
+
+        params = CitySearchSerializer(data=request.query_params)
+        params.is_valid(raise_exception=True)
+        p = params.validated_data
+        try:
+            place = find_place(p["name"])
+        except Exception:
+            return Response({"detail": "Map search is busy. Please try again in a minute."}, status=503)
+        if not place:
+            return Response({"detail": f"We couldn't find a place called “{p['name']}”. Check the spelling."}, status=404)
+        data = self._nearby_response(place["lat"], place["lng"], p)
+        data["place"] = place
+        return Response(data)
+
+    def _nearby_response(self, lat, lng, p):
+        from apps.scraper.directory import ensure_tiles
+
+        # Start background downloads of any map squares we haven't refreshed in 24 h.
+        loading = ensure_tiles(lat, lng, p["radius_km"]) if not p.get("partners_only") else False
+        qs = nearby_hospitals(lat, lng, p["radius_km"], p["limit"], p.get("department"), p.get("partners_only", False))
         results = NearbyHospitalSerializer(qs, many=True).data
-        return Response({
-            "center": {"lat": p["lat"], "lng": p["lng"]},
+        return {
+            "center": {"lat": lat, "lng": lng},
             "radius_km": p["radius_km"],
             "count": len(results),
+            "loading_more": loading,  # True: more hospitals are being fetched from OpenStreetMap
             "results": results,
-        })
+        }
 
     @action(detail=False)
     def cities(self, request):

@@ -63,13 +63,18 @@ class HospitalSerializer(serializers.ModelSerializer):
 
 
 class NearbyHospitalSerializer(HospitalSerializer):
-    """Hospital + how far it is from the searched point."""
+    """Hospital + how far it is from the searched point + whether instant booking is possible."""
 
     distance_km = serializers.SerializerMethodField()
     doctor_count = serializers.IntegerField(read_only=True)
+    is_partner = serializers.BooleanField(source="partner", read_only=True)
+    has_website = serializers.SerializerMethodField()
 
     class Meta(HospitalSerializer.Meta):
-        fields = HospitalSerializer.Meta.fields + ["distance_km", "doctor_count"]
+        fields = HospitalSerializer.Meta.fields + ["distance_km", "doctor_count", "is_partner", "has_website", "scraped_at"]
+
+    def get_has_website(self, obj):
+        return bool(obj.website)
 
     def get_distance_km(self, obj):
         return round(obj.distance.km, 2) if getattr(obj, "distance", None) is not None else None
@@ -81,5 +86,13 @@ class NearbyQuerySerializer(serializers.Serializer):
     lat = serializers.FloatField(min_value=-90, max_value=90)
     lng = serializers.FloatField(min_value=-180, max_value=180)
     radius_km = serializers.FloatField(min_value=0.5, max_value=50, default=10)
-    limit = serializers.IntegerField(min_value=1, max_value=50, default=20)
+    limit = serializers.IntegerField(min_value=1, max_value=100, default=50)
     department = serializers.IntegerField(required=False)
+    partners_only = serializers.BooleanField(required=False, default=False)
+
+
+class CitySearchSerializer(serializers.Serializer):
+    name = serializers.CharField(min_length=2, max_length=80)
+    radius_km = serializers.FloatField(min_value=1, max_value=30, default=8)
+    limit = serializers.IntegerField(min_value=1, max_value=100, default=50)
+    partners_only = serializers.BooleanField(required=False, default=False)
