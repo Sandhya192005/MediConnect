@@ -9,7 +9,8 @@ export default function AdminDashboard() {
       cards={[
         { title: "Hospitals", text: "Add and approve hospitals.", href: "/admin/hospitals" },
         { title: "Doctors & appointments", text: "Full management in Django admin.", href: `${API_URL}/admin/` },
-        { title: "Scrape jobs", text: "Hospitals fetched from the web.", phase: "Phase 7.5" },
+        { title: "Appointment requests", text: "Confirm or decline requests to non-partner hospitals.", href: "/admin/requests" },
+        { title: "Scrape jobs", text: "Website lookups and their results (Django admin).", href: `${API_URL}/admin/scraper/scrapejob/` },
       ]}
     />
   );

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Our Doctors – Greenfield Demo Hospital</title></head>
+<body>
+  <h1>Our Doctors</h1>
+  <ul>
+    <li>Dr. Kavitha Raman – Cardiologist · MBBS, MD, DM · Mon–Sat 9:00 am – 1:00 pm</li>
+    <li>Dr. Suresh Babu – Orthopedic Surgeon · MBBS, MS (Ortho) · Mon, Wed, Fri 4:00 pm – 7:00 pm</li>
+    <li>Dr. Lakshmi Narayan – Pediatrician · MBBS, DCH · Mon–Fri 10:00 am – 2:00 pm</li>
+  </ul>
+  <h2>Visiting consultants</h2>
+  <!-- Filled in by JavaScript: plain HTML downloaders miss these, a real browser (Playwright) sees them. -->
+  <ul id="visiting"></ul>
+  <script>
+    const visiting = [
+      "Dr. Farhan Ali – Dermatologist · MBBS, MD (Derm) · Saturday 10:00 am – 1:00 pm",
+      "Dr. Meenakshi Iyer – Neurologist · MBBS, DM (Neuro) · Thursday 2:00 pm – 5:00 pm",
+    ];
+    document.getElementById("visiting").innerHTML = visiting.map((d) => `<li>${d}</li>`).join("");
+  </script>
+  <p><a href="/index.html">Home</a> · <a href="/contact.html">Contact</a></p>
+</body>
+</html>

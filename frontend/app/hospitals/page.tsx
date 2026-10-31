@@ -84,7 +84,12 @@ export default function HospitalsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold">Hospitals near you</h1>
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <h1 className="text-2xl font-bold">Hospitals near you</h1>
+        <Link href="/hospitals/lookup" className="text-sm text-teal-700 underline">
+          Can&apos;t find a hospital? Look it up from its website →
+        </Link>
+      </div>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         {tab("near", "📍 Near me")}
         {tab("city", "🏙️ Browse by city")}

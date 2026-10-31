@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.search",
     "apps.chatbot",
+    "apps.scraper",
 ]
 
 MIDDLEWARE = [
@@ -159,6 +160,21 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 CHAT_RATE_LIMIT = int(os.environ.get("CHAT_RATE_LIMIT", "20"))  # messages per user…
 CHAT_RATE_WINDOW_SECONDS = 600  # …per 10 minutes
+
+# --- Hospital scraper (Playwright) ---
+SCRAPER_USER_AGENT = "MediConnectBot/0.1 (student project; hospital info lookup)"
+SCRAPER_FRESH_HOURS = 24  # saved copy younger than this is served without re-scraping
+SCRAPER_MIN_REFRESH_MINUTES = 60  # "Refresh from website" allowed at most this often per hospital
+SCRAPER_MAX_PAGES = 6
+SCRAPER_PAGE_TIMEOUT_MS = 20_000
+SCRAPER_JOBS_PER_USER_PER_HOUR = int(os.environ.get("SCRAPER_JOBS_PER_USER_PER_HOUR", "10"))
+# Hosts on the private Docker network that may be scraped (only the mock hospital site).
+SCRAPER_ALLOWED_PRIVATE_HOSTS = env_list("SCRAPER_ALLOWED_PRIVATE_HOSTS", "")
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+CELERY_TASK_ROUTES = {
+    # Browser jobs go to their own queue, served by the scraper_worker container (Chromium installed).
+    "apps.scraper.tasks.scrape_job_task": {"queue": "scraper"},
+}
 
 # --- Elasticsearch ---
 ELASTICSEARCH_URL = os.environ.get("ELASTICSEARCH_URL", "http://localhost:9200")

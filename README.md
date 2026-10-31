@@ -45,6 +45,16 @@ docker compose exec backend python manage.py createsuperuser   # admin login
 - `location_verified`: set by an admin (Django admin action) after checking the pin. Unverified pins show as "Approximate location". Moving a pin resets it.
 - Frontend `/hospitals` (map + list) and `/hospitals/<id>` (hospital page with its doctors). Map tiles from OpenStreetMap.
 
+### Hospital lookup from its own website (Playwright)
+
+Flow: patient looks up a hospital → served from PostgreSQL if collected < 24 h ago → otherwise a background job: OpenStreetMap (address, pin, website) → URL safety + robots.txt → Playwright (Chromium) reads up to 6 useful pages on that site → OpenAI extracts doctors/departments/timings/contacts (rule-based fallback without a key) → saved with source URL + time → live notification.
+
+- `POST /api/scraper/lookup/` `{q}` or `{url}` → `{matches, job}`; `GET /api/scraper/jobs/<id>/`; `GET /api/scraper/hospitals/<id>/`; `POST /api/scraper/hospitals/<id>/refresh/` (at most hourly per hospital; 10 lookups/hour per user).
+- Scraped hospitals are `source=scraped`, `is_approved=False`: viewable for checking, not listed as partners. `ScrapedDoctor` rows are information only, never bookable slots.
+- Non-partner hospitals: the hospital's own booking link/phone, plus `POST /api/appointment-requests/` (always "Pending – not confirmed" until an admin confirms at `/admin/requests`).
+- Containers: `scraper_worker` (Celery `scraper` queue, Chromium, 1 browser at a time) and `mockhospital` (fictional demo site at http://localhost:8090, `http://mockhospital/` inside Docker).
+- Real-browser test: `docker compose exec -e SCRAPER_LIVE=1 scraper_worker pytest apps/scraper/tests.py::test_live_mock_site`
+
 ### AI assistant (OpenAI)
 
 - Set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`, default `gpt-4o-mini`) in `.env`, then `docker compose up -d --force-recreate backend`.
@@ -78,7 +88,7 @@ docker compose exec backend pytest
 - [x] Phase 5 — Elasticsearch search
 - [x] Phase 6 — Nearby hospitals map (PostGIS + Leaflet)
 - [x] Phase 7 — OpenAI chatbot (live OpenAI call not yet verified: needs a valid API key)
-- [ ] Phase 7.5 — On-demand hospital scraper (Playwright)
+- [x] Phase 7.5 — Hospital lookup from its own website (Playwright) + appointment requests
 - [ ] Phase 8 — Playwright end-to-end tests
 
 ## Main API endpoints

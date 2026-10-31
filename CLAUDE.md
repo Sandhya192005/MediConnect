@@ -13,9 +13,9 @@ Stack (all run in Docker Compose):
 
 ## Current state
 
-Phases 1–6 are done (see `README.md` → Progress). Remaining, in order: 7 OpenAI chatbot → 7.5 on-demand Playwright hospital scraper → 8 Playwright end-to-end tests. The full plan lives in `C:\Users\Sandhya\.claude\plans\hi-i-am-planing-prancy-bird.md`.
+Phases 1–7.5 are done (see `README.md` → Progress). Remaining: 8 Playwright end-to-end tests. The chatbot (7) and the scraper's AI extraction still need a live check with a valid OpenAI key (the current key is rejected; the scraper falls back to rule-based extraction). The full plan lives in `C:\Users\Sandhya\.claude\plans\hi-i-am-planing-prancy-bird.md`.
 
-Git branches: `main` (on GitHub, ends at Phase 3), then one branch per phase stacked on the previous one: `feature_notification` (4) → `feature_search` (5) → `feature_map` (6). Start each new phase on a new `feature_*` branch from the latest one. `CLAUDE.md` is not committed unless the owner asks.
+Git branches: `main` (on GitHub, ends at Phase 3), then one branch per phase stacked on the previous one: `feature_notification` (4) → `feature_search` (5) → `feature_map` (6) → `feature_chatbot` (7) → `feature_scraper` (7.5). Start each new phase on a new `feature_*` branch from the latest one. `CLAUDE.md` is not committed unless the owner asks.
 
 ## Commands (PowerShell, from the repo root)
 
@@ -48,6 +48,8 @@ URLs: app http://localhost:3000 · API http://localhost:8000/api/ · Django admi
 - `doctors`: `DoctorProfile` (auto-created for doctor users via signal) and `WeeklyAvailability`. `services.py` generates slots from weekly hours, with a Redis cache invalidated by a per-doctor version key.
 - `appointments`: `Appointment`. Booking locks the doctor row (`select_for_update`), rechecks the slot, and relies on a partial unique constraint (doctor, start, active statuses) to block double booking.
 - `notifications`: email (`emails.py` + templates), in-app `Notification` model, WebSocket consumer (`/ws/notifications/`, close code 4401 = bad token), and Celery tasks (send email, push in-app, reminders every 5 min, auto-complete hourly). Views call `services.notify_appointment()`, which queues tasks on commit.
+- `chatbot`: OpenAI chat loop (`service.py`) with tools (`tools.py`) that call our own code; `propose_booking` only returns a card, the user's Confirm calls the normal booking API.
+- `scraper`: `services.py` decides when to scrape (24 h freshness, one active job per hospital, per-user quota); `pipeline.py` runs a job (geocode → `safety.py` URL/robots checks → `browser.py` Playwright → `extract.py` OpenAI or rules → save `ScrapedDoctor` + hospital fields → notify). Runs on the `scraper` Celery queue in `scraper_worker` (image built with `WITH_BROWSER=1`). Test target: `mockhospital` container. `appointments/requests_api.py` holds `AppointmentRequest` for non-partner hospitals.
 - `search`: Elasticsearch indexes (`indexes.py`: synonyms, `search_as_you_type`), documents/sync (signals → Celery tasks), queries, `/api/search/` + `/api/search/suggest/`. Returns 503 when ES is down, and the frontend falls back to `/api/doctors/?q=`.
 
 Redis databases: 0 Celery broker, 1 results, 2 cache, 3 Channels. Tests (`backend/conftest.py`) run Celery eagerly, with in-memory email/cache/channel layer and `test_mediconnect_*` ES indexes. Use `django_capture_on_commit_callbacks(execute=True)` to trigger on-commit tasks.
@@ -75,7 +77,9 @@ Frontend: `frontend/lib/api.ts` (fetch wrapper with JWT refresh), `lib/auth.tsx`
 - Start with a mock hospital adapter. Before writing any real hospital adapter, check that collection is permitted (terms of service, robots.txt). If data isn't accessible, record the limitation instead of inventing data.
 - Never bypass CAPTCHAs, logins or anti-bot measures; never touch patient data; never automate real bookings. Block private/internal IPs for user-supplied URLs (SSRF).
 - Normalize/validate output, deduplicate, and handle timeouts and site changes.
-- Celery scrape tasks: idempotent, bounded retries, timeouts, rate limits, no overlapping runs for the same hospital, and re-scrape only past a staleness threshold. Never one browser task per patient search.
+- Celery scrape tasks: idempotent, bounded retries, timeouts, rate limits, no overlapping runs for the same hospital.
+- Owner decision: a patient's hospital search **may trigger** a background scrape, but only when the saved copy is older than 24 h (or the patient presses a rate-limited "Refresh from website"). Fresh copies are served from the database. Never block the search request on the browser, and never start a duplicate job for a hospital already being scraped.
+- Owner decision: for scraped-only (non-partner) hospitals, the patient gets the hospital's own booking link/phone plus an **Appointment request** in MediConnect, always shown as "Pending – not confirmed" until an admin/hospital confirms. It is a separate model from `Appointment` and never counts as a reserved slot.
 - Automated tests mock websites and browsers; live checks only against approved sources.
 
 ## Open items (agree with the owner before relying on them)

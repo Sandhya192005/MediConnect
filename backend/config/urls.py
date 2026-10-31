@@ -3,6 +3,7 @@ from django.http import JsonResponse
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from apps.appointments.requests_api import AppointmentRequestViewSet
 from apps.appointments.views import AppointmentViewSet
 from apps.hospitals.views import DepartmentViewSet, HospitalViewSet
 
@@ -15,6 +16,7 @@ router = DefaultRouter()
 router.register("hospitals", HospitalViewSet, basename="hospital")
 router.register("departments", DepartmentViewSet, basename="department")
 router.register("appointments", AppointmentViewSet, basename="appointment")
+router.register("appointment-requests", AppointmentRequestViewSet, basename="appointment-request")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -24,5 +26,6 @@ urlpatterns = [
     path("api/notifications/", include("apps.notifications.urls")),
     path("api/search/", include("apps.search.urls")),
     path("api/chat/", include("apps.chatbot.urls")),
+    path("api/scraper/", include("apps.scraper.urls")),
     path("api/", include(router.urls)),
 ]

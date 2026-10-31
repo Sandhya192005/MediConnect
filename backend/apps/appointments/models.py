@@ -45,3 +45,37 @@ class Appointment(models.Model):
 
     def __str__(self):
         return f"{self.patient} with {self.doctor} at {self.start:%Y-%m-%d %H:%M}"
+
+
+class AppointmentRequest(models.Model):
+    """
+    A patient's request to visit a hospital that is NOT a MediConnect partner (scraped only).
+    This is not an appointment: it never reserves a slot, and it is shown as
+    "Pending – not confirmed" until an admin (later: the hospital) confirms it.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending – not confirmed"
+        CONFIRMED = "confirmed", "Confirmed by hospital"
+        DECLINED = "declined", "Declined"
+        CANCELLED = "cancelled", "Cancelled by patient"
+
+    patient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="appointment_requests")
+    hospital = models.ForeignKey("hospitals.Hospital", on_delete=models.CASCADE, related_name="appointment_requests")
+    scraped_doctor = models.ForeignKey(
+        "scraper.ScrapedDoctor", on_delete=models.SET_NULL, null=True, blank=True, related_name="requests"
+    )
+    preferred_date = models.DateField()
+    preferred_time = models.CharField(max_length=30, blank=True, help_text="e.g. 'Morning' or '10:30 AM'")
+    reason = models.CharField(max_length=300, blank=True)
+    phone = models.CharField(max_length=20, blank=True, help_text="So the hospital can call back")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    admin_note = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Request {self.id}: {self.patient} → {self.hospital} ({self.status})"

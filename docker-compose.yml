@@ -71,6 +71,30 @@ services:
       redis:
         condition: service_healthy
 
+  # Runs hospital-website scrape jobs (Playwright + Chromium). One browser at a time.
+  scraper_worker:
+    build:
+      context: ./backend
+      args:
+        WITH_BROWSER: "1"
+    command: watchfiles --filter python "celery -A config worker -Q scraper -c 1 -l info -n scraper@%h" /app/apps /app/config
+    env_file: .env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # A fake hospital website, so the scraper can be tested without touching real hospitals.
+  mockhospital:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./backend/scraper_mock/site:/usr/share/nginx/html:ro
+    ports:
+      - "8090:80"
+
   # Scheduler: adds periodic tasks (reminders, auto-complete) to the queue.
   celery_beat:
     build: ./backend
