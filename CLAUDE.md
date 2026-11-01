@@ -13,9 +13,14 @@ Stack (all run in Docker Compose):
 
 ## Current state
 
-Phases 1–7.5 are done (see `README.md` → Progress). Remaining: 8 Playwright end-to-end tests. The chatbot (7) and the scraper's AI extraction still need a live check with a valid OpenAI key (the current key is rejected; the scraper falls back to rule-based extraction). The full plan lives in `C:\Users\Sandhya\.claude\plans\hi-i-am-planing-prancy-bird.md`.
+All planned phases (1–8) are done (see `README.md` → Progress). Last results: 111 backend tests pass (1 opt-in live browser test skipped), 9 Playwright end-to-end tests pass. Still unverified: the chatbot (7) and the scraper's AI extraction with a live OpenAI key (the current key is rejected; the scraper falls back to rule-based extraction). The full plan lives in `C:\Users\Sandhya\.claude\plans\hi-i-am-planing-prancy-bird.md`.
 
-Git branches: `main` (on GitHub, ends at Phase 3), then one branch per phase stacked on the previous one: `feature_notification` (4) → `feature_search` (5) → `feature_map` (6) → `feature_chatbot` (7) → `feature_scraper` (7.5) → `feature_hospital_directory` (all hospitals from OpenStreetMap). Start each new phase on a new `feature_*` branch from the latest one. `CLAUDE.md` is not committed unless the owner asks.
+Git branches (each stacked on the previous one, so later branches contain all earlier phases):
+- `main` (GitHub): Phases 1–3 only. Merging the feature branches into `main` is still open.
+- `feature_notification` (4) → `feature_search` (5) → `feature_map` (6) → `feature_chatbot` (7) → `feature_scraper` (7.5, plus the all-hospitals directory and the Wikidata website finder, which the owner chose to push here).
+- Phase 8: local branch `feature_e2e`, pushed by the owner's choice to GitHub as **`automate_test`**: the most complete branch (Phases 1–8). Push with `git push origin feature_e2e:automate_test`.
+- Local-only leftover: `feature_hospital_directory` (same commit as `feature_scraper`).
+- Start new work on a new `feature_*` branch from `feature_e2e`, and ask the owner which remote branch to push it to. `CLAUDE.md` is not committed unless the owner asks.
 
 ## Commands (PowerShell, from the repo root)
 
@@ -31,13 +36,20 @@ docker compose exec backend pytest                             # all backend tes
 docker compose exec backend pytest apps/hospitals/tests.py::test_radius_and_limit   # one test
 docker compose exec frontend sh -c "npx tsc --noEmit && npx next lint"
 docker compose logs -f celery_worker
+docker compose exec backend python manage.py e2e_setup          # reset e2e test data (DEBUG only; the e2e run calls it itself)
+cd e2e; npx playwright test                                    # end-to-end tests (needs the backend up; starts the frontend if needed)
+cd e2e; npx playwright test tests/booking.spec.ts              # one e2e file
+cd e2e; npx playwright test --headed                           # watch the browser
+cd e2e; npx playwright show-report                             # report with screenshot/video/trace of failures
 ```
+
+- Owner's daily start: `docker compose up -d db redis elasticsearch mailpit mockhospital backend celery_worker celery_beat scraper_worker`, then `cd frontend; npm run dev`. The owner runs the frontend manually: don't start or stop it for them unless asked.
 
 - New Python packages: add to `backend/requirements.txt` (pinned), then rebuild `backend`, `celery_worker` and `celery_beat` images.
 - New npm packages: `docker compose exec frontend npm install <pkg>@<version>` (container has its own `node_modules`), then `npm install` on Windows too so VS Code sees the types. Run npm/npx from PowerShell, not Git Bash.
 - In Git Bash, docker builds need `export PATH="/c/Users/Sandhya/AppData/Local/Programs/DockerDesktop/resources/bin:$PATH"` (credential helper).
 
-URLs: app http://localhost:3000 · API http://localhost:8000/api/ · Django admin http://localhost:8000/admin/ · Mailpit http://localhost:8025 · Elasticsearch http://localhost:9200 · Postgres from Windows `localhost:5433` (db/user/password `mediconnect`; 5432 is the owner's local PostgreSQL 17). Seed logins: doctors `<first>.<last>@mediconnect.dev` / `Doctor@123`.
+URLs: app http://localhost:3000 · mock hospital site http://localhost:8090 (`http://mockhospital/` inside Docker) · API http://localhost:8000/api/ · Django admin http://localhost:8000/admin/ · Mailpit http://localhost:8025 · Elasticsearch http://localhost:9200 · Postgres from Windows `localhost:5433` (db/user/password `mediconnect`; 5432 is the owner's local PostgreSQL 17). Seed logins: doctors `<first>.<last>@mediconnect.dev` / `Doctor@123`. E2E logins (reset by `e2e_setup`): `e2e.patient@mediconnect.dev`, `e2e.doctor@mediconnect.dev` / `E2e@12345`.
 
 ## Architecture
 
@@ -50,12 +62,27 @@ URLs: app http://localhost:3000 · API http://localhost:8000/api/ · Django admi
 - `notifications`: email (`emails.py` + templates), in-app `Notification` model, WebSocket consumer (`/ws/notifications/`, close code 4401 = bad token), and Celery tasks (send email, push in-app, reminders every 5 min, auto-complete hourly). Views call `services.notify_appointment()`, which queues tasks on commit.
 - `chatbot`: OpenAI chat loop (`service.py`) with tools (`tools.py`) that call our own code; `propose_booking` only returns a card, the user's Confirm calls the normal booking API.
 - `scraper`: `services.py` decides when to scrape (24 h freshness, one active job per hospital, per-user quota); `pipeline.py` runs a job (geocode → `safety.py` URL/robots checks → `browser.py` Playwright → `extract.py` OpenAI or rules → save `ScrapedDoctor` + hospital fields → notify). Runs on the `scraper` Celery queue in `scraper_worker` (image built with `WITH_BROWSER=1`). Test target: `mockhospital` container. `appointments/requests_api.py` holds `AppointmentRequest` for non-partner hospitals; `appointments/external_api.py` holds `ExternalAppointment` (patient-added bookings made directly with a hospital: reminders only, never a reserved slot).
-- Hospital directory: `scraper/directory.py` + `overpass.py` import every hospital per ~11 km `OsmTile` (24 h freshness, conditional-update lock, failed tiles wait 10 min) as `source=osm`, `is_approved=False`. "Listed" = approved or osm/scraped; "partner" = approved + a doctor with working hours (`Hospital.is_partner`, `hospitals/services.listed_hospitals()` annotation). Never overwrite partner fields from OSM.
+- Hospital directory: `scraper/directory.py` + `overpass.py` import every hospital per ~11 km `OsmTile` (24 h freshness, conditional-update lock, failed tiles wait 10 min) as `source=osm`, `is_approved=False`. "Listed" = approved or osm/scraped; "partner" = approved + a doctor with working hours (`Hospital.is_partner`, `hospitals/services.listed_hospitals()` annotation). Never overwrite partner fields from OSM (only `source=osm` hospitals take name, pin and address updates from OSM).
+- Missing websites: `scraper/wikidata.py` (free API; Wikimedia needs the contact link in `SCRAPER_USER_AGENT`).
+  - The map import reads the OSM tags `wikidata`, `operator:wikidata` and `brand:wikidata` (`directory.fill_websites_from_wikidata`).
+  - Opening a hospital without a website queues a job that searches Wikidata by name (`pipeline.find_missing_website`). A name match counts only within 15 km, or for a hospital group from `DIRECTORY_COUNTRY_QID` (India).
+  - `Hospital.website_source` (osm / wikidata / patient; empty = added by an admin) is shown to patients.
+  - `website_checked_at` limits searches to once per 30 days. Wikidata errors are never cached or recorded as "not found".
 - `search`: Elasticsearch indexes (`indexes.py`: synonyms, `search_as_you_type`), documents/sync (signals → Celery tasks), queries, `/api/search/` + `/api/search/suggest/`. Returns 503 when ES is down, and the frontend falls back to `/api/doctors/?q=`.
 
-Redis databases: 0 Celery broker, 1 results, 2 cache, 3 Channels. Tests (`backend/conftest.py`) run Celery eagerly, with in-memory email/cache/channel layer and `test_mediconnect_*` ES indexes. Use `django_capture_on_commit_callbacks(execute=True)` to trigger on-commit tasks.
+Redis databases: 0 Celery broker, 1 results, 2 cache, 3 Channels. Tests (`backend/conftest.py`) run Celery eagerly, with in-memory email/cache/channel layer and `test_mediconnect_*` ES indexes. Use `django_capture_on_commit_callbacks(execute=True)` to trigger on-commit tasks. The autouse `fake_wikidata` fixture blocks real Wikidata calls: set `.search` / `.entities` on it to script answers.
 
-Frontend: `frontend/lib/api.ts` (fetch wrapper with JWT refresh), `lib/auth.tsx`, `lib/notifications.tsx` (WebSocket + reconnect), `components/RoleGuard.tsx` guards role pages (`/patient`, `/doctor`, `/admin`). Leaflet components must be loaded with `next/dynamic(..., { ssr: false })`.
+Frontend: `frontend/lib/api.ts` (fetch wrapper with JWT refresh), `lib/auth.tsx`, `lib/notifications.tsx` (WebSocket + reconnect), `components/RoleGuard.tsx` guards role pages (`/patient`, `/doctor`, `/admin`). Leaflet components must be loaded with `next/dynamic(..., { ssr: false })`. Map pins are `CircleMarker`s (SVG `path.leaflet-interactive`), not image markers.
+
+End-to-end tests (`e2e/`): Node `@playwright/test` 1.49.1, separate from the Python Playwright in the scraper.
+- `global-setup.ts` runs `manage.py e2e_setup` (in `doctors/management/commands/`). It resets only:
+  - the `e2e.*` users;
+  - "E2E Partner Hospital": its doctor works daily 06:00–22:00, and the calendar is wiped each run;
+  - "E2E Mock Website Hospital", whose website is `http://mockhospital/`.
+- The ids are written to `e2e/.e2e-data.json` (gitignored); read them with `e2e()` from `tests/helpers.ts`.
+- Tests run one at a time (`workers: 1`), because they share one database.
+- The chatbot reply is faked with `page.route`. No test may call a real hospital website or OpenAI.
+- `window.confirm` dialogs (e.g. Cancel) must be accepted with `page.once("dialog", …)`.
 
 ## Working rules from the project owner
 
@@ -87,3 +114,5 @@ Frontend: `frontend/lib/api.ts` (fetch wrapper with JWT refresh), `lib/auth.tsx`
 
 - The owner's original brief listed four roles (patient, doctor, **hospital admin**, platform admin). Only three exist today; a hospital-admin role is not built.
 - OpenAPI docs and a Postman collection are not built yet.
+- Real hospital websites: no site's terms of use have been checked (the owner was asked about Apollo and hasn't answered). The app reads real sites when patients open hospital pages. One unapproved live read of apollohospitals.com happened during a check on 2026-11-01 (1 page, allowed by robots.txt). No further live checks on real sites without the owner's OK.
+- Website coverage: only about 1 in 8 OSM hospitals lists a website. Wikidata adds some (14 in central Chennai from map tags, about 3% by name search); the rest still need a pasted website.
