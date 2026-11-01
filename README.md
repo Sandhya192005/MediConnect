@@ -88,6 +88,32 @@ Seeded doctor logins: `anita.rao@mediconnect.dev` (and others from `apps/doctors
 docker compose exec backend pytest
 ```
 
+### End-to-end tests (Playwright)
+
+A real Chromium drives the real app: the Next.js frontend plus the Docker backend. Run from PowerShell:
+
+```powershell
+cd e2e
+npm install                      # first time only
+npx playwright install chromium  # first time only (~90 MB browser)
+npx playwright test              # starts the frontend itself if it isn't already running on :3000
+npx playwright test --headed     # watch the browser
+npx playwright show-report       # HTML report; failed tests keep a screenshot, video and trace
+```
+
+Before each run, `global-setup.ts` calls `manage.py e2e_setup`. It resets its own `e2e.*` accounts (password `E2e@12345`), an "E2E Partner Hospital" with a doctor who works every day, and an "E2E Mock Website Hospital" whose website is the mock site. It never touches other data, and refuses to run unless `DJANGO_DEBUG=1`.
+
+| Test | What it proves |
+|---|---|
+| `auth.spec.ts` | sign up, log out, wrong password, role-protected pages |
+| `booking.spec.ts` | two browsers: the patient books, the doctor's bell updates live (WebSocket), the slot shows as taken, the patient cancels |
+| `search.spec.ts` | typo-tolerant search (Elasticsearch), hospitals in results, autocomplete |
+| `map.spec.ts` | fake GPS in Chennai, Leaflet map with tiles and pins, partners-only filter, open a hospital |
+| `hospital-website.spec.ts` | opening a hospital → Celery → Playwright in `scraper_worker` reads the mock site → doctors appear → search inside them |
+| `chatbot.spec.ts` | the assistant's reply is faked in the browser (no OpenAI call); its booking card books through the real API |
+
+Real hospital websites and OpenAI are never called by these tests.
+
 ## Progress
 
 - [x] Phase 1 — Docker, JWT auth, roles (patient / doctor / admin)
@@ -98,7 +124,7 @@ docker compose exec backend pytest
 - [x] Phase 6 — Nearby hospitals map (PostGIS + Leaflet)
 - [x] Phase 7 — OpenAI chatbot (live OpenAI call not yet verified: needs a valid API key)
 - [x] Phase 7.5 — Hospital lookup from its own website (Playwright) + appointment requests
-- [ ] Phase 8 — Playwright end-to-end tests
+- [x] Phase 8 — Playwright end-to-end tests (`e2e/`)
 
 ## Main API endpoints
 
