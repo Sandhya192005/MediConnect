@@ -99,14 +99,16 @@ def refresh(request, hospital_id):
     hospital = get_object_or_404(_visible_hospitals(), pk=hospital_id)
     url = ""
     if not hospital.website:
-        # Found on the map without a website: the patient may paste it (saved after a successful read).
+        # The patient may paste it (saved after a successful read); without one, we search Wikidata for it.
         url = str(request.data.get("url", "")).strip()[:500]
-        if not url:
-            return Response({"detail": "This hospital has no website saved. Paste its website address to read it."}, status=400)
-        try:
-            url = check_public_url(url)
-        except UnsafeURL as e:
-            return Response({"url": [str(e)]}, status=400)
+        if url:
+            try:
+                url = check_public_url(url)
+            except UnsafeURL as e:
+                return Response({"url": [str(e)]}, status=400)
+        elif not services.can_search_website(hospital):
+            return Response({"detail": "We already searched for this hospital's website and couldn't find it. "
+                                       "Paste its website address to read it."}, status=400)
     if not services.can_force_refresh(hospital):
         return Response({"detail": "This hospital was refreshed recently. Please try again later."}, status=429)
     try:

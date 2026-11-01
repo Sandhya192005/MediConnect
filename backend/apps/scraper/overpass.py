@@ -33,6 +33,8 @@ def hospitals_in_box(south: float, west: float, north: float, east: float) -> li
             continue  # unnamed buildings aren't useful to patients
         seen.add(osm_id)
         street = " ".join(filter(None, [tags.get("addr:housenumber"), tags.get("addr:street")]))
+        # Many Indian entries only have addr:full ("New No.310, Mint Street, Sowcarpet").
+        address = tags.get("addr:full") or ", ".join(filter(None, [street, tags.get("addr:suburb")]))
         out.append({
             "osm_id": osm_id,
             "name": name[:200],
@@ -40,8 +42,10 @@ def hospitals_in_box(south: float, west: float, north: float, east: float) -> li
             "lng": float(lng),
             "website": _website(tags),
             "phone": (tags.get("phone") or tags.get("contact:phone") or "").split(";")[0].strip()[:30],
-            "address": ", ".join(filter(None, [street, tags.get("addr:suburb"), tags.get("addr:postcode")]))[:300],
+            "address": ", ".join(filter(None, [address, tags.get("addr:postcode")]))[:300],
             "city": (tags.get("addr:city") or tags.get("addr:town") or tags.get("addr:district") or "")[:100],
             "state": (tags.get("addr:state") or "")[:100],
+            # The hospital's own Wikidata item first; its group's (operator/brand) as a fallback for the website.
+            "wikidata_ids": [q for q in (tags.get("wikidata"), tags.get("operator:wikidata"), tags.get("brand:wikidata")) if q],
         })
     return out

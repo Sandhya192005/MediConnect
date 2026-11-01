@@ -59,6 +59,8 @@ class HospitalSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         self._apply_location(validated_data)
+        if validated_data.get("website", instance.website) != instance.website:
+            validated_data["website_source"] = ""  # set by an admin now, not found by us
         return super().update(instance, validated_data)
 
 

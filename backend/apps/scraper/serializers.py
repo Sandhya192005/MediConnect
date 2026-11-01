@@ -3,7 +3,7 @@ from rest_framework import serializers
 from apps.hospitals.serializers import HospitalSerializer
 
 from .models import ScrapedDoctor, ScrapeJob
-from .services import is_fresh
+from .services import can_search_website, is_fresh
 
 
 class ScrapeJobSerializer(serializers.ModelSerializer):
@@ -28,12 +28,16 @@ class HospitalWithScrapeSerializer(HospitalSerializer):
     is_fresh = serializers.SerializerMethodField()
     has_bookable_doctors = serializers.SerializerMethodField()
     active_job = serializers.SerializerMethodField()
+    can_search_website = serializers.SerializerMethodField()
 
     class Meta(HospitalSerializer.Meta):
         fields = HospitalSerializer.Meta.fields + [
             "source_url", "scraped_at", "booking_url", "scraped_info", "scraped_doctors",
-            "is_fresh", "has_bookable_doctors", "active_job",
+            "is_fresh", "has_bookable_doctors", "active_job", "website_source", "can_search_website",
         ]
+
+    def get_can_search_website(self, obj):
+        return can_search_website(obj)
 
     def get_is_fresh(self, obj):
         return is_fresh(obj)

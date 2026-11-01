@@ -22,3 +22,45 @@ def _test_settings(settings):
     channel_layers.backends.clear()  # fresh in-memory layer per test (each test has its own event loop)
     yield
     channel_layers.backends.clear()
+
+
+class FakeWikidata:
+    """Stands in for httpx.Client in apps.scraper.wikidata. Default: Wikidata knows nothing."""
+
+    def __init__(self, search=None, entities=None):
+        self.search, self.entities, self.calls = search or [], entities or {}, []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def get(self, url, params=None):
+        self.calls.append(params)
+        if params["action"] == "wbsearchentities":
+            body = {"search": self.search}
+        else:
+            body = {"entities": {i: self.entities[i] for i in params["ids"].split("|") if i in self.entities}}
+        return _FakeResponse(body)
+
+
+class _FakeResponse:
+    def __init__(self, body):
+        self.body = body
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self.body
+
+
+@pytest.fixture(autouse=True)
+def fake_wikidata(monkeypatch):
+    """Tests never call the real Wikidata. Set .search / .entities on the returned fake to script answers."""
+    from apps.scraper import wikidata
+
+    fake = FakeWikidata()
+    monkeypatch.setattr(wikidata, "_client", lambda: fake)
+    return fake

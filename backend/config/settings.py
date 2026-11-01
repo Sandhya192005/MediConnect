@@ -163,7 +163,11 @@ CHAT_RATE_LIMIT = int(os.environ.get("CHAT_RATE_LIMIT", "20"))  # messages per u
 CHAT_RATE_WINDOW_SECONDS = 600  # …per 10 minutes
 
 # --- Hospital scraper (Playwright) ---
-SCRAPER_USER_AGENT = "MediConnectBot/0.1 (student project; hospital info lookup)"
+# Honest name + contact link: OpenStreetMap and Wikimedia APIs ask every client for one (Wikidata refuses without it).
+SCRAPER_USER_AGENT = "MediConnectBot/0.1 (student project; hospital info lookup; https://github.com/Sandhya192005/MediConnect)"
+# Searching hospital websites by name on Wikidata: hospital groups without one location must be from this country.
+DIRECTORY_COUNTRY_QID = os.environ.get("DIRECTORY_COUNTRY_QID", "Q668")  # Q668 = India
+WEBSITE_RECHECK_DAYS = 30  # search again for a missing website at most this often
 SCRAPER_FRESH_HOURS = 24  # saved copy younger than this is served without re-scraping
 SCRAPER_MIN_REFRESH_MINUTES = 60  # "Refresh from website" allowed at most this often per hospital
 SCRAPER_MAX_PAGES = 6

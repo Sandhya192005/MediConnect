@@ -70,6 +70,14 @@ def needs_scrape(hospital) -> bool:
     return bool(hospital.website) and not is_fresh(hospital)
 
 
+def can_search_website(hospital) -> bool:
+    """No website saved: we may look for one on Wikidata, but only once per WEBSITE_RECHECK_DAYS."""
+    if hospital.website:
+        return False
+    checked = hospital.website_checked_at
+    return not checked or timezone.now() - checked >= timedelta(days=settings.WEBSITE_RECHECK_DAYS)
+
+
 def can_force_refresh(hospital) -> bool:
     if not hospital.scraped_at:
         return True

@@ -11,7 +11,7 @@ class DepartmentAdmin(admin.ModelAdmin):
 @admin.register(Hospital)
 class HospitalAdmin(admin.GISModelAdmin):
     list_display = ["name", "city", "country", "source", "is_approved", "location_verified"]
-    list_filter = ["is_approved", "location_verified", "source", "city"]
+    list_filter = ["is_approved", "location_verified", "source", "website_source", "city"]
     search_fields = ["name", "city", "address"]
     filter_horizontal = ["departments"]
     actions = ["approve", "mark_location_verified"]

@@ -7,6 +7,7 @@ The hospital directory: every hospital on the map, not only MediConnect partners
   → the map shows what we already have right away and fills in as tiles finish.
 """
 
+import logging
 import math
 from datetime import timedelta
 
@@ -18,8 +19,10 @@ from django.utils import timezone
 
 from apps.hospitals.models import Hospital
 
-from . import overpass
+from . import overpass, wikidata
 from .models import OsmTile
+
+log = logging.getLogger(__name__)
 
 TILE = 0.1  # degrees (~11 km)
 MAX_TILE_RADIUS_KM = 10  # tiles are loaded around the patient up to this distance
@@ -96,11 +99,31 @@ def sync_tile(key: str) -> int:
     except Exception:
         _set(tile.pk, status="failed")
         raise
+    fill_websites_from_wikidata(items)
     with indexing_suspended():  # one bulk search update below instead of hundreds of small ones
         ids = upsert_hospitals(items)
     _set(tile.pk, status="done", synced_at=timezone.now(), hospitals_found=len(items))
     transaction.on_commit(lambda: index_hospitals_bulk_task.delay(ids))
     return len(items)
+
+
+def fill_websites_from_wikidata(items: list[dict]) -> None:
+    """Most map entries have no website, but some link to Wikidata, which often has it. One API call per 50."""
+    for item in items:
+        item.setdefault("website_source", "osm" if item.get("website") else "")
+    wanted = [q for i in items if not i["website"] for q in i.get("wikidata_ids", [])]
+    try:
+        sites = wikidata.websites_for_ids(wanted)
+    except Exception:  # Wikidata down: the hospitals still get saved, just without these websites
+        log.warning("Wikidata website lookup failed", exc_info=True)
+        return
+    for item in items:
+        if item["website"]:
+            continue
+        for qid in item.get("wikidata_ids", []):  # own item first, then the group's
+            if qid in sites:
+                item["website"], item["website_source"] = sites[qid], "wikidata"
+                break
 
 
 def upsert_hospitals(items: list[dict]) -> list[int]:
@@ -125,10 +148,16 @@ def upsert_hospitals(items: list[dict]) -> list[int]:
             )
         if h.source == Hospital.Source.OSM:
             h.name, h.location = item["name"], point  # OSM is the source for these, keep them current
+            h.address = item["address"] or h.address
         # Only fill empty fields: never overwrite what an admin or the website scrape saved.
-        for field in ("website", "phone", "address", "city", "state"):
+        for field in ("phone", "address", "city", "state"):
             if item[field] and not getattr(h, field):
                 setattr(h, field, item[field])
+        if item["website"] and not h.website:
+            h.website, h.website_source = item["website"], item.get("website_source") or "osm"
+        qids = item.get("wikidata_ids") or []
+        if qids and not h.wikidata_id:
+            h.wikidata_id = qids[0][:20]
         if h.location is None:
             h.location, h.location_verified = point, False
         try:

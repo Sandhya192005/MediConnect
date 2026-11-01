@@ -51,6 +51,7 @@ docker compose exec backend python manage.py createsuperuser   # admin login
 - The map is split into ~11 km tiles (`OsmTile`). A tile not refreshed in 24 h is downloaded in the background (Celery `sync_osm_tile_task`, Overpass API, no key), saved as `source=osm` hospitals, and indexed in one bulk Elasticsearch update. Existing hospitals (same name within 300 m) are linked by `osm_id`, never duplicated or overwritten.
 - Search (`/doctors`, "Find hospitals or doctors") returns hospitals (partners first), MediConnect doctors, and doctors listed on hospital websites (`GET /api/search/listed-doctors/?q=`).
 - Opening a hospital page (logged in) reads its website with Playwright if the saved copy is older than 24 h. The page has a doctor search box.
+- Most OpenStreetMap entries have no website, so MediConnect looks for it on **Wikidata** (free, no key): first through the Wikidata link on the map entry (during the map import), then, when a patient opens a hospital without one, by name. A name match is accepted only if it's within 15 km, or a hospital group from the same country (`DIRECTORY_COUNTRY_QID`, default India). Each hospital is searched at most once per 30 days; the patient can still paste a website. The page shows where a website came from (`website_source`: OpenStreetMap / Wikidata / added by a patient, the last two "not confirmed by the hospital").
 
 ### Hospital lookup from its own website (Playwright)
 

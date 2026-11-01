@@ -73,6 +73,10 @@ export type HospitalDetail = Hospital & {
   is_fresh: boolean;
   has_bookable_doctors: boolean;
   active_job: ScrapeJob | null;
+  /** Where the website came from: "osm" | "wikidata" | "patient" | "" (admin / the hospital). */
+  website_source: string;
+  /** No website saved and we haven't searched for one recently. */
+  can_search_website: boolean;
 };
 
 export type AppointmentRequest = {

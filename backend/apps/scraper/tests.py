@@ -177,7 +177,7 @@ def test_hospital_without_website_saves_map_info_only(patient, monkeypatch):
     job = ScrapeJob.objects.create(query="Tiny Clinic Madurai", requested_by=patient)
     assert pipeline.run_job(job.id) == "blocked"
     job.refresh_from_db()
-    assert "doesn't list its website" in job.message
+    assert "couldn't find this hospital's website" in job.message
     assert job.hospital.name == "Tiny Clinic" and job.hospital.scraped_at is None
 
 
@@ -254,6 +254,7 @@ def test_typo_lookup_finds_saved_hospital(patient):
 def test_paste_website_for_map_only_hospital(patient):
     h = Hospital.objects.create(name="Apollo Hospital", city="Chennai", source="scraped", is_approved=False)
     c = client_for(patient)
+    Hospital.objects.filter(pk=h.id).update(website_checked_at=timezone.now())  # we already searched for it
     assert c.post(f"/api/scraper/hospitals/{h.id}/refresh/", {}, format="json").status_code == 400
     assert c.post(f"/api/scraper/hospitals/{h.id}/refresh/", {"url": "http://10.0.0.1/"}, format="json").status_code == 400
     res = c.post(f"/api/scraper/hospitals/{h.id}/refresh/", {"url": f"{SITE}/"}, format="json")
@@ -268,6 +269,7 @@ def test_pasted_website_is_saved_after_scrape(patient, fake_browser):
     assert pipeline.run_job(job.id) == "done"
     h.refresh_from_db()
     assert h.website == f"{SITE}/" and h.scraped_doctors.count() == 3
+    assert h.website_source == "patient"  # shown as "added by a patient, not confirmed"
     assert Hospital.objects.count() == 1  # same hospital, no duplicate
 
 

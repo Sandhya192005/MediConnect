@@ -14,6 +14,13 @@ import { NOTIFICATION_EVENT } from "@/lib/notifications";
 import { timeAgo, type Doctor, type HospitalDetail, type ScrapeJob } from "@/lib/types";
 import { useScrapeJob } from "@/lib/useScrapeJob";
 
+// Shown next to a website we found ourselves, so patients know it isn't confirmed by the hospital.
+const WEBSITE_SOURCE: Record<string, string> = {
+  osm: "from OpenStreetMap",
+  wikidata: "found on Wikidata, not confirmed by the hospital",
+  patient: "added by a patient, not confirmed by the hospital",
+};
+
 const HospitalMap = dynamic(() => import("@/components/HospitalMap"), { ssr: false });
 
 export default function HospitalDetailPage() {
@@ -58,16 +65,19 @@ export default function HospitalDetailPage() {
     }
   }, [id]);
 
-  // Saved copy older than 24 h: quietly fetch a fresh one in the background (logged-in users only).
+  // Runs once per page view, in the background, for logged-in users only.
   useEffect(() => {
     if (!hospital || autoTried || !user) return;
     setAutoTried(true);
-    if (hospital.website && !hospital.is_fresh && !hospital.active_job) refresh(true);
+    if (hospital.active_job) return;
+    // Stale copy → refresh it. No website yet → search for it (Wikidata) and read it if found.
+    if ((hospital.website && !hospital.is_fresh) || hospital.can_search_website) refresh(true);
   }, [hospital, autoTried, user, refresh]);
 
   if (!hospital) return <p className="text-slate-500">{error || "Loading…"}</p>;
 
   const partner = hospital.has_bookable_doctors;
+  const searching = !hospital.website && (job?.status === "pending" || job?.status === "running");
   const info = hospital.scraped_info;
   const hasPin = hospital.latitude != null && hospital.longitude != null;
 
@@ -97,7 +107,14 @@ export default function HospitalDetailPage() {
             <p className="mt-1 text-slate-600">{[hospital.address, hospital.city, hospital.state].filter(Boolean).join(", ")}</p>
             {hospital.phone && <p className="mt-1 text-sm">📞 <a href={`tel:${hospital.phone}`} className="underline">{hospital.phone}</a></p>}
             {hospital.website && (
-              <a href={hospital.website} target="_blank" rel="noopener noreferrer" className="mt-1 block text-sm text-teal-700 underline">Official website ↗</a>
+              <p className="mt-1 text-sm">
+                <a href={hospital.website} target="_blank" rel="noopener noreferrer" className="text-teal-700 underline">
+                  {hospital.website_source === "wikidata" || hospital.website_source === "patient" ? "Website" : "Official website"} ↗
+                </a>
+                {WEBSITE_SOURCE[hospital.website_source] && (
+                  <span className="ml-1 text-xs text-slate-500">({WEBSITE_SOURCE[hospital.website_source]})</span>
+                )}
+              </p>
             )}
             {hasPin && <div className="mt-3"><LocationBadge verified={hospital.location_verified} /></div>}
           </div>
@@ -145,10 +162,14 @@ export default function HospitalDetailPage() {
                   ? user
                     ? "Not collected yet."
                     : "Log in to load the latest information from this hospital's website."
-                  : "This hospital has no website saved yet."}
+                  : hospital.can_search_website
+                    ? user
+                      ? "No website saved yet: we'll look for it."
+                      : "No website saved yet. Log in and we'll look for it."
+                    : "We couldn't find this hospital's website on OpenStreetMap or Wikidata."}
               </p>
             )}
-            {!hospital.website && user && (
+            {!hospital.website && user && !searching && (
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -168,7 +189,7 @@ export default function HospitalDetailPage() {
                 </button>
               </form>
             )}
-            <div className="mt-3 space-y-2"><ScrapeStatus job={job} />{refreshMsg && <p className="text-sm text-amber-700">{refreshMsg}</p>}</div>
+            <div className="mt-3 space-y-2"><ScrapeStatus job={job} searching={searching} />{refreshMsg && <p className="text-sm text-amber-700">{refreshMsg}</p>}</div>
 
             {info && (
               <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">

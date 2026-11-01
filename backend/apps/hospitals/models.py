@@ -25,6 +25,17 @@ class Hospital(models.Model):
     country = models.CharField(max_length=100, default="India")
     phone = models.CharField(max_length=30, blank=True)
     website = models.URLField(blank=True)
+
+    class WebsiteSource(models.TextChoices):
+        OSM = "osm", "OpenStreetMap"
+        WIKIDATA = "wikidata", "Wikidata"
+        PATIENT = "patient", "Added by a patient"
+
+    # Where the website came from ("" = added by an admin / the hospital itself).
+    website_source = models.CharField(max_length=20, choices=WebsiteSource.choices, blank=True)
+    # Last time we searched for a missing website, so we don't search again on every page view.
+    website_checked_at = models.DateTimeField(null=True, blank=True)
+    wikidata_id = models.CharField(max_length=20, blank=True, help_text="e.g. Q4780321, from OpenStreetMap")
     # (longitude, latitude) in WGS84 — used for "nearby hospitals" in Phase 6
     location = models.PointField(geography=True, srid=4326, null=True, blank=True)
     # Only an admin who has checked the address/pin sets this. Unverified locations are
