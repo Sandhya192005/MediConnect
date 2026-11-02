@@ -115,7 +115,9 @@ def rebuild_all(refresh: bool = True) -> dict:
     )
     n_hosp, _ = bulk(
         es(),
-        ({"_index": index_name("hospitals"), "_id": h.id, "_source": hospital_doc(h)} for h in HOSPITAL_QS),
+        # .all() = a fresh query each time. Looping over the shared HOSPITAL_QS directly would make Django
+        # cache its rows, and every later rebuild in the same process would index those stale rows.
+        ({"_index": index_name("hospitals"), "_id": h.id, "_source": hospital_doc(h)} for h in HOSPITAL_QS.all()),
     )
     if refresh:
         es().indices.refresh(index=f"{index_name('doctors')},{index_name('hospitals')}")

@@ -8,6 +8,7 @@ import AppointmentRequestForm from "@/components/AppointmentRequestForm";
 import ExternalAppointmentForm from "@/components/ExternalAppointmentForm";
 import LocationBadge from "@/components/LocationBadge";
 import ScrapeStatus from "@/components/ScrapeStatus";
+import SpecialistList from "@/components/SpecialistList";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { NOTIFICATION_EVENT } from "@/lib/notifications";
@@ -121,7 +122,7 @@ export default function HospitalDetailPage() {
           {hasPin && <HospitalMap hospitals={[hospital]} height={240} />}
         </section>
 
-        {/* Right: what their website says */}
+        {/* Right: our specialists (partners), then what their website says */}
         <section className="space-y-4 lg:col-span-3">
           {totalDoctors > 0 && (
             <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -141,6 +142,14 @@ export default function HospitalDetailPage() {
               )}
             </div>
           )}
+          {partner && (
+            <div className="rounded-xl border border-slate-200 bg-white p-5">
+              <h2 className="text-lg font-semibold">Our specialists</h2>
+              <p className="mb-4 text-sm text-slate-500">MediConnect doctors at this hospital. Pick a specialist to see free slots and book instantly.</p>
+              <SpecialistList doctors={mcDoctors} searching={!!dq} />
+            </div>
+          )}
+
           <div className="rounded-xl border border-slate-200 bg-white p-5">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <h2 className="text-lg font-semibold">From the hospital&apos;s website</h2>
@@ -225,21 +234,7 @@ export default function HospitalDetailPage() {
           </div>
 
           {/* Booking */}
-          {partner ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-5">
-              <h2 className="mb-3 text-lg font-semibold">Book with a MediConnect doctor</h2>
-              {mcDoctors.length === 0 && <p className="text-sm text-slate-500">No MediConnect doctor matches your search.</p>}
-              <div className="grid gap-3 sm:grid-cols-2">
-                {mcDoctors.map((d) => (
-                  <Link key={d.id} href={`/doctors/${d.id}`} className="rounded-lg border border-slate-200 p-3 hover:border-teal-400">
-                    <p className="font-semibold">Dr. {d.name}</p>
-                    <p className="text-sm text-teal-700">{d.specialization}</p>
-                    <p className="text-sm text-slate-500">₹{Number(d.fee).toFixed(0)} · Book →</p>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ) : (
+          {!partner && (
             <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-5">
               <h2 className="text-lg font-semibold">How to book</h2>
               <p className="text-sm text-slate-600">This hospital isn&apos;t a MediConnect partner yet, so we can&apos;t confirm slots instantly.</p>

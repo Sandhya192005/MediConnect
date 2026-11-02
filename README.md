@@ -49,7 +49,10 @@ docker compose exec backend python manage.py createsuperuser   # admin login
 
 - The map and city search show **every hospital** in the area, not only partners. `GET /api/hospitals/nearby/` and `GET /api/hospitals/city/?name=Chennai` return `is_partner`, `has_website`, and `loading_more`.
 - The map is split into ~11 km tiles (`OsmTile`). A tile not refreshed in 24 h is downloaded in the background (Celery `sync_osm_tile_task`, Overpass API, no key), saved as `source=osm` hospitals, and indexed in one bulk Elasticsearch update. Existing hospitals (same name within 300 m) are linked by `osm_id`, never duplicated or overwritten.
-- Search (`/doctors`, "Find hospitals or doctors") returns hospitals (partners first), MediConnect doctors, and doctors listed on hospital websites (`GET /api/search/listed-doctors/?q=`).
+- Search (`/doctors`, "Find hospitals or doctors") shows three groups:
+  - **MediConnect hospitals** (`GET /api/search/partner-hospitals/?q=&department=&city=&max_fee=`): partner hospitals, each with its specialties and the specialists that match the search ("heart" → the hospitals with cardiologists, typos allowed). Opening one shows its doctors grouped by specialty (`/hospitals/<id>?specialty=Cardiology`). Works without Elasticsearch too (plain database matching).
+  - **Other hospitals**: not on MediConnect yet, from the map and their own websites.
+  - **Doctors listed on hospital websites** (`GET /api/search/listed-doctors/?q=`).
 - Opening a hospital page (logged in) reads its website with Playwright if the saved copy is older than 24 h. The page has a doctor search box.
 - Most OpenStreetMap entries have no website, so MediConnect looks for it on **Wikidata** (free, no key): first through the Wikidata link on the map entry (during the map import), then, when a patient opens a hospital without one, by name. A name match is accepted only if it's within 15 km, or a hospital group from the same country (`DIRECTORY_COUNTRY_QID`, default India). Each hospital is searched at most once per 30 days; the patient can still paste a website. The page shows where a website came from (`website_source`: OpenStreetMap / Wikidata / added by a patient, the last two "not confirmed by the hospital").
 
@@ -107,7 +110,7 @@ Before each run, `global-setup.ts` calls `manage.py e2e_setup`. It resets its ow
 |---|---|
 | `auth.spec.ts` | sign up, log out, wrong password, role-protected pages |
 | `booking.spec.ts` | two browsers: the patient books, the doctor's bell updates live (WebSocket), the slot shows as taken, the patient cancels |
-| `search.spec.ts` | typo-tolerant search (Elasticsearch), hospitals in results, autocomplete |
+| `search.spec.ts` | MediConnect hospitals with matching specialists (typos, everyday words), specialists grouped by specialty, autocomplete |
 | `map.spec.ts` | fake GPS in Chennai, Leaflet map with tiles and pins, partners-only filter, open a hospital |
 | `hospital-website.spec.ts` | opening a hospital → Celery → Playwright in `scraper_worker` reads the mock site → doctors appear → search inside them |
 | `chatbot.spec.ts` | the assistant's reply is faked in the browser (no OpenAI call); its booking card books through the real API |

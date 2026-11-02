@@ -16,6 +16,26 @@ HIGHLIGHT = {
 }
 
 
+def doctor_text_query(q: str) -> dict:
+    """Free-text doctor match, shared by doctor search and the MediConnect hospitals list."""
+    return {
+        "multi_match": {
+            "query": q,
+            # ^n = boost: a match on name/specialization counts more than a match in the bio
+            "fields": ["name^4", "specialization^3", "department^3", "hospital_name^2", "city^2", "qualification", "bio"],
+            "fuzziness": "AUTO",  # tolerate typos: "cardiolgist" -> "cardiologist"
+            "prefix_length": 1,
+            "operator": "or",
+        }
+    }
+
+
+def hospital_text_query(q: str) -> dict:
+    # AUTO:3,5 = allow 2 typos from 5 letters ("applo" -> "apollo"); hospital names are often misspelt.
+    return {"multi_match": {"query": q, "fields": ["name^3", "departments^2", "city^2", "address", "state"],
+                            "fuzziness": "AUTO:3,5"}}
+
+
 def search_doctors(q="", department=None, city=None, min_fee=None, max_fee=None, page=1, size=12):
     filters = [{"term": {"is_bookable": True}}]
     if department:
@@ -31,16 +51,7 @@ def search_doctors(q="", department=None, city=None, min_fee=None, max_fee=None,
         filters.append({"range": {"fee": rng}})
 
     if q:
-        must = [{
-            "multi_match": {
-                "query": q,
-                # ^n = boost: a match on name/specialization counts more than a match in the bio
-                "fields": ["name^4", "specialization^3", "department^3", "hospital_name^2", "city^2", "qualification", "bio"],
-                "fuzziness": "AUTO",  # tolerate typos: "cardiolgist" -> "cardiologist"
-                "prefix_length": 1,
-                "operator": "or",
-            }
-        }]
+        must = [doctor_text_query(q)]
     else:
         must = [{"match_all": {}}]
 
@@ -74,11 +85,7 @@ def search_hospitals(q="", city=None, page=1, size=12):
     filters = [{"term": {"listed": True}}]  # partners + hospitals from OpenStreetMap / websites
     if city:
         filters.append({"term": {"city.raw": city}})
-    must = (
-        # AUTO:3,5 = allow 2 typos from 5 letters ("applo" -> "apollo"); hospital names are often misspelt.
-        [{"multi_match": {"query": q, "fields": ["name^3", "departments^2", "city^2", "address", "state"], "fuzziness": "AUTO:3,5"}}]
-        if q else [{"match_all": {}}]
-    )
+    must = [hospital_text_query(q)] if q else [{"match_all": {}}]
     res = es().search(
         index=index_name("hospitals"),
         query={"bool": {"must": must, "filter": filters}},

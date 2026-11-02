@@ -4,22 +4,27 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import Highlight from "@/components/Highlight";
 import SearchBox from "@/components/SearchBox";
-import { api, ApiError } from "@/lib/api";
-import type { Doctor } from "@/lib/types";
-
-type Hit = {
-  id: number;
-  name: string;
-  specialization: string;
-  department: string | null;
-  hospital_name: string | null;
-  city: string | null;
-  fee: number;
-  experience_years: number;
-  highlight: Record<string, string[]>;
-};
+import { api } from "@/lib/api";
 
 type Facet = { value: string; count: number };
+
+/** A MediConnect (partner) hospital: instant booking with its own specialists. */
+type PartnerHospital = {
+  id: number;
+  name: string;
+  address: string;
+  city: string;
+  doctor_count: number;
+  specialties: { name: string; count: number }[];
+  matching_doctors: { id: number; name: string; specialization: string; department: string; fee: number }[];
+};
+
+type PartnerResponse = {
+  total: number;
+  degraded: boolean;
+  results: PartnerHospital[];
+  facets: { departments: Facet[]; cities: Facet[] };
+};
 
 type HospitalHit = {
   id: number;
@@ -40,38 +45,12 @@ type ListedDoctor = {
   hospital_city: string;
 };
 
-type SearchResponse = {
-  total: number;
-  results: Hit[];
-  facets: { departments: Facet[]; cities: Facet[] };
-};
-
 const FEE_OPTIONS = [
   { label: "Any fee", value: "" },
   { label: "Up to ₹500", value: "500" },
   { label: "Up to ₹800", value: "800" },
   { label: "Up to ₹1000", value: "1000" },
 ];
-
-/** Used when Elasticsearch is down: the plain database search from Phase 2. */
-async function fallbackSearch(q: string): Promise<SearchResponse> {
-  const docs = await api<Doctor[]>(`/api/doctors/?q=${encodeURIComponent(q)}`);
-  return {
-    total: docs.length,
-    results: docs.map((d) => ({
-      id: d.id,
-      name: d.name,
-      specialization: d.specialization,
-      department: d.department_name,
-      hospital_name: d.hospital_name,
-      city: d.hospital_city,
-      fee: Number(d.fee),
-      experience_years: d.experience_years,
-      highlight: {},
-    })),
-    facets: { departments: [], cities: [] },
-  };
-}
 
 function Chips({ title, items, active, onPick }: { title: string; items: Facet[]; active: string; onPick: (v: string) => void }) {
   if (items.length === 0 && !active) return null;
@@ -93,47 +72,91 @@ function Chips({ title, items, active, onPick }: { title: string; items: Facet[]
   );
 }
 
-export default function DoctorsPage() {
+function PartnerCard({ h, department }: { h: PartnerHospital; department: string }) {
+  // Open the hospital on the specialty the patient was looking for.
+  const focus = department || h.matching_doctors[0]?.department || "";
+  const href = `/hospitals/${h.id}${focus ? `?specialty=${encodeURIComponent(focus)}` : ""}`;
+  return (
+    <article aria-label={h.name} className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 hover:border-teal-400 hover:shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <Link href={href} className="font-semibold hover:text-teal-700">{h.name}</Link>
+        <span className="shrink-0 rounded-full bg-teal-50 px-2 py-0.5 text-xs text-teal-700">Instant booking</span>
+      </div>
+      <p className="text-sm text-slate-600">{[h.address, h.city].filter(Boolean).join(", ")}</p>
+
+      <p className="mt-3 text-xs font-medium uppercase tracking-wide text-slate-500">
+        {h.doctor_count} specialist{h.doctor_count === 1 ? "" : "s"}
+      </p>
+      <div className="mt-1 flex flex-wrap gap-1.5">
+        {h.specialties.map((s) => (
+          <Link
+            key={s.name}
+            href={`/hospitals/${h.id}?specialty=${encodeURIComponent(s.name)}`}
+            className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700 hover:bg-teal-50 hover:text-teal-800"
+          >
+            {s.name} {s.count > 1 ? `· ${s.count}` : ""}
+          </Link>
+        ))}
+      </div>
+
+      {h.matching_doctors.length > 0 && (
+        <div className="mt-3 border-t border-slate-100 pt-3">
+          <p className="text-xs font-medium text-slate-500">Matching specialists</p>
+          <ul className="mt-1 space-y-1 text-sm">
+            {h.matching_doctors.slice(0, 3).map((d) => (
+              <li key={d.id}>
+                <Link href={`/doctors/${d.id}`} className="text-teal-700 hover:underline">Dr. {d.name}</Link>
+                <span className="text-slate-600"> · {d.specialization} · ₹{d.fee.toFixed(0)}</span>
+              </li>
+            ))}
+            {h.matching_doctors.length > 3 && <li className="text-xs text-slate-500">+{h.matching_doctors.length - 3} more</li>}
+          </ul>
+        </div>
+      )}
+
+      <Link href={href} className="mt-auto pt-3 text-sm font-medium text-teal-700">View specialists & book →</Link>
+    </article>
+  );
+}
+
+export default function FindPage() {
   const [q, setQ] = useState("");
   const [department, setDepartment] = useState("");
   const [city, setCity] = useState("");
   const [maxFee, setMaxFee] = useState("");
-  const [data, setData] = useState<SearchResponse | null>(null);
-  const [degraded, setDegraded] = useState(false);
-  const [hospitals, setHospitals] = useState<HospitalHit[]>([]);
+  const [partners, setPartners] = useState<PartnerResponse | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [others, setOthers] = useState<HospitalHit[]>([]);
   const [listed, setListed] = useState<ListedDoctor[]>([]);
 
+  // MediConnect hospitals, with the specialists matching the search.
   useEffect(() => {
     const params = new URLSearchParams({ q });
     if (department) params.set("department", department);
     if (city) params.set("city", city);
     if (maxFee) params.set("max_fee", maxFee);
-
-    const t = setTimeout(async () => {
-      try {
-        setData(await api<SearchResponse>(`/api/search/?${params}`));
-        setDegraded(false);
-      } catch (e) {
-        if (e instanceof ApiError && e.status === 503) {
-          setData(await fallbackSearch(q));
-          setDegraded(true);
-        }
-      }
+    const t = setTimeout(() => {
+      api<PartnerResponse>(`/api/search/partner-hospitals/?${params}`)
+        .then((r) => {
+          setPartners(r);
+          setFailed(false);
+        })
+        .catch(() => setFailed(true));
     }, 200);
     return () => clearTimeout(t);
   }, [q, department, city, maxFee]);
 
-  // Hospitals (all listed ones, partners first) and doctors listed on hospital websites.
+  // Other hospitals (not partners) and doctors listed on hospital websites: only when searching.
   useEffect(() => {
     if (!q.trim()) {
-      setHospitals([]);
+      setOthers([]);
       setListed([]);
       return;
     }
     const t = setTimeout(() => {
       api<{ results: HospitalHit[] }>(`/api/search/?type=hospitals&q=${encodeURIComponent(q)}${city ? `&city=${encodeURIComponent(city)}` : ""}`)
-        .then((r) => setHospitals(r.results))
-        .catch(() => setHospitals([]));
+        .then((r) => setOthers(r.results.filter((h) => !h.is_partner)))
+        .catch(() => setOthers([]));
       api<{ results: ListedDoctor[] }>(`/api/search/listed-doctors/?q=${encodeURIComponent(q)}`)
         .then((r) => setListed(r.results))
         .catch(() => setListed([]));
@@ -145,7 +168,7 @@ export default function DoctorsPage() {
     <div>
       <h1 className="text-2xl font-bold">Find hospitals or doctors</h1>
       <p className="text-sm text-slate-600">
-        Search a hospital name, a doctor, or a specialty. Try “Apollo”, “heart”, “skin doctor”, “kids”, or even a typo like “cardiolgist”.
+        Search a hospital, a doctor, or a specialty. Try “Apollo”, “heart”, “skin doctor”, “kids”, or even a typo like “cardiolgist”.
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-4">
@@ -159,64 +182,53 @@ export default function DoctorsPage() {
         </select>
       </div>
 
-      {data && !degraded && (
+      {partners && (
         <div className="mt-4 space-y-2">
-          <Chips title="Department" items={data.facets.departments} active={department} onPick={setDepartment} />
-          <Chips title="City" items={data.facets.cities} active={city} onPick={setCity} />
+          <Chips title="Specialty" items={partners.facets.departments} active={department} onPick={setDepartment} />
+          <Chips title="City" items={partners.facets.cities} active={city} onPick={setCity} />
         </div>
       )}
 
-      {degraded && (
+      {partners?.degraded && (
         <p className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
-          Smart search is temporarily unavailable, so these are basic results.
+          Smart search is temporarily unavailable, so these are basic results (no typo correction).
         </p>
       )}
 
-      {hospitals.length > 0 && (
-        <section className="mt-6">
-          <h2 className="text-lg font-semibold">Hospitals</h2>
+      <section className="mt-6" aria-label="MediConnect hospitals">
+        <h2 className="text-lg font-semibold">
+          MediConnect hospitals <span className="text-sm font-normal text-slate-500">· choose a specialist and book instantly</span>
+        </h2>
+        {failed ? (
+          <p className="mt-2 text-red-600">Couldn&apos;t load hospitals. Please try again.</p>
+        ) : partners === null ? (
+          <p className="mt-2 text-slate-500">Loading…</p>
+        ) : partners.results.length === 0 ? (
+          <p className="mt-2 text-slate-500">No MediConnect hospital has a specialist matching your search.</p>
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-slate-500">{partners.total} hospital{partners.total === 1 ? "" : "s"}</p>
+            <div className="mt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {partners.results.map((h) => <PartnerCard key={h.id} h={h} department={department} />)}
+            </div>
+          </>
+        )}
+      </section>
+
+      {others.length > 0 && (
+        <section className="mt-8" aria-label="Other hospitals">
+          <h2 className="text-lg font-semibold">Other hospitals <span className="text-sm font-normal text-slate-500">· not on MediConnect yet</span></h2>
+          <p className="text-sm text-slate-500">Information from the map and each hospital&apos;s own website. Book with the hospital, or send a request.</p>
           <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {hospitals.slice(0, 9).map((h) => (
+            {others.slice(0, 9).map((h) => (
               <Link key={h.id} href={`/hospitals/${h.id}`} className="rounded-xl border border-slate-200 bg-white p-4 hover:border-teal-400">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold"><Highlight text={h.highlight.name} fallback={h.name} /></h3>
-                  {h.is_partner && <span className="shrink-0 rounded-full bg-teal-50 px-2 py-0.5 text-xs text-teal-700">Partner</span>}
-                </div>
+                <h3 className="font-semibold"><Highlight text={h.highlight.name} fallback={h.name} /></h3>
                 <p className="text-sm text-slate-600">{[h.address, h.city].filter(Boolean).join(", ") || "Address not listed"}</p>
-                <p className="mt-1 text-xs text-slate-500">{h.is_partner ? "Instant booking on MediConnect" : "View info from its website →"}</p>
+                <p className="mt-1 text-xs text-slate-500">View info from its website →</p>
               </Link>
             ))}
           </div>
         </section>
-      )}
-
-      <h2 className="mt-8 text-lg font-semibold">MediConnect doctors <span className="text-sm font-normal text-slate-500">· book instantly</span></h2>
-      {data === null ? (
-        <p className="mt-2 text-slate-500">Loading…</p>
-      ) : data.results.length === 0 ? (
-        <p className="mt-2 text-slate-500">No MediConnect doctors match your search.</p>
-      ) : (
-        <>
-          <p className="mt-1 text-sm text-slate-500">{data.total} doctor{data.total === 1 ? "" : "s"} found</p>
-          <div className="mt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {data.results.map((d) => (
-              <Link key={d.id} href={`/doctors/${d.id}`} className="rounded-xl border border-slate-200 bg-white p-5 hover:border-teal-400 hover:shadow-sm">
-                <h3 className="font-semibold">
-                  Dr. <Highlight text={d.highlight.name} fallback={d.name} />
-                </h3>
-                <p className="text-sm text-teal-700">
-                  <Highlight text={d.highlight.specialization} fallback={d.specialization} />
-                </p>
-                <p className="mt-2 text-sm text-slate-600">
-                  <Highlight text={d.highlight.hospital_name} fallback={d.hospital_name} />, <Highlight text={d.highlight.city} fallback={d.city} />
-                </p>
-                <p className="mt-1 text-sm text-slate-500">
-                  {d.experience_years} yrs experience · ₹{Number(d.fee).toFixed(0)}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </>
       )}
 
       {listed.length > 0 && (

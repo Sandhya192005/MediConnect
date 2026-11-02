@@ -5,7 +5,7 @@ from rest_framework import permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
-from . import queries
+from . import partners, queries
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +53,23 @@ def search(request):
         log.warning("Search failed: %s", e)
         return UNAVAILABLE
     return Response(data)
+
+
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
+def partner_hospitals(request):
+    """
+    GET /api/search/partner-hospitals/?q=heart&department=&city=&max_fee=
+    MediConnect hospitals (instant booking) with their specialties and the doctors matching q.
+    Works without Elasticsearch too (plain database matching, "degraded": true).
+    """
+    p = request.query_params
+    return Response(partners.partner_hospitals(
+        p.get("q", "").strip()[:100],
+        department=p.get("department") or None,
+        city=p.get("city") or None,
+        max_fee=_num(p.get("max_fee")),
+    ))
 
 
 @api_view(["GET"])
