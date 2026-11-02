@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -30,7 +31,8 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto max-w-sm rounded-xl border border-slate-200 bg-white p-6">
-      <h1 className="mb-6 text-2xl font-bold">Log in</h1>
+      <Image src="/logo-mark.png" alt="MediConnect" width={72} height={72} className="mx-auto mb-2 mix-blend-multiply" priority />
+      <h1 className="mb-6 text-center text-2xl font-bold">Log in</h1>
       <form onSubmit={onSubmit} className="space-y-4">
         <label className="block text-sm">
           Email

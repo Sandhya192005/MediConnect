@@ -10,7 +10,7 @@ import "./globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "MediConnect",
+  title: "MediConnect · Connect · Consult · Care",
   description: "Book hospital appointments with the right doctor, near you.",
 };
 

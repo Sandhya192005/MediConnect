@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { dashboardFor, useAuth } from "@/lib/auth";
@@ -12,12 +13,17 @@ export default function Navbar() {
   return (
     <header className="border-b border-slate-200 bg-white">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link href="/" className="text-xl font-bold text-teal-700">
-          MediConnect
+        <Link href="/" className="flex items-center gap-2" aria-label="MediConnect home">
+          <Image src="/logo-mark.png" alt="" width={40} height={40} priority className="mix-blend-multiply" />
+          <span className="hidden text-xl font-bold sm:inline">
+            <span className="text-[#0f3b68]">Medi</span>
+            <span className="text-[#12a594]">Connect</span>
+          </span>
         </Link>
         <div className="flex items-center gap-4 text-sm">
           <Link href="/doctors" className="hover:text-teal-700">
-            Find hospitals or doctors
+            <span className="sm:hidden">Find</span>
+            <span className="hidden sm:inline">Find hospitals or doctors</span>
           </Link>
           <Link href="/hospitals" className="hidden hover:text-teal-700 sm:inline">
             Map
