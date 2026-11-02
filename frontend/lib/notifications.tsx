@@ -22,6 +22,8 @@ type State = {
   toast: Notification | null;
   markRead: (id: number) => Promise<void>;
   markAllRead: () => Promise<void>;
+  remove: (id: number) => Promise<void>;
+  clearAll: () => Promise<void>;
   dismissToast: () => void;
 };
 
@@ -117,8 +119,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setUnread(0);
   }, []);
 
+  const remove = useCallback(async (id: number) => {
+    const r = await api<{ unread: number }>(`/api/notifications/${id}/`, { method: "DELETE" });
+    setItems((prev) => prev.filter((n) => n.id !== id));
+    setUnread(r.unread);
+  }, []);
+
+  const clearAll = useCallback(async () => {
+    await api("/api/notifications/clear/", { method: "POST" });
+    setItems([]);
+    setUnread(0);
+  }, []);
+
   return (
-    <Ctx.Provider value={{ items, unread, connected, toast, markRead, markAllRead, dismissToast: () => setToast(null) }}>
+    <Ctx.Provider value={{ items, unread, connected, toast, markRead, markAllRead, remove, clearAll, dismissToast: () => setToast(null) }}>
       {children}
     </Ctx.Provider>
   );

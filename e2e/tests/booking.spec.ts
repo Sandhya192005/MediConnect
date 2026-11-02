@@ -49,6 +49,11 @@ test("patient books and cancels; the doctor is notified live", async ({ browser 
   await doctorPage.getByRole("button", { name: /^Notifications/ }).click();
   await expect(doctorPage.getByRole("button", { name: /New booking.*Esha Patient/ })).toBeVisible();
 
+  // The doctor deletes it from the bell (✕ on the notification).
+  await doctorPage.getByRole("button", { name: "Delete notification: New booking" }).click();
+  await expect(doctorPage.getByRole("button", { name: /New booking.*Esha Patient/ })).toHaveCount(0);
+  await expect(doctorPage.getByTestId("unread-count")).toHaveCount(0);
+
   // The slot is now taken: shown crossed out and disabled for everyone.
   await page.goto(`/doctors/${doctor.id}`);
   await pickTomorrow();
@@ -60,6 +65,15 @@ test("patient books and cancels; the doctor is notified live", async ({ browser 
   await mine.getByRole("button", { name: "Cancel" }).click();
   await expect(mine).toContainText("cancelled");
   await expect(mine.getByRole("button", { name: "Cancel" })).toHaveCount(0);
+
+  // The doctor is told about the cancellation live, then clears all notifications.
+  // (The bell menu is still open from before: the new notification appears in it live.)
+  await expect(doctorPage.getByTestId("unread-count")).toHaveText("1", { timeout: 20_000 });
+  await expect(doctorPage.getByRole("button", { name: /^Appointment cancelled/ })).toBeVisible();
+  doctorPage.once("dialog", (d) => d.accept()); // "Delete all your notifications?"
+  await doctorPage.getByRole("button", { name: "Clear all" }).click();
+  await expect(doctorPage.getByText("No notifications yet.")).toBeVisible();
+  await expect(doctorPage.getByTestId("unread-count")).toHaveCount(0);
 
   await doctorCtx.close();
   await patientCtx.close();

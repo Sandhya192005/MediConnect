@@ -104,3 +104,43 @@ def test_past_appointments_completed(doctor, patient):
     future.refresh_from_db()
     assert old.status == "completed"
     assert future.status == "booked"
+
+
+# ---- deleting notifications ----------------------------------------------------------
+
+def _note(user, title="Hi", read=False):
+    from .models import Notification
+
+    return Notification.objects.create(user=user, kind="test", title=title, message="m", is_read=read)
+
+
+def test_delete_one_notification(db):
+    from .models import Notification
+
+    me = User.objects.create_user("me@x.com", "pw", role="patient")
+    other = User.objects.create_user("other@x.com", "pw", role="patient")
+    unread, read, theirs = _note(me, "a"), _note(me, "b", read=True), _note(other, "c")
+    c = APIClient()
+    c.force_authenticate(me)
+
+    res = c.delete(f"/api/notifications/{unread.id}/")
+    assert res.status_code == 200 and res.data["unread"] == 0
+    assert not Notification.objects.filter(pk=unread.pk).exists()
+    assert c.delete(f"/api/notifications/{theirs.id}/").status_code == 404  # never someone else's
+    assert Notification.objects.filter(pk=theirs.pk).exists()
+    assert c.get("/api/notifications/").data["results"][0]["id"] == read.id
+
+
+def test_clear_all_only_clears_mine(db):
+    from .models import Notification
+
+    me = User.objects.create_user("me@x.com", "pw", role="patient")
+    other = User.objects.create_user("other@x.com", "pw", role="patient")
+    _note(me), _note(me, read=True), _note(other)
+    c = APIClient()
+    c.force_authenticate(me)
+    res = c.post("/api/notifications/clear/")
+    assert res.status_code == 200 and res.data == {"unread": 0, "deleted": 2}
+    assert Notification.objects.filter(user=me).count() == 0
+    assert Notification.objects.filter(user=other).count() == 1
+    assert APIClient().post("/api/notifications/clear/").status_code == 401  # must be logged in

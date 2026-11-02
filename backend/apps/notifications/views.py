@@ -24,6 +24,24 @@ def mark_read(request, pk):
     return Response({"unread": Notification.objects.filter(user=request.user, is_read=False).count()})
 
 
+def _unread(user) -> int:
+    return Notification.objects.filter(user=user, is_read=False).count()
+
+
+@api_view(["DELETE"])
+def delete_one(request, pk):
+    """DELETE /api/notifications/<id>/ — remove one of your own notifications."""
+    get_object_or_404(Notification, pk=pk, user=request.user).delete()
+    return Response({"unread": _unread(request.user)})
+
+
+@api_view(["POST"])
+def clear_all(request):
+    """POST /api/notifications/clear/ — remove all of your notifications (never anyone else's)."""
+    deleted, _ = Notification.objects.filter(user=request.user).delete()
+    return Response({"unread": 0, "deleted": deleted})
+
+
 @api_view(["POST"])
 def mark_all_read(request):
     Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
