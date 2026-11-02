@@ -1,13 +1,102 @@
 @import "tailwindcss";
 
+/*
+ * MediConnect design system. Colours come from the logo:
+ *   navy  #0f3b68  ("Medi", the swoosh)
+ *   teal  #12a594  ("Connect", the cross)
+ *   blue  #1565c0  (the cross's gradient end)
+ * Tailwind's teal scale is re-tuned to the logo teal, so every existing `teal-*` class follows the brand.
+ */
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  --color-teal-50: #ecfbf8;
+  --color-teal-100: #d0f5ee;
+  --color-teal-200: #a3eadd;
+  --color-teal-300: #6cd8c7;
+  --color-teal-400: #34bfab;
+  --color-teal-500: #17a896;
+  --color-teal-600: #12a594;
+  --color-teal-700: #0e8073;
+  --color-teal-800: #10665d;
+  --color-teal-900: #11544d;
+
+  --color-navy-50: #eef4fb;
+  --color-navy-100: #d6e4f4;
+  --color-navy-200: #adc8e8;
+  --color-navy-500: #2b5d92;
+  --color-navy-700: #154675;
+  --color-navy-800: #0f3b68;
+  --color-navy-900: #0b2c4e;
+
+  --color-brand-blue: #1565c0;
 }
 
-.input {
-  @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100;
+body {
+  background: #f6f9fc;
 }
 
-.btn-primary {
-  @apply w-full rounded-md bg-teal-600 px-4 py-2 font-medium text-white hover:bg-teal-700 disabled:opacity-60;
+/* The logo's teal→blue gradient. */
+.bg-brand-gradient {
+  background-image: linear-gradient(135deg, #17c3a3 0%, #12a594 35%, #1565c0 100%);
+}
+.text-brand-gradient {
+  background-image: linear-gradient(90deg, #0f3b68, #12a594);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---- Building blocks used across pages ---- */
+
+/* Base pieces other classes build on (@utility, so they can be used inside @apply). */
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-200 disabled:cursor-not-allowed disabled:opacity-60;
+}
+@utility card {
+  @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/60;
+}
+
+/* In the "components" layer, so Tailwind utilities (md:hidden, px-3, w-auto…) can still override them. */
+@layer components {
+  .input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-4 focus:ring-teal-100;
+  }
+
+  .btn-primary {
+    @apply btn w-full bg-teal-600 text-white shadow-sm shadow-teal-600/20 hover:bg-teal-700;
+  }
+  .btn-solid {
+    @apply btn bg-teal-600 text-white shadow-sm shadow-teal-600/20 hover:bg-teal-700;
+  }
+  .btn-navy {
+    @apply btn bg-navy-800 text-white hover:bg-navy-900;
+  }
+  .btn-outline {
+    @apply btn border border-slate-300 bg-white text-slate-700 hover:border-teal-500 hover:text-teal-700;
+  }
+  .btn-ghost {
+    @apply btn text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+  }
+
+  .card-hover {
+    @apply card transition hover:-translate-y-0.5 hover:border-teal-300 hover:shadow-md hover:shadow-teal-900/5;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold tracking-tight text-navy-800 sm:text-3xl;
+  }
+  .page-subtitle {
+    @apply mt-1 text-slate-600;
+  }
+  .section-title {
+    @apply text-lg font-semibold text-navy-800;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 transition hover:border-teal-400 hover:text-teal-800;
+  }
+  .chip-active {
+    @apply inline-flex items-center gap-1 rounded-full bg-teal-600 px-3 py-1 text-xs font-medium text-white;
+  }
 }

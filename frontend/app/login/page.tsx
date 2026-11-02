@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import AuthLayout from "@/components/AuthLayout";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/lib/api";
@@ -30,15 +30,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto max-w-sm rounded-xl border border-slate-200 bg-white p-6">
-      <Image src="/logo-mark.png" alt="MediConnect" width={72} height={72} className="mx-auto mb-2 mix-blend-multiply" priority />
-      <h1 className="mb-6 text-center text-2xl font-bold">Log in</h1>
+    <AuthLayout title="Log in" subtitle="Welcome back. Log in to book and manage your visits.">
       <form onSubmit={onSubmit} className="space-y-4">
-        <label className="block text-sm">
+        <label className="block text-sm font-medium text-slate-700">
           Email
           <input className="input mt-1" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
-        <label className="block text-sm">
+        <label className="block text-sm font-medium text-slate-700">
           Password
           <input className="input mt-1" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
@@ -47,12 +45,12 @@ export default function LoginPage() {
           {busy ? "Logging in…" : "Log in"}
         </button>
       </form>
-      <p className="mt-4 text-center text-sm text-slate-600">
+      <p className="mt-6 text-center text-sm text-slate-600">
         No account?{" "}
-        <Link href="/register" className="text-teal-700 underline">
+        <Link href="/register" className="font-semibold text-teal-700 hover:underline">
           Sign up
         </Link>
       </p>
-    </div>
+    </AuthLayout>
   );
 }

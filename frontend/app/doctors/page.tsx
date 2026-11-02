@@ -129,6 +129,12 @@ export default function FindPage() {
   const [others, setOthers] = useState<HospitalHit[]>([]);
   const [listed, setListed] = useState<ListedDoctor[]>([]);
 
+  // Arriving from the home page with words already typed: /doctors?q=heart
+  useEffect(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get("q");
+    if (fromUrl) setQ(fromUrl);
+  }, []);
+
   // MediConnect hospitals, with the specialists matching the search.
   useEffect(() => {
     const params = new URLSearchParams({ q });

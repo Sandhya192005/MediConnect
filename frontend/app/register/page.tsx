@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import AuthLayout from "@/components/AuthLayout";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/lib/api";
@@ -39,33 +39,31 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md rounded-xl border border-slate-200 bg-white p-6">
-      <Image src="/logo-mark.png" alt="MediConnect" width={72} height={72} className="mx-auto mb-2 mix-blend-multiply" priority />
-      <h1 className="mb-6 text-center text-2xl font-bold">Create an account</h1>
+    <AuthLayout title="Create an account" subtitle="Free for patients. Doctors can join to offer instant booking.">
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm">
+          <label className="block text-sm font-medium text-slate-700">
             First name
             <input className="input mt-1" required value={form.first_name} onChange={set("first_name")} />
           </label>
-          <label className="block text-sm">
+          <label className="block text-sm font-medium text-slate-700">
             Last name
             <input className="input mt-1" value={form.last_name} onChange={set("last_name")} />
           </label>
         </div>
-        <label className="block text-sm">
+        <label className="block text-sm font-medium text-slate-700">
           Email
           <input className="input mt-1" type="email" required value={form.email} onChange={set("email")} />
         </label>
-        <label className="block text-sm">
+        <label className="block text-sm font-medium text-slate-700">
           Phone
           <input className="input mt-1" value={form.phone} onChange={set("phone")} />
         </label>
-        <label className="block text-sm">
+        <label className="block text-sm font-medium text-slate-700">
           Password
           <input className="input mt-1" type="password" required minLength={8} value={form.password} onChange={set("password")} />
         </label>
-        <label className="block text-sm">
+        <label className="block text-sm font-medium text-slate-700">
           I am a
           <select className="input mt-1" value={form.role} onChange={set("role")}>
             <option value="patient">Patient</option>
@@ -77,12 +75,12 @@ export default function RegisterPage() {
           {busy ? "Creating account…" : "Sign up"}
         </button>
       </form>
-      <p className="mt-4 text-center text-sm text-slate-600">
+      <p className="mt-6 text-center text-sm text-slate-600">
         Already registered?{" "}
-        <Link href="/login" className="text-teal-700 underline">
+        <Link href="/login" className="font-semibold text-teal-700 hover:underline">
           Log in
         </Link>
       </p>
-    </div>
+    </AuthLayout>
   );
 }
