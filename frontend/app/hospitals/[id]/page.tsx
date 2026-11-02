@@ -20,6 +20,7 @@ const WEBSITE_SOURCE: Record<string, string> = {
   osm: "from OpenStreetMap",
   wikidata: "found on Wikidata, not confirmed by the hospital",
   patient: "added by a patient, not confirmed by the hospital",
+  nearby: "from the same hospital listed nearby on the map, not confirmed by the hospital",
 };
 
 const HospitalMap = dynamic(() => import("@/components/HospitalMap"), { ssr: false });
@@ -110,7 +111,7 @@ export default function HospitalDetailPage() {
             {hospital.website && (
               <p className="mt-1 text-sm">
                 <a href={hospital.website} target="_blank" rel="noopener noreferrer" className="text-teal-700 underline">
-                  {hospital.website_source === "wikidata" || hospital.website_source === "patient" ? "Website" : "Official website"} ↗
+                  {["wikidata", "patient", "nearby"].includes(hospital.website_source) ? "Website" : "Official website"} ↗
                 </a>
                 {WEBSITE_SOURCE[hospital.website_source] && (
                   <span className="ml-1 text-xs text-slate-500">({WEBSITE_SOURCE[hospital.website_source]})</span>

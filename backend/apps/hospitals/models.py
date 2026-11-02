@@ -30,6 +30,7 @@ class Hospital(models.Model):
         OSM = "osm", "OpenStreetMap"
         WIKIDATA = "wikidata", "Wikidata"
         PATIENT = "patient", "Added by a patient"
+        NEARBY = "nearby", "Same hospital nearby on the map"
 
     # Where the website came from ("" = added by an admin / the hospital itself).
     website_source = models.CharField(max_length=20, choices=WebsiteSource.choices, blank=True)

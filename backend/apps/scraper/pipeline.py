@@ -8,7 +8,9 @@ One scrape job, start to finish (runs inside the scraper_worker container):
 import logging
 
 import httpx
+from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import D
 from django.db import transaction
 from django.utils import timezone
 
@@ -64,16 +66,44 @@ def _search_website(name: str, lat, lng, qid: str = "") -> str | None:
         return ""
 
 
+NEARBY_M = 500
+
+
+def nearby_namesake(hospital: Hospital) -> Hospital | None:
+    """
+    The same hospital mapped twice is common ("MIOT Hospital" and "MIOT International", 140 m apart).
+    A saved hospital within NEARBY_M with the same distinctive name and a website is very likely the same place.
+    Distinctive words must be 4+ letters, so "Sri Hospital" doesn't borrow "Sri Ramachandra"'s website.
+    """
+    if hospital.location is None:
+        return None
+    mine = {w for w in wikidata._words(hospital.name) if len(w) >= 4}
+    if not mine:
+        return None
+    others = (Hospital.objects.exclude(pk=hospital.pk).exclude(website="")
+              .filter(location__dwithin=(hospital.location, D(m=NEARBY_M)))
+              .annotate(dist=Distance("location", hospital.location)).order_by("dist"))
+    for other in others[:20]:
+        theirs = {w for w in wikidata._words(other.name) if len(w) >= 4}
+        if theirs and (mine <= theirs or theirs <= mine):
+            return other
+    return None
+
+
 def find_missing_website(hospital: Hospital) -> str:
     """Search for a hospital's website once; remember that we looked (and what we found)."""
-    lat, lng = (hospital.location.y, hospital.location.x) if hospital.location else (None, None)
-    url = _search_website(hospital.name, lat, lng, hospital.wikidata_id)
+    twin = nearby_namesake(hospital)
+    if twin:
+        url, source = twin.website, Hospital.WebsiteSource.NEARBY
+    else:
+        lat, lng = (hospital.location.y, hospital.location.x) if hospital.location else (None, None)
+        url, source = _search_website(hospital.name, lat, lng, hospital.wikidata_id), Hospital.WebsiteSource.WIKIDATA
     if url is None:
         return ""  # Wikidata unreachable: don't mark as searched, so the next visit tries again
     hospital.website_checked_at = timezone.now()
     fields = ["website_checked_at"]
     if url and not hospital.website:
-        hospital.website, hospital.website_source = url, Hospital.WebsiteSource.WIKIDATA
+        hospital.website, hospital.website_source = url, source
         fields += ["website", "website_source"]
     hospital.save(update_fields=fields)
     return hospital.website

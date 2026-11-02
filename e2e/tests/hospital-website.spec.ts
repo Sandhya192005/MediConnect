@@ -25,9 +25,12 @@ test("opening a hospital reads its website, and its doctors can be searched", as
   // Search inside this hospital's doctors (the request form's doctor dropdown keeps listing everyone, on purpose).
   const heading = page.getByRole("heading", { name: /Doctors listed on their website/ });
   const list = heading.locator("xpath=following-sibling::ul[1]");
-  await expect(heading).toHaveText(/\(5\)/);
+  await expect(heading).toHaveText(/\(6\)/);
+  // A profile no page links to (like MIOT's): found only through the site's sitemap.
+  await expect(list.getByText("Dr. Anand Kumar")).toBeVisible();
+  await expect(list).toContainText("Kidney Care");
   await page.getByLabel("Search doctors at this hospital").fill("derma");
-  await expect(heading).toHaveText(/\(1 of 5\)/);
+  await expect(heading).toHaveText(/\(1 of 6\)/);
   await expect(list.getByText("Dr. Farhan Ali")).toBeVisible();
   await expect(list.getByText("Dr. Kavitha Raman")).toHaveCount(0);
 

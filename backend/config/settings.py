@@ -171,6 +171,8 @@ WEBSITE_RECHECK_DAYS = 30  # search again for a missing website at most this oft
 SCRAPER_FRESH_HOURS = 24  # saved copy younger than this is served without re-scraping
 SCRAPER_MIN_REFRESH_MINUTES = 60  # "Refresh from website" allowed at most this often per hospital
 SCRAPER_MAX_PAGES = 6
+SCRAPER_MAX_DOCTOR_PAGES = 10  # extra doctor pages found through the site's sitemap
+SCRAPER_TIME_BUDGET_S = 100  # stop opening new pages after this; the scrape task is stopped at 150 s
 SCRAPER_PAGE_TIMEOUT_MS = 20_000
 SCRAPER_JOBS_PER_USER_PER_HOUR = int(os.environ.get("SCRAPER_JOBS_PER_USER_PER_HOUR", "10"))
 # Hosts on the private Docker network that may be scraped (only the mock hospital site).

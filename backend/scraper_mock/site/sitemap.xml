@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fictional demo site. Lists a doctor profile that no page links to, and one removed page (404). -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>http://mockhospital/index.html</loc></url>
+  <url><loc>http://mockhospital/doctors.html</loc></url>
+  <url><loc>http://mockhospital/contact.html</loc></url>
+  <url><loc>http://mockhospital/centers-of-excellence/meet-the-doctors/</loc></url>
+  <url><loc>http://mockhospital/centers-of-excellence/kidney-care/meet-the-doctors/dr-anand-kumar.html</loc></url>
+  <url><loc>http://mockhospital/careers.html</loc></url>
+</urlset>

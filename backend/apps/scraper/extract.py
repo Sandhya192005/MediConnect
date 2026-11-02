@@ -21,7 +21,7 @@ MAX_DOCTORS = 150
 PHONE = re.compile(r"(?:\+?\d[\d\s\-()]{7,16}\d)")
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 DOCTOR_LINE = re.compile(
-    r"\bDr\.?\s+(?P<name>[A-Z][A-Za-z.'\-]+(?:\s+[A-Z][A-Za-z.'\-]+){0,3})"
+    r"\bDr\.?\s+(?P<name>[A-Z][A-Za-z.'\-]*(?:\s+[A-Z][A-Za-z.'\-]*){0,4})"  # initials allowed: "Dr. P V A Mohandas"
     r"(?:\s*[,\-–|:]\s*(?P<spec>[A-Za-z &/()]{3,60}))?"
 )
 _DAY = r"(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*\.?"
@@ -30,6 +30,25 @@ _TIME = r"\d{1,2}(?::\d{2})?\s*(?i:am|pm)?"
 TIMING = re.compile(
     rf"{_DAY}(?:\s*(?:,|&|/|–|-|to)\s*{_DAY})*\s*[:,]?\s*{_TIME}\s*(?:–|-|to)\s*\d{{1,2}}(?::\d{{2}})?\s*(?i:am|pm)"
 )
+# A doctor's own profile page: the title is the name ("Dr. Rajan Ravichandran | MIOT International").
+PROFILE_TITLE = re.compile(
+    # Initials allowed: "Prof. Dr. P V A Mohandas"
+    r"^\s*(?:Prof\.?\s*)?Dr\.?\s*(?P<name>[A-Z][A-Za-z.'\-]*(?:\s+[A-Z][A-Za-z.'\-]*){0,5})\s*(?:[|\-–:]|$)"
+)
+# Address parts that name a page type, not a specialty.
+NOT_SPECIALTY = re.compile(
+    r"^(?:meet-the-doctors?|doctors?|our-doctors|our-team|team|consultants?|specialists?|profiles?|people|staff|"
+    r"centers?-of-excellence|centres?-of-excellence|departments?|specialities|specialties|key-specialities|en|index\.html?)$",
+    re.I,
+)
+# Words that make a phrase look like a medical specialty (rule-based fallback only).
+MEDICAL_WORD = re.compile(
+    r"olog|iatr|surg|physician|medicine|specialist|consultant|cardi|ortho|neuro|derma|gyn|obstet|paediat|pediat|"
+    r"\bent\b|dental|dentist|onco|radio|nephro|uro|gastro|hepat|transplant|therap|anaesth|anesth|ophthal|eye|skin|"
+    r"heart|kidney|bone|spine|child|diabet|endocrin|pulmon|chest|psych|rheumat|haemat|hemat|plastic|cosmetic",
+    re.I,
+)
+BOOKING_LINK = re.compile(r"appointment|(?<![a-z])book(?:ing|\s+now|\s+an?)?(?![a-z])", re.I)
 GENERAL_HOURS_LINE = re.compile(r"\b(?:OPD|opening|visiting)\b|\b(?:timings?|hours)\b", re.I)
 
 SCHEMA_HINT = {
@@ -69,23 +88,31 @@ def _clean_url(v: str, site_url: str) -> str:
 
 def normalize(raw: dict, site_url: str) -> dict:
     """Validate whatever came back (LLM or fallback) into a safe, predictable shape."""
-    doctors, seen = [], set()
+    doctors, seen = [], {}
     for d in raw.get("doctors") or []:
         if not isinstance(d, dict):
             continue
         name = _clean_str(d.get("name"), 150)
         name = re.sub(r"^(dr\.?\s*)", "Dr. ", name, flags=re.I) if name else ""
-        if len(name) < 6 or name.lower() in seen:
+        if len(name) < 6:
             continue
-        seen.add(name.lower())
-        doctors.append({
+        clean = {
             "name": name,
             "specialization": _clean_str(d.get("specialization"), 150),
             "qualification": _clean_str(d.get("qualification"), 200),
             "timings": _clean_str(d.get("timings"), 200),
-        })
+        }
+        # "Dr. P.V.A. Mohandas" and "Dr. P V A Mohandas" are the same person: compare letters only.
+        key = re.sub(r"[^a-z]", "", name.lower())
+        if key in seen:  # same doctor again: keep the first, but fill in what it was missing
+            first = seen[key]
+            for field in ("specialization", "qualification", "timings"):
+                first[field] = first[field] or clean[field]
+            continue
         if len(doctors) >= MAX_DOCTORS:
-            break
+            continue
+        seen[key] = clean
+        doctors.append(clean)
 
     def str_list(key, n=10):
         out = []
@@ -108,23 +135,39 @@ def normalize(raw: dict, site_url: str) -> dict:
     }
 
 
+def specialty_from_url(url: str) -> str:
+    """'.../kidney-transplant/meet-the-doctors/dr-rajan/' -> 'Kidney Transplant' (the section the profile sits in)."""
+    parts = [p for p in urlparse(url).path.split("/") if p][:-1]  # drop the doctor's own part
+    for part in reversed(parts):
+        if not NOT_SPECIALTY.match(part) and not part.lower().startswith("dr-"):
+            return re.sub(r"[-_]+", " ", re.sub(r"\.html?$", "", part)).strip().title()[:100]
+    return ""
+
+
 def rule_based(pages: list[dict]) -> dict:
     """No-AI fallback: good enough for simple, well-labelled pages."""
     text = "\n".join(p["text"] for p in pages)
     doctors = []
+    for p in pages:  # a doctor's own profile page: one doctor, specialty from where the page sits
+        m = PROFILE_TITLE.match(p.get("title") or "")
+        if m:
+            doctors.append({"name": "Dr. " + m.group("name").strip(), "specialization": specialty_from_url(p["url"]), "timings": ""})
     for line in text.splitlines():
         m = DOCTOR_LINE.search(line)
         if m:
             t = TIMING.search(line)
+            spec = (m.group("spec") or "").strip()
             doctors.append({
                 "name": "Dr. " + m.group("name"),
-                "specialization": (m.group("spec") or "").strip(),
+                # "Dr. X – discusses the gaps in healthcare" (a news line) is not a specialty.
+                "specialization": spec if MEDICAL_WORD.search(spec) else "",
                 "timings": t.group(0) if t else "",
             })
     booking = ""
     for p in pages:
         for link in p.get("links", []):
-            if re.search(r"appointment|book", f"{link['text']} {link['url']}", re.I):
+            # Whole words, and not just a "#book-appointment" pop-up anchor on some other page.
+            if BOOKING_LINK.search(f"{link['text']} {link['url'].split('#')[0]}") and "#" not in link["url"]:
                 booking = link["url"]
                 break
         if booking:

@@ -410,4 +410,4 @@ def test_live_mock_site():
     assert not any("login" in u or "careers" in u for u in urls)  # skipped on purpose
     assert "Dr. Farhan Ali" in text  # added by JavaScript: only a real browser sees it
     data = normalize(rule_based(pages), "http://mockhospital/")
-    assert len(data["doctors"]) == 5
+    assert len(data["doctors"]) == 6  # incl. Dr. Anand Kumar, found only through the sitemap
