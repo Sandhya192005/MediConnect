@@ -42,14 +42,14 @@ function Lookup() {
 
   return (
     <div className="max-w-2xl">
-      <Link href="/hospitals" className="text-sm text-teal-700">← Hospitals near you</Link>
-      <h1 className="mt-2 text-2xl font-bold">Look up any hospital</h1>
+      <Link href="/hospitals" className="text-sm font-medium text-teal-700 hover:underline">← Hospitals near you</Link>
+      <h1 className="page-title mt-2">Look up any hospital</h1>
       <p className="mt-1 text-sm text-slate-600">
         We&apos;ll show what&apos;s on the hospital&apos;s <strong>own website</strong> (doctors, departments, timings, contact) so you can check it
         before you book. Saved copies younger than 24 hours appear instantly.
       </p>
 
-      <form onSubmit={search} className="mt-5 space-y-3 rounded-xl border border-slate-200 bg-white p-5">
+      <form onSubmit={search} className="mt-5 space-y-3 card p-5">
         <label className="block text-sm">
           Hospital name and city
           <input className="input mt-1" placeholder="e.g. Greenfield Demo Hospital Chennai" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -68,7 +68,7 @@ function Lookup() {
           <ScrapeStatus job={job} />
           {result.matches.length === 0 && !job && <p className="text-sm text-slate-600">No hospitals found.</p>}
           {result.matches.map((m) => (
-            <Link key={m.id} href={`/hospitals/${m.id}`} className="block rounded-xl border border-slate-200 bg-white p-4 hover:border-teal-400">
+            <Link key={m.id} href={`/hospitals/${m.id}`} className="block card-hover p-4">
               <div className="flex items-start justify-between gap-2">
                 <span className="font-semibold">{m.name}</span>
                 {m.is_approved && m.source !== "scraped" ? (

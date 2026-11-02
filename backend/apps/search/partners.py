@@ -16,7 +16,7 @@ from elasticsearch import ApiError, ConnectionError as ESConnectionError
 from apps.doctors.models import DoctorProfile
 
 from .indexes import es, index_name
-from .queries import doctor_text_query, hospital_text_query
+from .queries import doctor_text_query
 
 log = logging.getLogger(__name__)
 MAX_MATCHES = 300
@@ -38,7 +38,10 @@ def _es_matches(q: str) -> tuple[list[int], list[int]]:
     )
     hospitals = es().search(
         index=index_name("hospitals"), size=50, source=["id"],
-        query={"bool": {"must": [hospital_text_query(q)], "filter": [{"term": {"is_partner": True}}]}},
+        # Name and city only: the departments field would make "heart" match every hospital with Cardiology,
+        # and a "name match" hides the matching specialists.
+        query={"bool": {"must": [{"multi_match": {"query": q, "fields": ["name^3", "city"], "fuzziness": "AUTO:3,5"}}],
+                        "filter": [{"term": {"is_partner": True}}]}},
     )
     return [h["_source"]["id"] for h in doctors["hits"]["hits"]], [h["_source"]["id"] for h in hospitals["hits"]["hits"]]
 

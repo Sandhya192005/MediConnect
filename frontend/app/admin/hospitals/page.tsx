@@ -1,5 +1,6 @@
 "use client";
 
+import PageHeader from "@/components/PageHeader";
 import { useCallback, useEffect, useState } from "react";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
@@ -53,8 +54,8 @@ function HospitalsAdmin() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-5">
-      <form onSubmit={add} className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 lg:col-span-2">
-        <h2 className="font-semibold">Add hospital</h2>
+      <form onSubmit={add} className="space-y-3 card p-5 lg:col-span-2">
+        <h2 className="section-title">Add hospital</h2>
         <input className="input" placeholder="Name" required value={form.name} onChange={set("name")} />
         <input className="input" placeholder="Address" value={form.address} onChange={set("address")} />
         <div className="grid grid-cols-2 gap-2">
@@ -84,7 +85,7 @@ function HospitalsAdmin() {
 
       <ul className="space-y-3 lg:col-span-3">
         {hospitals.map((h) => (
-          <li key={h.id} className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
+          <li key={h.id} className="flex items-start justify-between gap-3 card p-4">
             <div>
               <p className="font-medium">{h.name}</p>
               <p className="text-sm text-slate-600">{[h.address, h.city, h.state].filter(Boolean).join(", ")}</p>
@@ -92,7 +93,7 @@ function HospitalsAdmin() {
             </div>
             <button
               onClick={() => toggleApproval(h)}
-              className={`shrink-0 rounded-md px-3 py-1 text-xs ${h.is_approved ? "bg-teal-100 text-teal-800" : "bg-amber-100 text-amber-800"}`}
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${h.is_approved ? "bg-teal-50 text-teal-800 ring-1 ring-teal-200" : "bg-amber-50 text-amber-800 ring-1 ring-amber-200"}`}
             >
               {h.is_approved ? "Approved" : "Pending – approve"}
             </button>
@@ -106,7 +107,7 @@ function HospitalsAdmin() {
 export default function AdminHospitalsPage() {
   return (
     <RoleGuard role="admin">
-      <h1 className="mb-4 text-2xl font-bold">Hospitals</h1>
+      <div className="mb-6"><PageHeader icon="hospital" title="Hospitals" subtitle="Add hospitals, approve partners and check pins." /></div>
       <HospitalsAdmin />
     </RoleGuard>
   );

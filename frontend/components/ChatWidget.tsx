@@ -65,7 +65,7 @@ function BookingCard({ p, canBook }: { p: Proposal; canBook: boolean }) {
           ✓ Booked! <Link href="/patient/appointments" className="underline">View appointments</Link>
         </p>
       ) : canBook ? (
-        <button onClick={confirm} disabled={state === "busy"} className="mt-2 w-full rounded-md bg-teal-600 py-1.5 font-medium text-white disabled:opacity-60">
+        <button onClick={confirm} disabled={state === "busy"} className="btn-primary mt-2 py-2">
           {state === "busy" ? "Booking…" : "Confirm booking"}
         </button>
       ) : (
@@ -156,7 +156,7 @@ export default function ChatWidget() {
       <button
         onClick={() => setOpen(!open)}
         aria-label={open ? "Close assistant" : "Open assistant"}
-        className="fixed bottom-4 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-teal-600 text-2xl text-white shadow-lg hover:bg-teal-700"
+        className="fixed bottom-4 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-brand-gradient text-2xl text-white shadow-lg shadow-teal-700/30 transition hover:scale-105"
       >
         {open ? "✕" : "💬"}
       </button>
@@ -166,12 +166,12 @@ export default function ChatWidget() {
           aria-label="MediConnect assistant"
           className="fixed bottom-20 right-4 z-40 flex h-[min(600px,calc(100vh-7rem))] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
         >
-          <header className="flex items-center justify-between bg-teal-600 px-4 py-3 text-white">
+          <header className="bg-brand-gradient flex items-center justify-between px-4 py-3 text-white">
             <div>
               <p className="font-semibold">MediConnect Assistant</p>
               <p className="text-xs text-teal-100">Finds doctors & slots · not medical advice</p>
             </div>
-            <button onClick={newChat} className="rounded-md bg-white/15 px-2 py-1 text-xs hover:bg-white/25">
+            <button onClick={newChat} className="rounded-lg bg-white/15 px-2.5 py-1 text-xs font-semibold hover:bg-white/25">
               New chat
             </button>
           </header>
@@ -194,7 +194,7 @@ export default function ChatWidget() {
               <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
                 <div className={`max-w-[90%] rounded-2xl px-3 py-2 text-sm ${m.role === "user" ? "bg-teal-600 text-white" : "border border-slate-200 bg-white"}`}>
                   {m.emergencyNotice && (
-                    <p role="alert" className="mb-2 rounded-md bg-red-50 p-2 font-medium text-red-700">🚨 {m.emergencyNotice}</p>
+                    <p role="alert" className="mb-2 rounded-lg bg-red-50 p-2 font-medium text-red-700">🚨 {m.emergencyNotice}</p>
                   )}
                   {/* Plain text only: the reply is never inserted as HTML. */}
                   <p className="whitespace-pre-wrap">{m.content}</p>
@@ -204,7 +204,7 @@ export default function ChatWidget() {
             ))}
 
             {busy && <p className="text-sm text-slate-400">Assistant is typing…</p>}
-            {error && <p role="alert" className="rounded-md bg-amber-50 p-2 text-sm text-amber-800">{error}</p>}
+            {error && <p role="alert" className="rounded-lg bg-amber-50 p-2 text-sm text-amber-800">{error}</p>}
             <div ref={bottomRef} />
           </div>
 
@@ -235,7 +235,7 @@ export default function ChatWidget() {
                 placeholder="Ask about doctors, slots, hospitals…"
                 aria-label="Message"
               />
-              <button disabled={busy || !input.trim()} className="rounded-md bg-teal-600 px-3 text-sm font-medium text-white disabled:opacity-50">
+              <button disabled={busy || !input.trim()} className="btn-solid px-3">
                 Send
               </button>
             </div>

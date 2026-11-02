@@ -1,5 +1,6 @@
 "use client";
 
+import PageHeader from "@/components/PageHeader";
 import { useEffect, useState } from "react";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
@@ -48,7 +49,7 @@ function ProfileForm() {
   }
 
   return (
-    <form onSubmit={save} className="max-w-xl space-y-4 rounded-xl border border-slate-200 bg-white p-6">
+    <form onSubmit={save} className="max-w-xl space-y-4 card p-6">
       <label className="block text-sm">
         Hospital
         <select className="input mt-1" value={form.hospital} onChange={set("hospital")}>
@@ -86,7 +87,7 @@ function ProfileForm() {
 export default function DoctorProfilePage() {
   return (
     <RoleGuard role="doctor">
-      <h1 className="mb-4 text-2xl font-bold">My profile</h1>
+      <div className="mb-6"><PageHeader icon="user" title="My profile" subtitle="What patients see on your page." /></div>
       <p className="mb-4 text-sm text-slate-600">Patients can book you once a hospital is selected and your working hours are set.</p>
       <ProfileForm />
     </RoleGuard>

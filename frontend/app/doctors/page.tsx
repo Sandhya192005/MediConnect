@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import Highlight from "@/components/Highlight";
+import Icon from "@/components/Icons";
+import PageHeader, { Avatar } from "@/components/PageHeader";
 import SearchBox from "@/components/SearchBox";
 import { api } from "@/lib/api";
 
@@ -56,15 +58,15 @@ function Chips({ title, items, active, onPick }: { title: string; items: Facet[]
   if (items.length === 0 && !active) return null;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-medium uppercase tracking-wide text-slate-500">{title}</span>
+      <span className="w-20 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</span>
       {active && (
-        <button onClick={() => onPick("")} className="rounded-full bg-teal-600 px-3 py-1 text-xs text-white">
-          {active} ✕
+        <button onClick={() => onPick("")} className="chip-active">
+          {active} <Icon name="close" className="h-3 w-3" />
         </button>
       )}
       {!active &&
         items.map((f) => (
-          <button key={f.value} onClick={() => onPick(f.value)} className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs hover:border-teal-500">
+          <button key={f.value} onClick={() => onPick(f.value)} className="chip">
             {f.value} <span className="text-slate-400">{f.count}</span>
           </button>
         ))}
@@ -77,44 +79,60 @@ function PartnerCard({ h, department }: { h: PartnerHospital; department: string
   const focus = department || h.matching_doctors[0]?.department || "";
   const href = `/hospitals/${h.id}${focus ? `?specialty=${encodeURIComponent(focus)}` : ""}`;
   return (
-    <article aria-label={h.name} className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 hover:border-teal-400 hover:shadow-sm">
-      <div className="flex items-start justify-between gap-2">
-        <Link href={href} className="font-semibold hover:text-teal-700">{h.name}</Link>
-        <span className="shrink-0 rounded-full bg-teal-50 px-2 py-0.5 text-xs text-teal-700">Instant booking</span>
-      </div>
-      <p className="text-sm text-slate-600">{[h.address, h.city].filter(Boolean).join(", ")}</p>
-
-      <p className="mt-3 text-xs font-medium uppercase tracking-wide text-slate-500">
-        {h.doctor_count} specialist{h.doctor_count === 1 ? "" : "s"}
-      </p>
-      <div className="mt-1 flex flex-wrap gap-1.5">
-        {h.specialties.map((s) => (
-          <Link
-            key={s.name}
-            href={`/hospitals/${h.id}?specialty=${encodeURIComponent(s.name)}`}
-            className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700 hover:bg-teal-50 hover:text-teal-800"
-          >
-            {s.name} {s.count > 1 ? `· ${s.count}` : ""}
-          </Link>
-        ))}
-      </div>
-
-      {h.matching_doctors.length > 0 && (
-        <div className="mt-3 border-t border-slate-100 pt-3">
-          <p className="text-xs font-medium text-slate-500">Matching specialists</p>
-          <ul className="mt-1 space-y-1 text-sm">
-            {h.matching_doctors.slice(0, 3).map((d) => (
-              <li key={d.id}>
-                <Link href={`/doctors/${d.id}`} className="text-teal-700 hover:underline">Dr. {d.name}</Link>
-                <span className="text-slate-600"> · {d.specialization} · ₹{d.fee.toFixed(0)}</span>
-              </li>
-            ))}
-            {h.matching_doctors.length > 3 && <li className="text-xs text-slate-500">+{h.matching_doctors.length - 3} more</li>}
-          </ul>
+    <article aria-label={h.name} className="card-hover flex flex-col overflow-hidden">
+      <div className="bg-brand-gradient h-1.5" />
+      <div className="flex flex-1 flex-col p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+            <Icon name="hospital" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <Link href={href} className="font-semibold text-navy-800 hover:text-teal-700">{h.name}</Link>
+            <p className="flex items-center gap-1 truncate text-sm text-slate-500">
+              <Icon name="pin" className="h-3.5 w-3.5 shrink-0" />
+              {[h.address, h.city].filter(Boolean).join(", ")}
+            </p>
+          </div>
         </div>
-      )}
+        <span className="mt-3 inline-flex w-fit items-center gap-1 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800">
+          <Icon name="check" className="h-3 w-3" /> Instant booking
+        </span>
 
-      <Link href={href} className="mt-auto pt-3 text-sm font-medium text-teal-700">View specialists & book →</Link>
+        <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          {h.doctor_count} specialist{h.doctor_count === 1 ? "" : "s"}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {h.specialties.map((s) => (
+            <Link key={s.name} href={`/hospitals/${h.id}?specialty=${encodeURIComponent(s.name)}`} className="chip">
+              {s.name}{s.count > 1 ? ` · ${s.count}` : ""}
+            </Link>
+          ))}
+        </div>
+
+        {h.matching_doctors.length > 0 && (
+          <div className="mt-4 rounded-xl bg-slate-50 p-3">
+            <p className="text-xs font-semibold text-slate-500">Matching specialists</p>
+            <ul className="mt-2 space-y-2 text-sm">
+              {h.matching_doctors.slice(0, 3).map((d) => (
+                <li key={d.id} className="flex items-center gap-2">
+                  <Avatar name={d.name} size="sm" />
+                  <span className="min-w-0">
+                    <Link href={`/doctors/${d.id}`} className="font-medium text-navy-800 hover:text-teal-700">Dr. {d.name}</Link>
+                    <span className="block truncate text-xs text-slate-500">{d.specialization} · ₹{d.fee.toFixed(0)}</span>
+                  </span>
+                </li>
+              ))}
+              {h.matching_doctors.length > 3 && <li className="text-xs text-slate-500">+{h.matching_doctors.length - 3} more</li>}
+            </ul>
+          </div>
+        )}
+
+        <div className="mt-auto pt-5">
+          <Link href={href} className="btn-solid w-full">
+            View specialists & book <Icon name="arrow" className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
     </article>
   );
 }
@@ -171,66 +189,80 @@ export default function FindPage() {
   }, [q, city]);
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold">Find hospitals or doctors</h1>
-      <p className="text-sm text-slate-600">
-        Search a hospital, a doctor, or a specialty. Try “Apollo”, “heart”, “skin doctor”, “kids”, or even a typo like “cardiolgist”.
-      </p>
+    <div className="space-y-8">
+      <PageHeader
+        icon="search"
+        title="Find hospitals or doctors"
+        subtitle="Search a hospital, a doctor, or a specialty. Try “Apollo”, “heart”, “skin doctor”, “kids”, or even a typo like “cardiolgist”."
+      />
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-4">
-        <div className="sm:col-span-3">
-          <SearchBox value={q} onChange={setQ} placeholder="Hospital, doctor, specialty or symptom area" />
+      <div className="card space-y-4 p-4 sm:p-5">
+        <div className="grid gap-3 sm:grid-cols-4">
+          <div className="sm:col-span-3">
+            <SearchBox value={q} onChange={setQ} placeholder="Hospital, doctor, specialty or symptom area" />
+          </div>
+          <select className="input" value={maxFee} onChange={(e) => setMaxFee(e.target.value)} aria-label="Maximum fee">
+            {FEE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
         </div>
-        <select className="input" value={maxFee} onChange={(e) => setMaxFee(e.target.value)} aria-label="Maximum fee">
-          {FEE_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        {partners && (partners.facets.departments.length > 0 || department || city) && (
+          <div className="space-y-2 border-t border-slate-100 pt-4">
+            <Chips title="Specialty" items={partners.facets.departments} active={department} onPick={setDepartment} />
+            <Chips title="City" items={partners.facets.cities} active={city} onPick={setCity} />
+          </div>
+        )}
       </div>
 
-      {partners && (
-        <div className="mt-4 space-y-2">
-          <Chips title="Specialty" items={partners.facets.departments} active={department} onPick={setDepartment} />
-          <Chips title="City" items={partners.facets.cities} active={city} onPick={setCity} />
-        </div>
-      )}
-
       {partners?.degraded && (
-        <p className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+        <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
           Smart search is temporarily unavailable, so these are basic results (no typo correction).
         </p>
       )}
 
-      <section className="mt-6" aria-label="MediConnect hospitals">
-        <h2 className="text-lg font-semibold">
-          MediConnect hospitals <span className="text-sm font-normal text-slate-500">· choose a specialist and book instantly</span>
-        </h2>
+      <section aria-label="MediConnect hospitals">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="section-title">MediConnect hospitals</h2>
+            <p className="text-sm text-slate-500">Choose a specialist and book instantly.</p>
+          </div>
+          {partners && !failed && (
+            <span className="text-sm text-slate-500">{partners.total} hospital{partners.total === 1 ? "" : "s"}</span>
+          )}
+        </div>
         {failed ? (
-          <p className="mt-2 text-red-600">Couldn&apos;t load hospitals. Please try again.</p>
+          <p className="mt-3 text-red-600">Couldn&apos;t load hospitals. Please try again.</p>
         ) : partners === null ? (
-          <p className="mt-2 text-slate-500">Loading…</p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => <div key={i} className="card h-64 animate-pulse bg-slate-100/60" />)}
+          </div>
         ) : partners.results.length === 0 ? (
-          <p className="mt-2 text-slate-500">No MediConnect hospital has a specialist matching your search.</p>
+          <div className="card mt-3 flex flex-col items-center p-10 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400"><Icon name="search" /></span>
+            <p className="mt-3 font-medium text-navy-800">No MediConnect hospital has a specialist matching your search.</p>
+            <p className="mt-1 text-sm text-slate-500">Try another word, or look at the other hospitals below.</p>
+          </div>
         ) : (
-          <>
-            <p className="mt-1 text-sm text-slate-500">{partners.total} hospital{partners.total === 1 ? "" : "s"}</p>
-            <div className="mt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {partners.results.map((h) => <PartnerCard key={h.id} h={h} department={department} />)}
-            </div>
-          </>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {partners.results.map((h) => <PartnerCard key={h.id} h={h} department={department} />)}
+          </div>
         )}
       </section>
 
       {others.length > 0 && (
-        <section className="mt-8" aria-label="Other hospitals">
-          <h2 className="text-lg font-semibold">Other hospitals <span className="text-sm font-normal text-slate-500">· not on MediConnect yet</span></h2>
+        <section aria-label="Other hospitals">
+          <h2 className="section-title">Other hospitals <span className="text-sm font-normal text-slate-500">· not on MediConnect yet</span></h2>
           <p className="text-sm text-slate-500">Information from the map and each hospital&apos;s own website. Book with the hospital, or send a request.</p>
-          <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {others.slice(0, 9).map((h) => (
-              <Link key={h.id} href={`/hospitals/${h.id}`} className="rounded-xl border border-slate-200 bg-white p-4 hover:border-teal-400">
-                <h3 className="font-semibold"><Highlight text={h.highlight.name} fallback={h.name} /></h3>
-                <p className="text-sm text-slate-600">{[h.address, h.city].filter(Boolean).join(", ") || "Address not listed"}</p>
-                <p className="mt-1 text-xs text-slate-500">View info from its website →</p>
+              <Link key={h.id} href={`/hospitals/${h.id}`} className="card-hover flex items-start gap-3 p-4">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500"><Icon name="hospital" /></span>
+                <span className="min-w-0">
+                  <span className="block font-semibold text-navy-800"><Highlight text={h.highlight.name} fallback={h.name} /></span>
+                  <span className="block truncate text-sm text-slate-500">{[h.address, h.city].filter(Boolean).join(", ") || "Address not listed"}</span>
+                  <span className="mt-1 block text-xs font-medium text-teal-700">View info from its website →</span>
+                </span>
               </Link>
             ))}
           </div>
@@ -238,19 +270,22 @@ export default function FindPage() {
       )}
 
       {listed.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold">Doctors listed on hospital websites</h2>
+        <section>
+          <h2 className="section-title">Doctors listed on hospital websites</h2>
           <p className="text-sm text-slate-500">Information from each hospital&apos;s own website. Book with the hospital, or send a request.</p>
-          <ul className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+          <ul className="card mt-3 divide-y divide-slate-100 overflow-hidden">
             {listed.map((d) => (
               <li key={d.id}>
-                <Link href={`/hospitals/${d.hospital_id}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-slate-50">
-                  <span>
-                    <span className="font-medium">{d.name}</span>
-                    {d.specialization && <span className="text-slate-600"> · {d.specialization}</span>}
-                    {d.timings && <span className="block text-xs text-slate-500">As listed: {d.timings}</span>}
+                <Link href={`/hospitals/${d.hospital_id}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50">
+                  <span className="flex items-center gap-3">
+                    <Avatar name={d.name} size="sm" />
+                    <span>
+                      <span className="font-medium text-navy-800">{d.name}</span>
+                      {d.specialization && <span className="text-slate-600"> · {d.specialization}</span>}
+                      {d.timings && <span className="block text-xs text-slate-500">As listed: {d.timings}</span>}
+                    </span>
                   </span>
-                  <span className="text-sm text-teal-700">{d.hospital_name}{d.hospital_city ? `, ${d.hospital_city}` : ""} →</span>
+                  <span className="text-sm font-medium text-teal-700">{d.hospital_name}{d.hospital_city ? `, ${d.hospital_city}` : ""} →</span>
                 </Link>
               </li>
             ))}

@@ -53,7 +53,7 @@ export default function ExternalAppointmentForm({
 
   if (saved && hospitalId) {
     return (
-      <p className="rounded-md bg-teal-50 p-3 text-sm text-teal-800">
+      <p className="rounded-xl bg-teal-50 p-3 text-sm text-teal-800">
         ✓ Added. We&apos;ll remind you 24 hours and 1 hour before. For changes, contact the hospital.
       </p>
     );

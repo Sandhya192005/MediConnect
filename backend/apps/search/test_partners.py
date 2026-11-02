@@ -20,6 +20,7 @@ def data(db):
     cardio = Department.objects.create(name="Cardiology")
     derma = Department.objects.create(name="Dermatology")
     lakeside = Hospital.objects.create(name="Lakeside Hospital", city="Chennai")
+    lakeside.departments.add(cardio, derma)  # "heart" must not count as a hospital-name match because of these
     valley = Hospital.objects.create(name="Green Valley Hospital", city="Bengaluru")
     make_doctor("a@x.com", "Anita", "Rao", lakeside, cardio, "Cardiologist", 800)
     make_doctor("m@x.com", "Meera", "Nair", lakeside, derma, "Dermatologist", 600)

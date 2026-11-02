@@ -1,5 +1,6 @@
 "use client";
 
+import PageHeader from "@/components/PageHeader";
 import { useEffect, useState } from "react";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
@@ -35,7 +36,7 @@ function AvailabilityEditor() {
   }
 
   return (
-    <div className="max-w-2xl space-y-3 rounded-xl border border-slate-200 bg-white p-6">
+    <div className="max-w-2xl space-y-3 card p-6">
       {rows.length === 0 && <p className="text-sm text-slate-500">No working hours yet. Add a time block below.</p>}
       {rows.map((r, i) => (
         <div key={i} className="flex flex-wrap items-center gap-2">
@@ -51,11 +52,11 @@ function AvailabilityEditor() {
       <div className="flex gap-3 pt-2">
         <button
           onClick={() => setRows([...rows, { weekday: 0, start_time: "09:00", end_time: "13:00" }])}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="btn-outline"
         >
           + Add time block
         </button>
-        <button onClick={save} className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white">Save</button>
+        <button onClick={save} className="btn-solid">Save</button>
       </div>
       {msg && <p className="text-sm text-teal-700">{msg}</p>}
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
@@ -66,7 +67,7 @@ function AvailabilityEditor() {
 export default function AvailabilityPage() {
   return (
     <RoleGuard role="doctor">
-      <h1 className="mb-4 text-2xl font-bold">Weekly working hours</h1>
+      <div className="mb-6"><PageHeader icon="clock" title="Weekly working hours" subtitle="Patients can book free slots inside these hours." /></div>
       <AvailabilityEditor />
     </RoleGuard>
   );

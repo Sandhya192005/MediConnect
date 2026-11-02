@@ -3,14 +3,16 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import Icon from "@/components/Icons";
 import LocationBadge from "@/components/LocationBadge";
+import PageHeader from "@/components/PageHeader";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import type { LatLng, NearbyResponse } from "@/lib/types";
 
 // Leaflet needs the browser, so skip server rendering for the map.
 const HospitalMap = dynamic(() => import("@/components/HospitalMap"), {
   ssr: false,
-  loading: () => <div className="flex h-[460px] items-center justify-center rounded-xl bg-slate-100 text-slate-500">Loading map…</div>,
+  loading: () => <div className="flex h-[460px] animate-pulse items-center justify-center rounded-xl bg-slate-100 text-slate-500">Loading map…</div>,
 });
 
 type Mode = "near" | "city";
@@ -72,15 +74,17 @@ export default function HospitalsPage() {
     };
   }, [mode, user, city, radius, partnersOnly, tick]);
 
-  const tab = (m: Mode, label: string) => (
+  const tab = (m: Mode, label: string, icon: string) => (
     <button
       onClick={() => {
         setMode(m);
         setData(null);
         setStatus("");
       }}
-      className={`rounded-md px-4 py-2 text-sm ${mode === m ? "bg-teal-600 text-white" : "border border-slate-300 bg-white"}`}
+      aria-pressed={mode === m}
+      className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-semibold transition ${mode === m ? "bg-white text-navy-800 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
     >
+      <Icon name={icon} className="h-4 w-4" />
       {label}
     </button>
   );
@@ -89,17 +93,19 @@ export default function HospitalsPage() {
   const center = mode === "near" ? user : data?.place ? { lat: data.place.lat, lng: data.place.lng } : null;
 
   return (
-    <div>
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-2xl font-bold">Hospitals</h1>
-        <Link href="/hospitals/lookup" className="text-sm text-teal-700 underline">Can&apos;t find a hospital? Look it up from its website →</Link>
-      </div>
+    <div className="space-y-5">
+      <PageHeader icon="map" title="Hospitals" subtitle="Every hospital near you or in any city. Teal pins are MediConnect partners with instant booking.">
+        <Link href="/hospitals/lookup" className="btn-outline">Can&apos;t find one? Look it up →</Link>
+      </PageHeader>
 
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        {tab("near", "📍 Near me")}
-        {tab("city", "🏙️ Search a city")}
+      <div className="card flex flex-wrap items-center gap-3 p-4">
+        <div className="inline-flex rounded-xl bg-slate-100 p-1">
+          {tab("near", "Near me", "pin")}
+          {tab("city", "Search a city", "hospital")}
+        </div>
         {mode === "near" && (
-          <button onClick={locate} className="rounded-md border border-teal-600 px-4 py-2 text-sm text-teal-700 hover:bg-teal-50">
+          <button onClick={locate} className="btn-solid">
+            <Icon name="pin" className="h-4 w-4" />
             {user ? "Update my location" : "Use my location"}
           </button>
         )}
@@ -113,42 +119,45 @@ export default function HospitalsPage() {
             className="flex gap-2"
           >
             <input className="input w-56" value={cityInput} onChange={(e) => setCityInput(e.target.value)} placeholder="City or area, e.g. T. Nagar Chennai" aria-label="City" />
-            <button className="rounded-md bg-teal-600 px-3 text-sm text-white" disabled={cityInput.trim().length < 2}>Search</button>
+            <button className="btn-solid" disabled={cityInput.trim().length < 2}>Search</button>
           </form>
         )}
-        <select className="input w-32" value={radius} onChange={(e) => setRadius(Number(e.target.value))} aria-label="Search radius">
+        <select className="input w-36" value={radius} onChange={(e) => setRadius(Number(e.target.value))} aria-label="Search radius">
           {RADII.map((r) => <option key={r} value={r}>Within {r} km</option>)}
         </select>
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={partnersOnly} onChange={(e) => setPartnersOnly(e.target.checked)} />
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <input type="checkbox" className="h-4 w-4 accent-teal-600" checked={partnersOnly} onChange={(e) => setPartnersOnly(e.target.checked)} />
           Instant-booking partners only
         </label>
       </div>
 
       {mode === "city" && !city && (
-        <div className="mt-3 flex flex-wrap gap-2 text-sm">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-slate-500">Popular:</span>
           {POPULAR_CITIES.map((c) => (
-            <button key={c} onClick={() => { setCityInput(c); setCity(c); }} className="rounded-full border border-slate-300 bg-white px-3 py-1 hover:border-teal-500">{c}</button>
+            <button key={c} onClick={() => { setCityInput(c); setCity(c); }} className="chip">{c}</button>
           ))}
         </div>
       )}
-      {status && <p role="status" className="mt-3 text-sm text-amber-700">{status}</p>}
+      {status && <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{status}</p>}
       {mode === "near" && !user && !status && (
-        <p className="mt-3 text-sm text-slate-600">Click “Use my location”. Your location is only used for this search and is not saved.</p>
+        <p className="text-sm text-slate-600">Click “Use my location”. Your location is only used for this search and is not saved.</p>
       )}
       {data?.loading_more && (
-        <p role="status" className="mt-3 flex items-center gap-2 text-sm text-sky-800">
+        <p role="status" className="flex items-center gap-2 rounded-xl bg-sky-50 p-3 text-sm text-sky-800">
           <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-sky-600 border-t-transparent" />
           Loading all hospitals in this area from OpenStreetMap… (first time only, up to a minute)
         </p>
       )}
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-5">
+      <div className="grid gap-5 lg:grid-cols-5">
         <div className="lg:col-span-3">
+          <div className="card overflow-hidden p-2">
           <HospitalMap hospitals={results} user={center} radiusKm={center ? radius : undefined} selectedId={selected} onSelect={setSelected} height={460} />
+          </div>
           <p className="mt-2 flex flex-wrap gap-4 text-xs text-slate-500">
-            <span><span className="inline-block h-2.5 w-2.5 rounded-full bg-teal-600" /> MediConnect partner (instant booking)</span>
-            <span><span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-500" /> Other hospitals (info from OpenStreetMap / their website)</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-teal-600" /> MediConnect partner (instant booking)</span>
+            <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-500" /> Other hospitals (info from OpenStreetMap / their website)</span>
             <span>Dashed = approximate location</span>
           </p>
         </div>
@@ -158,9 +167,9 @@ export default function HospitalsPage() {
             <input className="input mb-3" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={`Filter ${data.count} hospitals by name…`} aria-label="Filter hospitals" />
           )}
           {data === null ? (
-            <p className="text-slate-500">{(mode === "near" && user) || (mode === "city" && city) ? "Searching…" : "Results will appear here."}</p>
+            <p className="card p-5 text-slate-500">{(mode === "near" && user) || (mode === "city" && city) ? "Searching…" : "Results will appear here."}</p>
           ) : results.length === 0 ? (
-            <p className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
+            <p className="card p-5 text-sm text-slate-600">
               {data.loading_more ? "Loading hospitals…" : `No hospitals found within ${radius} km. Try a bigger radius.`}
             </p>
           ) : (
@@ -169,18 +178,18 @@ export default function HospitalsPage() {
                 <li
                   key={h.id}
                   onMouseEnter={() => setSelected(h.id)}
-                  className={`rounded-xl border bg-white p-4 ${selected === h.id ? "border-amber-500" : "border-slate-200"}`}
+                  className={`card p-4 transition ${selected === h.id ? "border-teal-500 ring-2 ring-teal-100" : ""}`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <Link href={`/hospitals/${h.id}`} className="font-semibold hover:text-teal-700">{h.name}</Link>
-                    {h.distance_km != null && <span className="shrink-0 text-sm font-medium text-teal-700">{h.distance_km} km</span>}
+                    <Link href={`/hospitals/${h.id}`} className="font-semibold text-navy-800 hover:text-teal-700">{h.name}</Link>
+                    {h.distance_km != null && <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">{h.distance_km} km</span>}
                   </div>
-                  <p className="text-sm text-slate-600">{[h.address, h.city].filter(Boolean).join(", ")}</p>
+                  <p className="text-sm text-slate-500">{[h.address, h.city].filter(Boolean).join(", ")}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                     {h.is_partner ? (
-                      <span className="rounded-full bg-teal-50 px-2 py-0.5 text-teal-700">Partner · instant booking</span>
+                      <span className="rounded-full bg-teal-50 px-2.5 py-0.5 font-semibold text-teal-800">Partner · instant booking</span>
                     ) : (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">
+                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 font-semibold text-slate-600">
                         {h.scraped_at ? "Website info collected" : h.has_website ? "Website available" : "No website listed"}
                       </span>
                     )}

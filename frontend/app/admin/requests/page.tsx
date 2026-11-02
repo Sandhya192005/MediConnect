@@ -1,5 +1,6 @@
 "use client";
 
+import PageHeader from "@/components/PageHeader";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import RoleGuard from "@/components/RoleGuard";
@@ -30,11 +31,11 @@ function Requests() {
     <>
       {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
       {items.length === 0 ? (
-        <p className="rounded-xl border border-slate-200 bg-white p-6 text-center text-slate-500">No pending requests.</p>
+        <p className="card p-6 text-center text-slate-500">No pending requests.</p>
       ) : (
         <ul className="space-y-3">
           {items.map((r) => (
-            <li key={r.id} className="rounded-xl border border-slate-200 bg-white p-4">
+            <li key={r.id} className="card p-4">
               <p className="font-medium">
                 <Link href={`/hospitals/${r.hospital}`} className="hover:text-teal-700">{r.hospital_name}</Link>
                 {r.doctor_name ? ` · ${r.doctor_name}` : ""}
@@ -46,8 +47,8 @@ function Requests() {
               <p className="mt-1 text-xs text-slate-400">Confirm only after the hospital has agreed (e.g. by phone: {r.hospital_phone || "no phone saved"}).</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <input className="input max-w-xs" placeholder="Note to patient (e.g. come at 10 am)" value={notes[r.id] ?? ""} onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} />
-                <button onClick={() => act(r.id, "confirm")} className="rounded-md bg-teal-600 px-3 py-1.5 text-sm text-white">Confirm</button>
-                <button onClick={() => act(r.id, "decline")} className="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700">Decline</button>
+                <button onClick={() => act(r.id, "confirm")} className="btn-solid px-3 py-1.5">Confirm</button>
+                <button onClick={() => act(r.id, "decline")} className="btn border border-red-200 bg-white px-3 py-1.5 text-red-700 hover:bg-red-50">Decline</button>
               </div>
             </li>
           ))}
@@ -60,7 +61,7 @@ function Requests() {
 export default function AdminRequestsPage() {
   return (
     <RoleGuard role="admin">
-      <h1 className="mb-4 text-2xl font-bold">Appointment requests</h1>
+      <div className="mb-6"><PageHeader icon="chat" title="Appointment requests" subtitle="Requests to non-partner hospitals. Confirm only after checking with the hospital." /></div>
       <Requests />
     </RoleGuard>
   );
