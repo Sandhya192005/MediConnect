@@ -13,7 +13,7 @@ Stack (all run in Docker Compose):
 
 ## Current state
 
-All planned phases (1–8) are done (see `README.md` → Progress). Since then: MediConnect hospitals with specialists in search, reading hidden doctor pages via sitemaps (MIOT), the logo, a full brand redesign of the frontend, and deleting notifications. Last results (2026-11-02): 125 backend tests pass (1 opt-in live browser test skipped), 10 Playwright end-to-end tests pass. Still unverified: the chatbot (7) and the scraper's AI extraction with a live OpenAI key (the current key is rejected; the scraper falls back to rule-based extraction). The full plan lives in `C:\Users\Sandhya\.claude\plans\hi-i-am-planing-prancy-bird.md`.
+All planned phases (1–8) are done (see `README.md` → Progress). Since then: MediConnect hospitals with specialists in search, reading hidden doctor pages via sitemaps (MIOT), the logo, a full brand redesign of the frontend, deleting notifications, and (in progress) a home page redesigned with the taste skill, with the app pages re-skinned to match. Last results (2026-11-02): 125 backend tests pass (1 opt-in live browser test skipped), 10 Playwright end-to-end tests pass. Still unverified: the chatbot (7) and the scraper's AI extraction with a live OpenAI key (the current key is rejected; the scraper falls back to rule-based extraction). The full plan lives in `C:\Users\Sandhya\.claude\plans\hi-i-am-planing-prancy-bird.md`.
 
 Git branches (each stacked on the previous one, so later branches contain all earlier phases):
 - `main` (GitHub): Phases 1–3 only. Merging the feature branches into `main` is still open.
@@ -46,7 +46,10 @@ cd e2e; npx playwright show-report                             # report with scr
 ```
 
 - Owner's daily start: `docker compose up -d db redis elasticsearch mailpit mockhospital backend celery_worker celery_beat scraper_worker`, then `cd frontend; npm run dev`. The owner runs the frontend manually: don't start or stop it for them unless asked.
-- If `npm run dev` lands on port 3001, the Docker `frontend` container is holding 3000 (e.g. after ▶ Start on the whole group in Docker Desktop). Stop it with `docker compose stop frontend`. The backend's CORS only allows `http://localhost:3000`, so the app breaks on 3001.
+- The frontend must run on port 3000: the backend's CORS only allows `http://localhost:3000`, so the app breaks on 3001. `npm run dev -- -p 3000` fails loudly instead of silently moving to 3001. If 3000 is taken, it's one of two things:
+  - the Docker `frontend` container (e.g. after ▶ Start on the whole group in Docker Desktop): `docker compose stop frontend`;
+  - a leftover `next dev` from another terminal or Claude session (taste-skill checks start temporary dev servers). `Get-NetTCPConnection -LocalPort 3000` may not list it, so find it by command line: `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object CommandLine -match 'next|npm-cli'`. Stopping processes is blocked for Claude by auto mode: give the owner the command.
+- `EINVAL: invalid argument, readlink '...\frontend\.next\...'` on `npm run dev` means a corrupt build cache. Causes: the Docker `frontend` container writes Linux symlinks into the shared `.next`; a dev server killed mid-write; OneDrive syncing `.next`. Fix: stop the dev server, `Remove-Item -Recurse -Force frontend\.next`, then restart. `.next` is regenerated.
 
 - New Python packages: add to `backend/requirements.txt` (pinned), then rebuild `backend`, `celery_worker` and `celery_beat` images.
 - New npm packages: `docker compose exec frontend npm install <pkg>@<version>` (container has its own `node_modules`), then `npm install` on Windows too so VS Code sees the types. Run npm/npx from PowerShell, not Git Bash.
@@ -88,17 +91,22 @@ Redis databases: 0 Celery broker, 1 results, 2 cache, 3 Channels. Tests (`backen
 
 Frontend: `frontend/lib/api.ts` (fetch wrapper with JWT refresh), `lib/auth.tsx`, `lib/notifications.tsx` (WebSocket + reconnect), `components/RoleGuard.tsx` guards role pages (`/patient`, `/doctor`, `/admin`). Leaflet components must be loaded with `next/dynamic(..., { ssr: false })`. Map pins are `CircleMarker`s (SVG `path.leaflet-interactive`), not image markers.
 
-Frontend design system (keep new pages consistent with it):
-- **Colours from the logo:** navy `#0f3b68` (`navy-*` scale) and teal `#12a594`. Tailwind's `teal-*` scale is re-tuned in `app/globals.css`, so existing `teal-*` classes follow the brand. `bg-brand-gradient` / `text-brand-gradient` give the logo's teal→blue gradient.
-- **Font:** Plus Jakarta Sans via `next/font` (`--font-jakarta`).
+Public home page (`/`): a standalone page built with the taste skill, `frontend/public/home/index.html` plus a subset of the kit in `frontend/public/home/assets` (system.css/js, motion, backgrounds, layout, ui fragments used, gradient-mesh and painterly-landscape effects, the iris-opens moment). `next.config.ts` rewrites `/` to it (`beforeFiles`); there is no `app/page.tsx`. Its deal (plan line 2) is in the comment at the top of `<body>`; the deal history is in `.taste-skill/` (committed). Edit it as plain HTML with the kit's classes, never the kit's own files. Check it with the skill's scripts against the running dev server (`CHROME_PATH` must point to Edge: `C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe`; Chrome is installed per-user and not found by the scripts):
+- `node <skill>/assets/layout/check.mjs --url http://localhost:3000/ --profile <dir> --sizes 1440x900,1024x768,820x1180,768x1024,390x844` (passes at all five).
+- `node <skill>/scripts/consistency.mjs http://localhost:3000/ --widths 1440,1024,820,768,390 --rhythm-widths 1440,820,768,390 --page software --category "hospital appointment booking" --primary "Book an appointment" --profile <dir>` (~10 min). Expected, judged-false findings: `container-edges` on the centred hero (the dealt `centred` hero is the layout guide's one centred exception) and the scroll/flush/contrast findings inside `#requests` (the dealt `iris-opens` moment; moments.md says that one is expected).
+
+Frontend design system for the app pages (matched to the home page; keep new pages consistent with it):
+- **Colours:** navy ink `#0f2f4f` (`navy-*` scale), the logo teal darkened to `#0e8073` as `teal-600` (white text on it reads 4.5:1), ground `#f4f7fa`. Tailwind's `teal-*` and `navy-*` scales are set in `app/globals.css`. `bg-brand-gradient` is now flat navy and `text-brand-gradient` flat teal (the skill bans decorative gradients).
+- **Font:** the skill's dealt pairing, Funnel Display (headings, `font-display`, weight 400) and Funnel Sans (text), via `next/font`. Weights 400 and 500 only: `--font-weight-semibold/bold/extrabold` are mapped to 500. Never Plus Jakarta Sans, Inter, Poppins and the other faces the skill bans.
+- **Buttons:** pill-shaped (`rounded-full`). The nav bar is opaque (no blur or transparency).
 - **Building blocks in `globals.css`:**
   - `btn` and `card` are `@utility` (so they can be `@apply`'d).
   - In `@layer components` (so utilities like `md:hidden` still win): `.btn-primary` (full width), `.btn-solid`, `.btn-outline`, `.btn-ghost`, `.btn-navy`, `.card-hover`, `.input`, `.chip`, `.chip-active`, `.page-title`, `.section-title`.
   - Never put component classes outside a layer: they would override Tailwind utilities.
 - **Shared components:**
   - `components/Icons.tsx`: inline SVG icons, no icon package.
-  - `PageHeader` (+ `Avatar` initials), `Navbar` (sticky, active link, phone menu), `Footer` (emergency numbers), `AuthLayout` (login/sign-up), `DashboardShell` (gradient greeting; the dashboard name stays the page's `h1`), `HomeSearch`, `SpecialistList` (doctors grouped by specialty; `?specialty=` preselects).
-- **Logo files:** `public/logo.png` (full), `public/logo-mark.png` (icon), `app/icon.png` / `app/apple-icon.png` (tab icons, cropped with PowerShell System.Drawing). Use `mix-blend-multiply` on them: the logo background is off-white.
+  - `PageHeader` (+ `Avatar` initials), `Navbar` (sticky, active link, phone menu), `Footer` (emergency numbers), `AuthLayout` (login/sign-up), `DashboardShell` (navy greeting; the dashboard name stays the page's `h1`), `SpecialistList` (doctors grouped by specialty; `?specialty=` preselects).
+- **Logo files:** `public/logo.png` (full), `public/logo-mark.png` (icon, off-white background), `public/logo-mark-clear.png` (icon with a transparent background: use this one; its white figures are see-through, so only on light grounds), `app/icon.png` / `app/apple-icon.png` (tab icons). Made with PowerShell System.Drawing.
 - **Selectors e2e tests rely on (keep them):**
   - day buttons inside `div.overflow-x-auto` and slots as `.grid button` on the doctor page;
   - `article[aria-label=<hospital>]` cards in the "MediConnect hospitals" region;
@@ -106,6 +114,19 @@ Frontend design system (keep new pages consistent with it):
   - `data-testid="unread-count"`;
   - delete buttons labelled "Delete notification: <title>".
 - To check visuals, write a throwaway `e2e/tests/zz-shots.spec.ts` that saves screenshots to the scratchpad, run it, then delete it.
+
+UI design with the taste skill (installed 2026-11-07 at user level: `%USERPROFILE%\.claude\skills\taste-skill`, v2.5; needs Node 22+ and Chrome/Edge, both present):
+- Use it for any redesign or new public page. It is built for marketing pages (static `starter.html`), so it applies mainly to MediConnect's public pages (home, find, hospital and doctor pages). App screens (booking, dashboards, admin) keep the design system above.
+- MediConnect's kind per the skill: **software** (a booking app/platform): `data-type="software"`, `site-kind="software"`.
+- Use the brand colours from the logo through `start.mjs brand` (navy ink, teal darkened to `#0e8073`), not a dealt palette. The skill bans violet, which MediConnect doesn't use.
+- Its house rules that touch this project:
+  - real photographs and real full-colour icons rather than drawn ones (our `Icons.tsx` set is drawn);
+  - no captions under pictures;
+  - one section per screen;
+  - no addresses with house numbers, and no real-format phone numbers on public pages (the seed and test data contain some).
+- Its full kit (34.6 MB) stays in the skill folder; only the parts the home page uses (1.2 MB) are copied to `frontend/public/home/assets`. Run its scripts from the skill folder. Its deal history goes in `.taste-skill/` at the repo root (committed, so pages keep varying); `shots/` and `.taste-profile/` are gitignored.
+- Its checkers serve a page file over http themselves. For the Next.js app, check a built page or the running dev server, and keep the e2e selectors listed above intact.
+- If you start a temporary dev server for checks, stop it when done. A leftover one holds port 3000 and blocks the owner's own `npm run dev`.
 
 End-to-end tests (`e2e/`): Node `@playwright/test` 1.49.1, separate from the Python Playwright in the scraper.
 - `global-setup.ts` runs `manage.py e2e_setup` (in `doctors/management/commands/`). It resets only:
