@@ -30,7 +30,7 @@ export default function AuthLayout({ title, subtitle, children }: { title: strin
       </aside>
 
       <div className="p-6 sm:p-10">
-        <Image src="/logo-mark.png" alt="MediConnect" width={64} height={64} className="mix-blend-multiply" priority />
+        <Image src="/logo-mark-clear.png" alt="MediConnect" width={64} height={64} priority />
         <h1 className="mt-4 text-2xl font-bold tracking-tight text-navy-800">{title}</h1>
         <p className="mt-1 text-sm text-slate-600">{subtitle}</p>
         <div className="mt-6">{children}</div>

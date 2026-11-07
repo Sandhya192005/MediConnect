@@ -1,57 +1,68 @@
 @import "tailwindcss";
 
 /*
- * MediConnect design system. Colours come from the logo:
- *   navy  #0f3b68  ("Medi", the swoosh)
- *   teal  #12a594  ("Connect", the cross)
- *   blue  #1565c0  (the cross's gradient end)
- * Tailwind's teal scale is re-tuned to the logo teal, so every existing `teal-*` class follows the brand.
+ * MediConnect design system, matched to the public home page (frontend/public/home, built with the
+ * taste-skill kit): Funnel Display headings and Funnel Sans text, weights 400 and 500 only, the logo
+ * navy as ink, the logo teal darkened to #0e8073 so white text on it reads 4.5:1, a cool off-white
+ * ground, pill buttons, flat colour (no decorative gradients).
+ * Tailwind's teal scale is re-tuned, so every existing `teal-*` class follows the brand.
  */
 @theme inline {
-  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-funnel-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-funnel-display), var(--font-funnel-sans), ui-sans-serif, system-ui, sans-serif;
 
-  --color-teal-50: #ecfbf8;
-  --color-teal-100: #d0f5ee;
-  --color-teal-200: #a3eadd;
-  --color-teal-300: #6cd8c7;
-  --color-teal-400: #34bfab;
-  --color-teal-500: #17a896;
-  --color-teal-600: #12a594;
-  --color-teal-700: #0e8073;
-  --color-teal-800: #10665d;
-  --color-teal-900: #11544d;
+  /* text and headlines at 400 and 500 only (the skill never uses 600-800) */
+  --font-weight-semibold: 500;
+  --font-weight-bold: 500;
+  --font-weight-extrabold: 500;
 
-  --color-navy-50: #eef4fb;
-  --color-navy-100: #d6e4f4;
-  --color-navy-200: #adc8e8;
-  --color-navy-500: #2b5d92;
-  --color-navy-700: #154675;
-  --color-navy-800: #0f3b68;
-  --color-navy-900: #0b2c4e;
+  --color-teal-50: #e9f5f3;
+  --color-teal-100: #cfe9e5;
+  --color-teal-200: #a4d6cf;
+  --color-teal-300: #6fbcb2;
+  --color-teal-400: #3a9f93;
+  --color-teal-500: #158b7e;
+  --color-teal-600: #0e8073;
+  --color-teal-700: #0b6a5f;
+  --color-teal-800: #0b564e;
+  --color-teal-900: #0b4741;
+
+  --color-navy-50: #eef3f7;
+  --color-navy-100: #dce5ee;
+  --color-navy-200: #b9c8d6;
+  --color-navy-500: #3a4e60;
+  --color-navy-700: #163a5c;
+  --color-navy-800: #0f2f4f;
+  --color-navy-900: #030c16;
 
   --color-brand-blue: #1565c0;
 }
 
 body {
-  background: #f6f9fc;
+  background: #f4f7fa;
+  color: #0f2f4f;
+}
+
+h1, h2, .page-title, .section-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.02em;
 }
 
 /* The logo's teal→blue gradient. */
+/* Was the logo's teal→blue gradient; the skill bans decorative gradients, so it is the deep brand navy. */
 .bg-brand-gradient {
-  background-image: linear-gradient(135deg, #17c3a3 0%, #12a594 35%, #1565c0 100%);
+  background-color: #0f2f4f;
 }
 .text-brand-gradient {
-  background-image: linear-gradient(90deg, #0f3b68, #12a594);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #0e8073;
 }
 
 /* ---- Building blocks used across pages ---- */
 
 /* Base pieces other classes build on (@utility, so they can be used inside @apply). */
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-200 disabled:cursor-not-allowed disabled:opacity-60;
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-teal-200 disabled:cursor-not-allowed disabled:opacity-60;
 }
 @utility card {
   @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/60;

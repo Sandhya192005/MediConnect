@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en" data-type="software" data-radius="round" data-ground="sand" data-buttons="pill" data-motion>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MediConnect: hospital booking in Chennai</title>
+<meta name="description" content="Book a specialist at a MediConnect partner hospital in Chennai, see every other hospital on the map, and get reminders 24 hours and 1 hour before. Free for patients.">
+<meta name="site-kind" content="software">
+<meta name="page-type" content="software">
+<link rel="icon" href="/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400..700&family=Funnel+Sans:wght@400..600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/home/assets/system.css">
+<link rel="stylesheet" href="/home/assets/ui/cards.css">
+<link rel="stylesheet" href="/home/assets/motion/motion.css">
+<link rel="stylesheet" href="/home/assets/backgrounds/backgrounds.css">
+<link rel="stylesheet" href="/home/assets/layout/layout.css">
+<link rel="stylesheet" href="/home/assets/icons/icon.css">
+<!-- start.mjs brand --page software --bg #f4f7fa --surface #dce5ee --ink #0f2f4f --muted #4a5f72 --accent #0e8073 --type funnel --radius round
+     (MediConnect's logo colours: navy ink, the logo teal darkened until white reads 4.5:1 on it).
+     One change by hand: the inverse ground is the deepest shade of the logo navy, so --g-dark stays
+     at lightness 0.05 or less (backgrounds.md). -->
+<style>
+:root {
+  --p-bg: #f4f7fa; --p-surface: #dce5ee; --p-ink: #0f2f4f; --p-muted: #3a4e60;
+  --p-accent: #0e8073; --p-accent-ink: #ffffff; --p-action: #0e8073; --p-action-ink: #ffffff;
+  --p-inv-bg: #030c16; --p-inv-surface: #0f1f30; --p-inv-ink: #f4f7fa; --p-inv-muted: #b4c1ce;
+  --p-inv-accent: #f4f7fa; --p-inv-accent-ink: #0f2f4f; --p-inv-action: #f4f7fa; --p-inv-action-ink: #0f2f4f;
+  --font-display: "Funnel Display", system-ui, sans-serif;
+  --font-text: "Funnel Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.03em;
+  --display-tracking-xl: -0.04em;
+  --ly-scale: 0.98;
+}
+</style>
+<link rel="stylesheet" href="/home/assets/ui/base.css">
+<link rel="stylesheet" href="/home/assets/ui/window/fragment.css">
+<link rel="stylesheet" href="/home/assets/ui/calendar/fragment.css">
+<link rel="stylesheet" href="/home/assets/ui/search/fragment.css">
+<link rel="stylesheet" href="/home/assets/ui/checklist/fragment.css">
+<link rel="stylesheet" href="/home/assets/ui/toggles/fragment.css">
+<link rel="stylesheet" href="/home/assets/ui/notify/fragment.css">
+<link rel="stylesheet" href="/home/assets/ui/chat/fragment.css">
+<script src="/home/assets/backgrounds/backgrounds.js"></script>
+<!-- the one moment: iris-opens on the requests band -->
+<script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
+<link rel="modulepreload" href="/home/assets/moments/moments.js">
+<link rel="modulepreload" href="/home/assets/moments/lib.js">
+<link rel="modulepreload" href="/home/assets/moments/iris-opens/moment.js">
+<style>
+  /* the logo in the bar and the footer: the client's own mark (its file has an off-white ground) */
+  .nav__logo img { width: 32px; height: 32px; }
+
+  /* hero window: the assistant's exchange (the centred hero's window, light) */
+  .d-win { background: #fff; color: #16212c; border-radius: 12px; overflow: hidden; font: 400 14px/1.4 var(--font-text); box-shadow: 0 0 0 1px rgb(15 47 79 / .1), 0 30px 70px -30px rgb(15 47 79 / .35); }
+  .d-win__bar { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px; border-bottom: 1px solid rgb(15 47 79 / .08); font-size: 13px; color: #4a5f72; }
+  .d-win__bar b { color: #0f2f4f; font-weight: 500; } .d-win__bar .sp { flex: 1; }
+  .d-win__dots { display: flex; gap: 6px; } .d-win__dots i { width: 10px; height: 10px; border-radius: 50%; background: #dce5ee; }
+  .d-win__body { display: grid; grid-template-columns: 250px 1fr; min-height: 420px; }
+  .slots { border-right: 1px solid rgb(15 47 79 / .08); padding: 10px; display: grid; align-content: start; gap: 2px; }
+  .slots .q { height: 34px; margin-bottom: 6px; border-radius: 9px; background: #eef3f6; display: flex; align-items: center; padding: 0 10px; color: #4a5f72; font-size: 13px; }
+  .slots .t { display: grid; grid-template-columns: 30px 1fr auto; gap: 1px 10px; padding: 9px 8px; border-radius: 9px; font-size: 13px; }
+  .slots .t.is-on { background: #eef3f6; }
+  .slots .t i { grid-row: 1 / span 2; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 500 13px/1 var(--font-text); font-style: normal; color: #0f2f4f; }
+  .slots .t b { font-weight: 500; color: #0f2f4f; } .slots .t time { color: #4a5f72; font-size: 13px; }
+  .slots .t span { grid-column: 2 / -1; color: #4a5f72; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .convo { display: grid; min-width: 0; align-content: start; }
+  .d-chat { display: grid; gap: 8px; align-content: start; padding: 14px 18px; font-size: 14px; }
+  .d-msg { max-width: 86%; padding: 10px 14px; border-radius: 16px; line-height: 1.45; }
+  .d-msg--me { justify-self: end; background: #0f2f4f; color: #fff; border-bottom-right-radius: 6px; }
+  .d-msg--bot { background: #eef3f6; color: #0f2f4f; border-bottom-left-radius: 6px; }
+  .d-msg small { display: inline; margin: 0 0 0 8px; font-size: 13px; color: #4a5f72; white-space: nowrap; }
+  .d-tool { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #4a5f72; }
+  .d-tool::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #0e8073; border-right-color: transparent; }
+  .acts { display: flex; gap: 8px; } .acts span { height: 30px; padding: 0 12px; border-radius: 99px; display: inline-flex; align-items: center; font-size: 13px; font-weight: 500; background: var(--action); color: var(--action-ink, #fff); }
+  .acts span + span { background: #e0e5ec; color: #0f2f4f; }
+  @media (max-width: 1023px) { .d-win__body { grid-template-columns: 1fr; } .slots { display: none; } }
+  @media (max-width: 639px) { .d-chat { font-size: 13px; padding: 12px 14px; } .d-win__bar .sp ~ span { display: none; } }
+
+  /* app-frame: the bookings list beside the doctor's calendar (sections-library.md, app-frame) */
+  .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); background: var(--u-bg); border: 1px solid var(--u-border); border-radius: var(--u-r); box-shadow: var(--u-shadow); }
+  .app > .app__pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+  .app > .app__pane + .app__pane { border-left: 1px solid var(--u-line); }
+  .app > .app__pane > .ui-panel { width: 100%; border: 0; border-radius: 0; box-shadow: none; }
+  .app > .app__pane > .ui-calendar { max-width: none; }
+  .app .ui-cal__events { background: none; }
+  .app > .app__pane::after { content: ""; position: absolute; inset: auto 0 0 0; height: 64px; background: linear-gradient(transparent, var(--u-bg)); pointer-events: none; }
+  @media (min-width: 1024px) and (max-width: 1279px) { .app.ui { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); } }
+  @media (max-width: 1023px) {
+    .app.ui { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    .app > .app__pane--list { max-height: 252px; }
+    .app > .app__pane--list::after { display: none; }
+    .app .ui-win__side { display: none; }
+    .app .ui-win__body { grid-template-columns: minmax(0, 1fr); }
+    .app > .app__pane + .app__pane { border-left: 0; border-top: 1px solid var(--u-line); }
+  }
+  @media (max-width: 639px) {
+    .app.ui { grid-template-rows: minmax(0, 1fr); }
+    .app > .app__pane--list { display: none; }
+    .app > .app__pane + .app__pane { border-top: 0; }
+  }
+
+  /* the phone bar holds the mark, the main button and the menu: the name steps out under 640 */
+  @media (max-width: 639px) { header.nav .nav__logo { font-size: 0; gap: 0; } }
+
+  /* sections taller than one screen where cards stack (layout-v4.md: the one page-CSS rule on a section) */
+  @media (min-width: 640px) and (max-width: 1023px) { #requests, #steps { --h: 2; } }
+  @media (min-width: 1024px) and (max-width: 1279px) {
+    #steps { --h: 2; }
+    #steps .card:nth-child(3) { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); grid-auto-rows: min-content; column-gap: var(--s-6); align-content: start; }
+    #steps .card:nth-child(3) > :not(.panel) { grid-column: 1; }
+    #steps .card:nth-child(3) > .panel { grid-column: 2; grid-row: 1 / span 4; }
+  }
+
+  /* backgrounds.css still spaces its soft grounds by an older rule (a min-height of its own and centred words);
+     here they keep the system's screen height and top alignment, as layout-v4.md asks */
+  #features, #faq { --g-screen: calc(var(--h, 1) * 100svh); display: block; padding-top: var(--padt); padding-bottom: calc(var(--padb) + var(--bar)); }
+  @media (min-width: 640px) and (max-width: 1279px) { #features, #faq { display: flex; flex-direction: column; } }
+
+  .faq-panel { --p-h: 260px; margin-top: var(--s-6); }
+  /* the requests window sits on the lit panel of the dark band: drawn light, like every UI on a lit ground */
+  #requests .frame .ui { --fx-bg: #f4f7fa; }
+  #requests .ui-win { width: 760px; max-width: calc(100vw - 96px); }
+  /* the chapter frame is 16:7 in system.css; here a little lower so its four names stay on the band's one screen */
+  @media (min-width: 1280px) { #requests .frame--hero:has(> .stage) { aspect-ratio: 3 / 1; } }
+
+  /* one --p-h per card group */
+  #features .panel { --p-h: 264px; }
+  @media (min-width: 640px) and (max-width: 1023px) { #features .panel { --p-h: 380px; } }
+  #steps .panel { --p-h: 300px; }
+</style>
+</head>
+<body>
+<!-- type: software (a booking app for patients in Chennai; site-kind software)
+     deal: hero centred; nav nav-centre (nav-cards dealt, re-dealt: no photographs for its picture cards);
+     close close-type; footer footer-columns; rhythm dark-band; buttons pill; mark: the client's logo;
+     type funnel; palette: the client's colours (start.mjs brand); radius round; lit ground sand;
+     effect gradient-mesh in the hero window; card ground painterly-landscape (features, one seed a panel);
+     CSS grounds bg-halo (features), bg-dots (faq); no big scene.
+     moments: iris-opens on the requests band (#requests); no hero moment (the hero holds the effect).
+     screens: hero 1, app 1, features 1, requests 1, steps 1, faq 1, footer.closing 1. -->
+
+<header class="nav nav--centre">
+  <div class="wrap nav__bar">
+    <a class="nav__logo" href="#top"><img src="/logo-mark-clear.png" alt="" width="32" height="32">MediConnect</a>
+    <nav class="nav__links" aria-label="Main">
+      <div class="nav__item"><a class="nav__link" href="#app">Booking</a></div>
+      <div class="nav__item">
+        <a class="nav__link" href="#features">Hospitals <svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <div class="nav__menu">
+          <div class="wrap grid">
+            <div class="menu-col span-3">
+              <p class="t-label">Partners</p>
+              <a href="#app">Instant booking<span>Free slots for 14 days</span></a>
+              <a href="#steps">Booking steps<span>Search, pick, get reminders</span></a>
+            </div>
+            <div class="menu-col span-3">
+              <p class="t-label">Every other hospital</p>
+              <a href="#features">On the map<span>Nearest first, any city</span></a>
+              <a href="#requests">Requests<span>Pending until confirmed</span></a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="nav__item"><a class="nav__link" href="#requests">Requests</a></div>
+      <div class="nav__item"><a class="nav__link" href="#steps">Steps</a></div>
+      <div class="nav__item"><a class="nav__link" href="#faq">Questions</a></div>
+    </nav>
+    <div class="nav__actions">
+      <a class="nav__link" href="/login">Log in</a>
+      <a class="btn btn--primary" href="/doctors">Book an appointment</a>
+    </div>
+    <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Menu"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero hero--centred" aria-labelledby="hero-h">
+    <div class="wrap"><div class="hero-text">
+      <div class="hero__c">
+        <a class="pill" href="#features"><span>New</span><span class="muted">Doctors read from hospital websites</span></a>
+        <h1 id="hero-h">Hospital booking in Chennai</h1>
+        <p class="hero__lead">Pick a specialist and a free slot at a partner hospital. Reminders arrive 24 hours and 1 hour before.</p>
+        <div class="btn-row"><a class="btn btn--primary" href="/doctors">Book an appointment</a><a class="btn btn--secondary" href="#app">See your bookings</a></div>
+      </div>
+      <div class="hero__window" data-fx="gradient-mesh" data-fx-seed="7" data-fx-palette='{"bg":"#d3e3ea","surface":"#e6eff3","ink":"#0f2f4f","muted":"#4a5f72","accent":"#0e8073"}' role="img" aria-label="The MediConnect assistant offering a free slot with a cardiologist tomorrow at 10:00">
+        <div class="ly-piece d-win" aria-hidden="true">
+          <div class="d-win__bar"><span class="d-win__dots"><i></i><i></i><i></i></span><span><b>Assistant</b> · Heart doctor, tomorrow</span><span class="sp"></span><span>3 partner hospitals</span></div>
+          <div class="d-win__body">
+            <div class="slots">
+              <div class="q">Search doctors or hospitals</div>
+              <div class="t is-on"><i style="background:#cfe8e3">AR</i><b>Dr. Anita Rao</b><time>10:00</time><span>Cardiologist · MediConnect City Hospital</span></div>
+              <div class="t"><i style="background:#dce5ee">RD</i><b>Dr. Rohan Das</b><time>11:30</time><span>Interventional cardiologist · Harbour Care</span></div>
+              <div class="t"><i style="background:#e9e0d2">VI</i><b>Dr. Vikram Iyer</b><time>14:00</time><span>General physician · MediConnect City Hospital</span></div>
+              <div class="t"><i style="background:#cdd6c6">MN</i><b>Dr. Meera Nair</b><time>16:30</time><span>Dermatologist · Lakeside Multispeciality</span></div>
+              <div class="t"><i style="background:#d6e0e9">AM</i><b>Dr. Arjun Menon</b><time>17:00</time><span>Orthopedic surgeon · Lakeside Multispeciality</span></div>
+            </div>
+            <div class="convo">
+              <div class="d-chat" data-ly-steps="900">
+                <div class="d-msg d-msg--me">I need a heart doctor near Anna Salai tomorrow morning</div>
+                <div class="d-tool" data-step>Checking free slots at 3 partner hospitals</div>
+                <div class="d-msg d-msg--bot" data-step>Dr. Anita Rao, cardiologist at City Hospital, is free tomorrow at 10:00. Fee ₹800.</div>
+                <div class="acts" data-step><span>Confirm booking</span><span>Other times</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="section" id="app" aria-labelledby="app-h">
+    <div class="wrap">
+      <div class="grid">
+        <h2 id="app-h" class="span-6">Your bookings and free slots in one place</h2>
+        <div class="span-6 start-7 stack-4">
+          <p>Every visit you booked, with its status, beside the doctor's calendar. Pick a free day and the booking joins the list.</p>
+          <a class="link" href="/patient/appointments">See your appointments</a>
+        </div>
+      </div>
+      <div class="ui app fill" role="img" aria-label="A patient's MediConnect bookings beside Dr. Anita Rao's calendar for November" data-ui-pause-host>
+        <div class="app__pane app__pane--list">
+          <div class="ui ui-panel ui-win" data-ui="window" data-open="Booked" data-work="Confirming" data-done="Confirmed">
+            <div class="ui-win__bar">
+              <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="ui-win__crumb">MediConnect <i>/</i> <b>Appointments</b></span>
+              <span class="ui-spacer"></span>
+              <span class="ui-win__search" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><span class="ui-win__ph">Search</span><span class="ui-kbd">/</span></span>
+            </div>
+            <div class="ui-win__body">
+              <nav class="ui-win__side" aria-hidden="true">
+                <span class="ui-win__nav is-on"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg>Upcoming<em>4</em></span>
+                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg>Past<em>7</em></span>
+                <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M2.5 9h3l1 1.5h3l1-1.5h3"/><path d="M2.5 9 4 3.5h8L13.5 9v3.5h-11z"/></svg>Requests<em>1</em></span>
+                <span class="ui-win__label">Hospitals</span>
+                <span class="ui-win__nav"><span class="ui-win__hash">#</span>City Hospital</span>
+                <span class="ui-win__nav"><span class="ui-win__hash">#</span>Lakeside</span>
+              </nav>
+              <div class="ui-win__main">
+                <div class="ui-win__cols" aria-hidden="true"><span>Doctor</span><span>Visit</span><span>Status</span><span>When</span></div>
+                <ul class="ui-win__rows">
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">AR</span><span class="ui-win__who">Dr. Anita Rao</span><span class="ui-win__sub">Cardiology · City Hospital</span><span class="ui-win__st" data-st>Booked</span><span class="ui-win__age">10 Nov</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">MN</span><span class="ui-win__who">Dr. Meera Nair</span><span class="ui-win__sub">Skin check · Lakeside</span><span class="ui-win__st" data-st>Booked</span><span class="ui-win__age">12 Nov</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">AM</span><span class="ui-win__who">Dr. Arjun Menon</span><span class="ui-win__sub">Knee review · Lakeside</span><span class="ui-win__st is-done" data-st>Confirmed</span><span class="ui-win__age">16 Nov</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">KR</span><span class="ui-win__who">Dr. Kavya Reddy</span><span class="ui-win__sub">Child check-up · Sunrise</span><span class="ui-win__st is-you" data-st>Request</span><span class="ui-win__age">20 Nov</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="5">VI</span><span class="ui-win__who">Dr. Vikram Iyer</span><span class="ui-win__sub">Fever · City Hospital</span><span class="ui-win__st is-done" data-st>Done</span><span class="ui-win__age">2 Nov</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">RV</span><span class="ui-win__who">Dr. Rahul Verma</span><span class="ui-win__sub">Ear pain · Green Valley</span><span class="ui-win__st is-done" data-st>Done</span><span class="ui-win__age">28 Oct</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">AR</span><span class="ui-win__who">Dr. Anita Rao</span><span class="ui-win__sub">ECG results · City Hospital</span><span class="ui-win__st is-done" data-st>Done</span><span class="ui-win__age">21 Oct</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">SK</span><span class="ui-win__who">Dr. Sana Khan</span><span class="ui-win__sub">Consultation · Harbour Care</span><span class="ui-win__st is-done" data-st>Done</span><span class="ui-win__age">14 Oct</span></li>
+                  <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">PS</span><span class="ui-win__who">Dr. Priya Shah</span><span class="ui-win__sub">Headaches · Green Valley</span><span class="ui-win__st is-done" data-st>Done</span><span class="ui-win__age">3 Oct</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="app__pane app__pane--open" data-ui-loop>
+          <div class="ui ui-panel ui-calendar" data-ui="calendar" data-start="9" data-end="13" data-month="Nov">
+            <div class="ui-cal__head">
+              <div class="ui-cal__month">November <span>2026</span></div>
+              <span class="ui-spacer"></span>
+              <span class="ui-chip ui-chip--plain ui-chip--ink" data-cal-range>Nov 9 – 13</span>
+              <span class="ui-cal__nav" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M10 4 6 8l4 4"/></svg></span>
+              <span class="ui-cal__nav" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m6 4 4 4-4 4"/></svg></span>
+            </div>
+            <div class="ui-cal__dow" aria-hidden="true"><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span></div>
+            <div class="ui-cal__days">
+                <span class="ui-cal__d is-out"><b>26</b></span><span class="ui-cal__d is-out"><b>27</b></span><span class="ui-cal__d is-out"><b>28</b></span><span class="ui-cal__d is-out"><b>29</b></span><span class="ui-cal__d is-out"><b>30</b></span><span class="ui-cal__d is-out"><b>31</b></span><span class="ui-cal__d" data-d="1"><b>1</b></span>
+                <span class="ui-cal__d" data-d="2"><b>2</b></span><span class="ui-cal__d" data-d="3"><b>3</b></span><span class="ui-cal__d" data-d="4"><b>4</b></span><span class="ui-cal__d" data-d="5"><b>5</b></span><span class="ui-cal__d" data-d="6"><b>6</b></span><span class="ui-cal__d is-today" data-d="7"><b>7</b></span><span class="ui-cal__d" data-d="8"><b>8</b></span>
+                <span class="ui-cal__d is-start" data-d="9"><b>9</b></span><span class="ui-cal__d is-in" data-d="10"><b>10</b></span><span class="ui-cal__d is-in" data-d="11"><b>11</b></span><span class="ui-cal__d is-in" data-d="12"><b>12</b></span><span class="ui-cal__d is-end" data-d="13"><b>13</b></span><span class="ui-cal__d" data-d="14"><b>14</b></span><span class="ui-cal__d" data-d="15"><b>15</b></span>
+                <span class="ui-cal__d" data-d="16"><b>16</b></span><span class="ui-cal__d" data-d="17"><b>17</b></span><span class="ui-cal__d" data-d="18"><b>18</b></span><span class="ui-cal__d" data-d="19"><b>19</b></span><span class="ui-cal__d is-mark" data-d="20"><b>20</b></span><span class="ui-cal__d" data-d="21"><b>21</b></span><span class="ui-cal__d" data-d="22"><b>22</b></span>
+                <span class="ui-cal__d" data-d="23"><b>23</b></span><span class="ui-cal__d" data-d="24"><b>24</b></span><span class="ui-cal__d" data-d="25"><b>25</b></span><span class="ui-cal__d" data-d="26"><b>26</b></span><span class="ui-cal__d" data-d="27"><b>27</b></span><span class="ui-cal__d" data-d="28"><b>28</b></span><span class="ui-cal__d" data-d="29"><b>29</b></span>
+                <span class="ui-cal__d" data-d="30"><b>30</b></span><span class="ui-cal__d is-out"><b>1</b></span><span class="ui-cal__d is-out"><b>2</b></span><span class="ui-cal__d is-out"><b>3</b></span><span class="ui-cal__d is-out"><b>4</b></span><span class="ui-cal__d is-out"><b>5</b></span><span class="ui-cal__d is-out"><b>6</b></span>
+            </div>
+            <div class="ui-cal__events">
+              <div class="ui-cal__ev" data-ev="10">
+                <span class="ui-cal__date"><b>10</b><i>Nov</i></span>
+                <span class="ui-cal__evtext"><span class="ui-cal__evtitle">Dr. Anita Rao, cardiology</span><span class="ui-cal__evsub">10:00 at MediConnect City Hospital</span></span>
+              </div>
+              <div class="ui-cal__ev" data-ev="12">
+                <span class="ui-cal__date"><b>12</b><i>Nov</i></span>
+                <span class="ui-cal__evtext"><span class="ui-cal__evtitle">Dr. Meera Nair, skin check</span><span class="ui-cal__evsub">16:30 at Lakeside Multispeciality</span></span>
+              </div>
+              <div class="ui-cal__ev" data-ev="20">
+                <span class="ui-cal__date"><b>20</b><i>Nov</i></span>
+                <span class="ui-cal__evtext"><span class="ui-cal__evtitle">Dr. Kavya Reddy, child check-up</span><span class="ui-cal__evsub">11:00 at Sunrise Children's Hospital</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section g2 bg-halo" id="features" aria-labelledby="features-h">
+    <div class="wrap">
+      <div class="group">
+      <div class="section-head">
+        <h2 id="features-h">Every hospital, not only partners. <span class="muted">Check one before you go.</span></h2>
+      </div>
+      <div class="grid">
+        <article class="card card--row card--open span-6 m-nolift">
+          <h3>Shows hospitals near you</h3>
+          <p>Partners with instant booking and every other hospital, nearest first.</p>
+          <div class="panel" data-fx="painterly-landscape" data-fx-seed="21" data-fx-palette='{"bg":"#c6d3df","surface":"#d6e0e9","ink":"#25303a","accent":"#3f6a92"}' data-fx-params='{"blur":1,"brush":0.35,"slope":0,"hillY":0.3,"horizon":0.62,"drift":0}'>
+            <div class="stage stage--fade-b"><div class="at-rise fit to-edge" style="--fit-max:380px;--ax:max(24px, 50% - 190px);--ay:56px;--ay-sm:56px" data-ui-loop>
+              <div class="ui ui-panel ui-search" data-ui="search">
+                <div class="ui-search__field">
+                  <svg class="ui-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+                  <span class="ui-search__q"><span data-search-q>eye hospital</span><i class="ui-search__caret"></i></span>
+                  <kbd class="ui-search__kbd">Near me</kbd>
+                </div>
+                <div class="ui-search__group">Hospitals within 5 km</div>
+                <ul class="ui-search__list" data-search-list>
+                  <li class="ui-search__row is-sel"><span class="ui-search__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M8 14s-4.5-4-4.5-7.5a4.5 4.5 0 0 1 9 0C12.5 10 8 14 8 14Z"/><circle cx="8" cy="6.5" r="1.6"/></svg></span><span class="ui-search__t">Sankara Nethralaya</span><span class="ui-search__m">1.2 km</span></li>
+                  <li class="ui-search__row"><span class="ui-search__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M8 14s-4.5-4-4.5-7.5a4.5 4.5 0 0 1 9 0C12.5 10 8 14 8 14Z"/><circle cx="8" cy="6.5" r="1.6"/></svg></span><span class="ui-search__t">Egmore Eye Hospital</span><span class="ui-search__m">2.8 km</span></li>
+                  <li class="ui-search__row"><span class="ui-search__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M8 14s-4.5-4-4.5-7.5a4.5 4.5 0 0 1 9 0C12.5 10 8 14 8 14Z"/><circle cx="8" cy="6.5" r="1.6"/></svg></span><span class="ui-search__t">Dr. Agarwal's Eye Hospital</span><span class="ui-search__m">3.4 km</span></li>
+                </ul>
+                <div class="ui-search__foot"><span><kbd>&uarr;</kbd><kbd>&darr;</kbd> to move</span><span><kbd>Enter</kbd> to open</span></div>
+              </div>
+            </div></div>
+          </div>
+        </article>
+        <article class="card card--row card--open span-6 m-nolift">
+          <h3>Reads hospital websites</h3>
+          <p>Doctors and OPD timings from each hospital's own site, with the date read.</p>
+          <div class="panel" data-fx="painterly-landscape" data-fx-seed="22" data-fx-palette='{"bg":"#c4dad6","surface":"#d8e8e5","ink":"#1f3330","accent":"#3f8f86"}' data-fx-params='{"drift":0}'>
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:340px;--ax:max(24px, 50% - 170px);--ay:40px;--ay-sm:40px">
+              <div class="ui ui-panel ui-checks" data-ui="checklist">
+                <div class="ui-checks__head">
+                  <div class="ui-title">MIOT International</div>
+                  <span class="ui-spacer"></span>
+                  <div class="ui-meta" data-checks-count>3 of 5</div>
+                </div>
+                <div class="ui-checks__bar"><i data-checks-bar style="--k:0.6"></i></div>
+                <ul class="ui-checks__list">
+                  <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Checked the site's robots rules</span></li>
+                  <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Read 14 pages</span></li>
+                  <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Found 13 doctors</span></li>
+                  <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Saved the OPD phone number</span></li>
+                  <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Marked the source and date</span></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+        </article>
+      </div>
+      </div>
+      <div class="grid">
+        <article class="card card--row card--open span-6 m-nolift">
+          <h3>Reminder settings</h3>
+          <p>Email and in-app alerts 24 hours and 1 hour before each visit.</p>
+          <div class="panel" data-fx="painterly-landscape" data-fx-seed="23" data-fx-palette='{"bg":"#cdd6c6","surface":"#dce3d6","ink":"#262d24","accent":"#6c8e63"}' data-fx-params='{"drift":0}'>
+            <div class="stage stage--fade-b"><div class="at-right to-edge" style="--ax:32px;--ay:56px">
+              <div class="ui ui-panel ui-toggles" data-ui="toggles">
+                <div class="ui-head">
+                  <svg class="ui-icon ui-toggles__ico" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 7a4 4 0 0 1 8 0c0 4 1.5 5 1.5 5h-11S4 11 4 7Z"/><path d="M6.8 14a1.4 1.4 0 0 0 2.4 0"/></svg>
+                  <div class="ui-title">Reminders</div>
+                  <span class="ui-spacer"></span>
+                  <div class="ui-meta" data-tg-count>4 of 5 on</div>
+                </div>
+                <ul class="ui-toggles__list">
+                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Email 24 hours before</span><span class="ui-tg__sub">With the hospital's address</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Email 24 hours before"><i></i></button></li>
+                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Alert 1 hour before</span><span class="ui-tg__sub">On every open tab</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Alert 1 hour before"><i></i></button></li>
+                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Booking confirmations</span><span class="ui-tg__sub">When the doctor confirms</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Booking confirmations"><i></i></button></li>
+                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Visits booked elsewhere</span><span class="ui-tg__sub">Added by you</span></span><button class="ui-switch is-on" type="button" role="switch" aria-checked="true" aria-label="Visits booked elsewhere"><i></i></button></li>
+                  <li class="ui-tg"><span class="ui-tg__text"><span class="ui-tg__label">Weekly summary</span><span class="ui-tg__sub">Every Monday</span></span><button class="ui-switch" type="button" role="switch" aria-checked="false" aria-label="Weekly summary"><i></i></button></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+        </article>
+        <article class="card card--row card--open span-6 m-nolift">
+          <h3>Keeps visits booked by phone</h3>
+          <p>Add a visit you booked directly with a hospital and still get reminders.</p>
+          <div class="panel" data-fx="painterly-landscape" data-fx-seed="24" data-fx-palette='{"bg":"#a3b0b6","accent":"#c49a6c"}' data-fx-params='{"blur":1,"brush":0.35,"slope":0,"hillY":0.3,"horizon":0.62,"drift":0}'>
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:380px;--ax:32px;--ay:calc(100% - 180px);--ay-sm:calc(100% - 180px)">
+              <div class="ui ui-notify" data-ui="notify">
+                <ul class="ui-notify__list" data-notify-list>
+                  <li class="ui-note"><span class="ui-avatar ui-note__av" data-tone="2">MI</span><span class="ui-note__text"><span class="ui-note__title">Visit tomorrow<time>now</time></span><span class="ui-note__body">MIOT International, 10:30</span></span><span class="ui-btn ui-btn--sm ui-note__btn">Open</span></li>
+                  <li class="ui-note"><span class="ui-avatar ui-note__av" data-tone="4">SN</span><span class="ui-note__text"><span class="ui-note__title">Added by you<time>2h</time></span><span class="ui-note__body">Sankara Nethralaya, 21 Nov</span></span></li>
+                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Reminder sent<time>1d</time></span><span class="ui-note__body">Email to you, 24 hours before</span></span></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section ground-inverse" id="requests" style="--hm: 2" aria-labelledby="requests-h" data-moment="iris-opens" data-moment-opts='{"from": "base"}'>
+    <div class="wrap">
+      <div class="grid">
+        <h2 id="requests-h" class="span-6">Requests to any other hospital</h2>
+        <div class="span-6 start-7 stack-4">
+          <p>Send a request from any hospital's page on the map. Its status shows in your list, with the hospital's own booking link and phone.</p>
+          <a class="link" href="/hospitals">Find a hospital on the map</a>
+        </div>
+      </div>
+      <div class="frame frame--hero frame--lit" style="margin-top: var(--s-6)">
+        <div class="stage stage--fade-b">
+          <div class="at-rise to-edge" style="--w:760px;--ay:48px" data-ui-loop>
+            <div class="ui ui-panel ui-win" data-ui="window" data-open="Pending" data-work="Checking" data-done="Accepted">
+              <div class="ui-win__bar">
+                <span class="ui-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="ui-win__crumb">MediConnect <i>/</i> <b>Requests</b></span>
+                <span class="ui-spacer"></span>
+                <span class="ui-win__search" aria-hidden="true"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg><span class="ui-win__ph">Search</span><span class="ui-kbd">/</span></span>
+              </div>
+              <div class="ui-win__body">
+                <nav class="ui-win__side" aria-hidden="true">
+                  <span class="ui-win__nav is-on"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M2.5 9h3l1 1.5h3l1-1.5h3"/><path d="M2.5 9 4 3.5h8L13.5 9v3.5h-11z"/></svg>All<em>8</em></span>
+                  <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></svg>Pending<em>3</em></span>
+                  <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg>Accepted<em>3</em></span>
+                  <span class="ui-win__nav"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>Declined<em>2</em></span>
+                </nav>
+                <div class="ui-win__main">
+                  <div class="ui-win__cols" aria-hidden="true"><span>Hospital</span><span>Visit</span><span>Status</span><span>Day</span></div>
+                  <ul class="ui-win__rows">
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">KH</span><span class="ui-win__who">Kauvery</span><span class="ui-win__sub">Cardiology, any doctor</span><span class="ui-win__st" data-st>Pending</span><span class="ui-win__age">Sat</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">VE</span><span class="ui-win__who">Vasan Eye</span><span class="ui-win__sub">Eye check, morning</span><span class="ui-win__st" data-st>Pending</span><span class="ui-win__age">Mon</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">SM</span><span class="ui-win__who">Sundaram</span><span class="ui-win__sub">General medicine</span><span class="ui-win__st is-done" data-st>Accepted</span><span class="ui-win__age">Tue</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="5">FM</span><span class="ui-win__who">Fortis Malar</span><span class="ui-win__sub">Orthopedics, evening</span><span class="ui-win__st is-you" data-st>Declined</span><span class="ui-win__age">Wed</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="2">MI</span><span class="ui-win__who">MIOT</span><span class="ui-win__sub">Kidney care review</span><span class="ui-win__st" data-st>Pending</span><span class="ui-win__age">Fri</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="1">SN</span><span class="ui-win__who">Sankara</span><span class="ui-win__sub">Eye test, child</span><span class="ui-win__st is-done" data-st>Accepted</span><span class="ui-win__age">2 Nov</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="4">EE</span><span class="ui-win__who">Egmore Eye</span><span class="ui-win__sub">Glasses check</span><span class="ui-win__st is-done" data-st>Accepted</span><span class="ui-win__age">30 Oct</span></li>
+                    <li class="ui-win__row" data-row><span class="ui-avatar" data-tone="3">AH</span><span class="ui-win__who">Apollo</span><span class="ui-win__sub">Dermatology, any doctor</span><span class="ui-win__st is-you" data-st>Declined</span><span class="ui-win__age">24 Oct</span></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="grid" style="margin-top: var(--s-6)">
+        <div class="span-3 stack-2"><p class="t-card">Any hospital</p><p class="muted">Every hospital on the map takes requests</p></div>
+        <div class="span-3 stack-2"><p class="t-card">Clear status</p><p class="muted">Pending, confirmed or declined</p></div>
+        <div class="span-3 stack-2"><p class="t-card">Hospital contacts</p><p class="muted">Its own booking link and phone</p></div>
+        <div class="span-3 stack-2"><p class="t-card">Reminders too</p><p class="muted">Once a request is confirmed</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="steps" aria-labelledby="steps-h" style="--hm: 2">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="steps-h">Book a visit in 3 steps</h2>
+      </div>
+      <div class="grid">
+        <article class="card card--row span-4 m-nolift">
+          <span class="step-num">1</span>
+          <h3>Search a specialty</h3>
+          <p>Type heart, skin or kids. A typo still finds the doctor.</p>
+          <div class="panel panel--inset">
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:320px;--ax:max(24px, 50% - 160px);--ay:40px;--ay-sm:40px" data-ui-loop>
+              <div class="ui ui-panel ui-search" data-ui="search">
+                <div class="ui-search__field">
+                  <svg class="ui-icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+                  <span class="ui-search__q"><span data-search-q>skin doctr</span><i class="ui-search__caret"></i></span>
+                </div>
+                <div class="ui-search__group">MediConnect hospitals</div>
+                <ul class="ui-search__list" data-search-list>
+                  <li class="ui-search__row is-sel"><span class="ui-search__ico"><svg class="ui-icon" viewBox="0 0 16 16"><circle cx="8" cy="6" r="2.5"/><path d="M3.5 13.5c.6-2.3 2.4-3.5 4.5-3.5s3.9 1.2 4.5 3.5"/></svg></span><span class="ui-search__t">Dr. Meera Nair</span><span class="ui-search__m">Lakeside</span></li>
+                  <li class="ui-search__row"><span class="ui-search__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M2.5 13.5v-9l5.5-2 5.5 2v9"/><path d="M8 6v4M6 8h4"/></svg></span><span class="ui-search__t">Lakeside Multispeciality</span><span class="ui-search__m">Dermatology</span></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+        </article>
+        <article class="card card--row span-4 m-nolift">
+          <span class="step-num">2</span>
+          <h3>Pick a free time</h3>
+          <p>Choose a day in the next 14 and a free slot.</p>
+          <div class="panel panel--inset">
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:300px;--ax:max(24px, 50% - 150px);--ay:40px;--ay-sm:40px">
+              <div class="ui ui-panel ui-checks" data-ui="checklist">
+                <div class="ui-checks__head">
+                  <div class="ui-title">Dr. Meera Nair</div>
+                  <span class="ui-spacer"></span>
+                  <div class="ui-meta" data-checks-count>3 of 4</div>
+                </div>
+                <div class="ui-checks__bar"><i data-checks-bar style="--k:0.75"></i></div>
+                <ul class="ui-checks__list">
+                  <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Thursday 12 November</span></li>
+                  <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">16:30, the slot is free</span></li>
+                  <li class="ui-check is-done"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Reason: rash on the arm</span></li>
+                  <li class="ui-check"><span class="ui-check__box"><svg viewBox="0 0 16 16"><path d="m4.5 8.2 2.3 2.3 4.7-5"/></svg></span><span class="ui-check__label">Confirm booking, fee ₹600</span></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+        </article>
+        <article class="card card--row span-4 m-nolift">
+          <span class="step-num">3</span>
+          <h3>Get reminders</h3>
+          <p>By email a day before and in the app an hour before.</p>
+          <div class="panel panel--inset">
+            <div class="stage stage--fade-b"><div class="at-rise fit" style="--fit-max:340px;--ax:24px;--ay:calc(100% - 180px);--ay-sm:calc(100% - 180px)">
+              <div class="ui ui-notify" data-ui="notify">
+                <ul class="ui-notify__list" data-notify-list>
+                  <li class="ui-note"><span class="ui-avatar ui-note__av" data-tone="3">MN</span><span class="ui-note__text"><span class="ui-note__title">Visit in 1 hour<time>now</time></span><span class="ui-note__body">Dr. Meera Nair, 16:30</span></span></li>
+                  <li class="ui-note"><span class="ui-avatar ui-note__av" data-tone="3">MN</span><span class="ui-note__text"><span class="ui-note__title">Visit tomorrow<time>1d</time></span><span class="ui-note__body">Lakeside Multispeciality</span></span></li>
+                  <li class="ui-note"><span class="ui-note__ico"><svg class="ui-icon" viewBox="0 0 16 16"><path d="m3.5 8.4 2.8 2.8 6.2-6.4"/></svg></span><span class="ui-note__text"><span class="ui-note__title">Booking confirmed<time>2d</time></span><span class="ui-note__body">Dr. Meera Nair confirmed</span></span></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section bg-dots" id="faq" style="--hm: 2" aria-labelledby="faq-h">
+    <div class="wrap">
+      <div class="grid">
+        <div class="span-6 stack-4">
+          <h2 id="faq-h">Questions</h2>
+          <p class="muted">About booking, hospitals and where the information comes from.</p>
+          <a class="link" href="mailto:hello@mediconnect.example">Email the MediConnect team</a>
+          <div class="panel panel--inset faq-panel" data-fx="painterly-landscape" data-fx-seed="31" data-fx-palette='{"bg":"#c6d3df","surface":"#d6e0e9","ink":"#25303a","accent":"#3f6a92"}' data-fx-params='{"drift":0}' role="img" aria-label="The MediConnect assistant answering whether booking is free">
+            <div class="stage stage--fade-b"><div class="at-rise fit to-edge" style="--fit-max:400px;--ax:max(24px, 50% - 200px);--ay:32px;--ay-sm:32px">
+              <div class="ui ui-panel ui-chat" data-ui="chat" aria-hidden="true">
+                <div class="ui-head"><span class="ui-agent" aria-hidden="true"></span><div class="ui-title">MediConnect assistant</div><span class="ui-chat__online">Online</span><span class="ui-spacer"></span></div>
+                <div class="ui-chat__body">
+                  <div class="ui-chat__day">Today, 9:41</div>
+                  <div class="ui-msg ui-msg--me" data-chat-q><span class="ui-msg__text">Do I pay to book Dr. Anita Rao?</span></div>
+                  <div class="ui-msg ui-msg--bot" data-chat-a>
+                    <span class="ui-agent ui-msg__av" aria-hidden="true"></span>
+                    <span class="ui-msg__col">
+                      <span class="ui-chat__answer">Booking is free. You pay her fee of <b>₹800</b> at MediConnect City Hospital.</span>
+                      <span class="ui-chat__srcs"><span class="ui-chat__src"><svg class="ui-icon" viewBox="0 0 16 16"><path d="M4 2.5h5l3 3v8H4z"/><path d="M9 2.5v3h3"/></svg>Dr. Anita Rao's page</span></span>
+                    </span>
+                  </div>
+                </div>
+                <div class="ui-chat__input"><span class="ui-chat__ph">Write a message</span><span class="ui-chat__send" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M8 13V3.5M3.8 7.5 8 3.3l4.2 4.2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div>
+              </div>
+            </div></div>
+          </div>
+        </div>
+        <div class="faq span-6 start-7">
+          <div class="faq__item"><h3>Is MediConnect free for patients?</h3><p>Yes. Searching, booking, requests and reminders cost nothing. You pay the doctor's fee at the hospital.</p></div>
+          <div class="faq__item"><h3>What is a partner hospital?</h3><p>A hospital whose doctors keep their hours on MediConnect, so you can book a free slot at once.</p></div>
+          <div class="faq__item"><h3>Can I book at other hospitals?</h3><p>Yes, by request. The hospital accepts or declines it, and your list shows which.</p></div>
+          <div class="faq__item"><h3>Where does hospital information come from?</h3><p>From OpenStreetMap, Wikidata and each hospital's own website. Every page shows the source and when it was read.</p></div>
+          <div class="faq__item"><h3>Can I use MediConnect in an emergency?</h3><p>No. In an emergency call 112, or 108 for an ambulance.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer closing" id="contact" aria-labelledby="close-h">
+  <div class="wrap">
+    <div class="closing__cta close--type">
+      <div class="section-head">
+        <h2 id="close-h">Book your next hospital visit</h2>
+        <p>Free for patients. Reminders 24 hours and 1 hour before.</p>
+      </div>
+      <a class="btn btn--primary btn--xl btn--wide" href="/doctors">Book an appointment<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
+    </div>
+    <div class="closing__links">
+      <div class="grid">
+        <div class="span-4 stack-4">
+          <a class="nav__logo" href="#top"><img src="/logo-mark-clear.png" alt="" width="32" height="32">MediConnect</a>
+          <p class="footer__lede">Hospital appointments in Chennai</p>
+        </div>
+        <div class="span-2 footer__col"><h4>Booking</h4><ul><li><a href="#app">Your bookings</a></li><li><a href="#steps">Steps</a></li></ul></div>
+        <div class="span-2 footer__col"><h4>Hospitals</h4><ul><li><a href="#features">Features</a></li><li><a href="/hospitals">Map</a></li></ul></div>
+        <div class="span-2 footer__col"><h4>Requests</h4><ul><li><a href="#requests">Other hospitals</a></li><li><a href="/register">Sign up</a></li></ul></div>
+        <div class="span-2 footer__col"><h4>Questions</h4><ul><li><a href="#faq">Answers</a></li><li><a href="mailto:hello@mediconnect.example">Contact</a></li></ul></div>
+      </div>
+      <div class="footer__legal">
+        <span>&copy; 2026 MediConnect</span>
+        <div class="socials"></div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script type="module" src="/home/assets/system.js"></script>
+<script type="module" src="/home/assets/motion/motion.js"></script>
+<script type="module" src="/home/assets/layout/layout.js"></script>
+</body>
+</html>

@@ -7,11 +7,8 @@ export default function Footer() {
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sm:col-span-2 lg:col-span-2">
           <div className="flex items-center gap-2">
-            <Image src="/logo-mark.png" alt="" width={36} height={36} className="mix-blend-multiply" />
-            <span className="text-lg font-extrabold">
-              <span className="text-navy-800">Medi</span>
-              <span className="text-teal-600">Connect</span>
-            </span>
+            <Image src="/logo-mark-clear.png" alt="" width={36} height={36} />
+            <span className="font-display text-lg text-navy-800">MediConnect</span>
           </div>
           <p className="mt-1 text-sm font-medium text-slate-500">Connect · Consult · Care</p>
           <p className="mt-3 max-w-sm text-sm text-slate-600">

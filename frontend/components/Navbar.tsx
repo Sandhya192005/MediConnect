@@ -34,14 +34,11 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-navy-800/10 bg-[#f4f7fa]">
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5">
         <Link href="/" className="flex items-center gap-2" aria-label="MediConnect home">
-          <Image src="/logo-mark.png" alt="" width={40} height={40} priority className="mix-blend-multiply" />
-          <span className="hidden text-xl font-extrabold tracking-tight sm:inline">
-            <span className="text-navy-800">Medi</span>
-            <span className="text-teal-600">Connect</span>
-          </span>
+          <Image src="/logo-mark-clear.png" alt="" width={32} height={32} priority />
+          <span className="hidden font-display text-xl tracking-tight text-navy-800 sm:inline">MediConnect</span>
         </Link>
 
         {/* Desktop */}
