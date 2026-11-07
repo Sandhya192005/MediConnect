@@ -6,3 +6,7 @@ node_modules/
 .next/
 playwright-report/
 test-results/
+
+# taste-skill (UI design kit): screenshots and browser profiles from its checks
+shots/
+.taste-profile/
