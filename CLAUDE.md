@@ -15,14 +15,13 @@ Stack (all run in Docker Compose):
 
 All planned phases (1–8) are done (see `README.md` → Progress). Since then: MediConnect hospitals with specialists in search, reading hidden doctor pages via sitemaps (MIOT), the logo, a full brand redesign of the frontend, deleting notifications, and (in progress) a home page redesigned with the taste skill, with the app pages re-skinned to match. Last results (2026-11-02): 125 backend tests pass (1 opt-in live browser test skipped), 10 Playwright end-to-end tests pass. Still unverified: the chatbot (7) and the scraper's AI extraction with a live OpenAI key (the current key is rejected; the scraper falls back to rule-based extraction). The full plan lives in `C:\Users\Sandhya\.claude\plans\hi-i-am-planing-prancy-bird.md`.
 
-Git branches (each stacked on the previous one, so later branches contain all earlier phases):
-- `main` (GitHub): Phases 1–3 only. Merging the feature branches into `main` is still open.
-- `feature_notification` (4) → `feature_search` (5) → `feature_map` (6) → `feature_chatbot` (7) → `feature_scraper` (7.5, plus the all-hospitals directory and the Wikidata website finder, which the owner chose to push here).
-- Phase 8: local branch `feature_e2e`.
-- After Phase 8: `feature_partner_hospitals` (MediConnect hospitals in search, MIOT doctor pages, logo) → `feature_frontend_design` (brand design parts 1–2, deleting notifications, `CLAUDE.md` updates).
-- **`automate_test` on GitHub** is the most complete branch: it equals local `feature_frontend_design`. The owner chose to push Phase 8 and everything after it there. Push with `git push origin feature_frontend_design:automate_test`.
-- Local-only leftover: `feature_hospital_directory` (same commit as `feature_scraper`).
-- Start new work on a new `feature_*` branch from `feature_frontend_design`, and ask the owner which remote branch to push it to. `CLAUDE.md` is not committed unless the owner asks.
+Git branches:
+- **`main` (GitHub) has everything.** On 2026-11-07 it was fast-forwarded to `automate_test` (`c93044b`, no merge commit), so it contains Phases 1–8 and all later work.
+- The older branches stay on GitHub unchanged, and `main` contains all of them. They were stacked on one another, each built on the previous one:
+  - `feature_notification` (4) → `feature_search` (5) → `feature_map` (6) → `feature_chatbot` (7) → `feature_scraper` (7.5);
+  - then `automate_test` (Phase 8 and everything up to `c93044b`).
+- Local-only leftovers, all contained in `main`: `feature_e2e`, `feature_partner_hospitals`, `feature_hospital_directory`, `feature_frontend_design`.
+- Start new work on a new `feature_*` branch from `main`, and ask the owner which remote branch to push it to. `CLAUDE.md` is not committed unless the owner asks.
 
 ## Commands (PowerShell, from the repo root)
 
@@ -168,7 +167,6 @@ End-to-end tests (`e2e/`): Node `@playwright/test` 1.49.1, separate from the Pyt
 
 - The owner's original brief listed four roles (patient, doctor, **hospital admin**, platform admin). Only three exist today; a hospital-admin role is not built.
 - OpenAPI docs and a Postman collection are not built yet.
-- Merging the feature branches into `main` (still Phases 1–3 on GitHub) has not been done.
 - Real hospital websites checked so far:
   - **MIOT International** (miotinternational.com): checked 2026-11-02 and approved by the owner. robots.txt only blocks thank-you, payment and admin pages; the terms & conditions only cover a campaign form. The site has no doctor directory, only ~8 profiles under "Centers of Excellence / Meet the doctors", found through its sitemap. A full read takes ~110 s (slow pages).
   - Every other site, including Apollo (asked, unanswered), is unchecked. The app reads real sites when patients open hospital pages. One unapproved live read of apollohospitals.com happened during a check on 2026-11-01 (1 page, allowed by robots.txt). No further live checks on real sites without the owner's OK.
