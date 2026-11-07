@@ -107,13 +107,23 @@
   @media (max-width: 639px) { header.nav .nav__logo { font-size: 0; gap: 0; } }
 
   /* sections taller than one screen where cards stack (layout-v4.md: the one page-CSS rule on a section) */
-  @media (min-width: 640px) and (max-width: 1023px) { #requests, #steps { --h: 2; } }
-  @media (min-width: 1024px) and (max-width: 1279px) {
-    #steps { --h: 2; }
-    #steps .card:nth-child(3) { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); grid-auto-rows: min-content; column-gap: var(--s-6); align-content: start; }
-    #steps .card:nth-child(3) > :not(.panel) { grid-column: 1; }
-    #steps .card:nth-child(3) > .panel { grid-column: 2; grid-row: 1 / span 4; }
+  @media (min-width: 640px) and (max-width: 1023px) { #requests { --h: 2; } }
+
+  /* steps stay one screen: three across from 1024, text beside a short panel on a tablet */
+  @media (min-width: 1024px) and (max-width: 1279px) { #steps .grid > .card { grid-column: auto / span 4; } }
+  @media (min-width: 640px) and (max-width: 1023px) {
+    #steps .panel { --p-h: 150px; }
+    #steps .grid > .card { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); grid-auto-rows: min-content; column-gap: var(--s-6); align-content: start; }
+    #steps .grid > .card > :not(.panel) { grid-column: 1; }
+    #steps .grid > .card > .panel { grid-column: 2; grid-row: 1 / span 4; margin-top: 0; }
+    #steps .stage > div { --ay: 16px !important; }
   }
+
+  /* features on a tablet: each card across the row, two a screen */
+  @media (min-width: 640px) and (max-width: 1023px) { #features .grid > .card { grid-column: 1 / -1; } }
+
+  /* the hero window is lower under 1280: the reply and its two actions stay clear of its foot */
+  @media (max-width: 1279px) { .d-tool { display: none; } }
 
   /* backgrounds.css still spaces its soft grounds by an older rule (a min-height of its own and centred words);
      here they keep the system's screen height and top alignment, as layout-v4.md asks */
@@ -129,7 +139,7 @@
 
   /* one --p-h per card group */
   #features .panel { --p-h: 264px; }
-  @media (min-width: 640px) and (max-width: 1023px) { #features .panel { --p-h: 380px; } }
+  @media (min-width: 640px) and (max-width: 1023px) { #features .panel { --p-h: max(170px, calc((100svh - 680px) / 2)); } }
   #steps .panel { --p-h: 300px; }
 </style>
 </head>

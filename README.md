@@ -87,6 +87,12 @@ Flow: patient looks up a hospital → served from PostgreSQL if collected < 24 h
 
 Seeded doctor logins: `anita.rao@mediconnect.dev` (and others from `apps/doctors/management/commands/seed.py`) / `Doctor@123`.
 
+### Home page (designed with the taste skill)
+
+- `/` is a standalone page, `frontend/public/home/index.html`, built with the taste-skill UI kit (its parts in `frontend/public/home/assets`) and served through a rewrite in `frontend/next.config.ts`.
+- Sections: hero with the assistant offering a free slot, bookings beside a doctor's calendar, features (hospitals near you, hospital websites, reminders, visits booked by phone), requests to other hospitals, 3 booking steps, FAQ, and the close with the footer.
+- The app pages share its look: Funnel Display and Funnel Sans, navy ink, the teal `#0e8073`, pill buttons and flat colour.
+
 ## Tests
 
 ```bash
