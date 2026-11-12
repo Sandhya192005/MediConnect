@@ -10,3 +10,6 @@ test-results/
 # taste-skill (UI design kit): screenshots and browser profiles from its checks
 shots/
 .taste-profile/
+
+# Machine-specific Claude Code notes
+CLAUDE.local.md

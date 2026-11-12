@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-MediConnect is a hospital appointment discovery and booking platform (Chennai first, then Tamil Nadu). The owner is a final-year CS student building it to learn Celery, Redis, Docker, Elasticsearch, Playwright, notifications, maps and LLM chatbots: explain important decisions in beginner-friendly language.
+MediConnect is a hospital appointment discovery and booking platform (Chennai first, then Tamil Nadu). It is a learning project for Celery, Redis, Docker, Elasticsearch, Playwright, notifications, maps and LLM chatbots: explain important decisions in beginner-friendly language.
 
 Stack (all run in Docker Compose):
 - Backend: Django 5.1 + DRF, JWT (simplejwt), PostgreSQL 16 + **PostGIS** (`postgis/postgis` image), Daphne/Channels (WebSockets), Celery + Celery Beat with Redis, Elasticsearch 8.15, pytest.
@@ -13,7 +13,7 @@ Stack (all run in Docker Compose):
 
 ## Current state
 
-All planned phases (1–8) are done (see `README.md` → Progress). Since then: MediConnect hospitals with specialists in search, reading hidden doctor pages via sitemaps (MIOT), the logo, a full brand redesign of the frontend, deleting notifications, and (in progress) a home page redesigned with the taste skill, with the app pages re-skinned to match. Last results (2026-11-02): 125 backend tests pass (1 opt-in live browser test skipped), 10 Playwright end-to-end tests pass. Still unverified: the chatbot (7) and the scraper's AI extraction with a live OpenAI key (the current key is rejected; the scraper falls back to rule-based extraction). The full plan lives in `C:\Users\Sandhya\.claude\plans\hi-i-am-planing-prancy-bird.md`.
+All planned phases (1–8) are done (see `README.md` → Progress). Since then: MediConnect hospitals with specialists in search, reading hidden doctor pages via sitemaps (MIOT), the logo, a full brand redesign of the frontend, deleting notifications, and (in progress) a home page redesigned with the taste skill, with the app pages re-skinned to match. Last results (2026-11-02): 125 backend tests pass (1 opt-in live browser test skipped), 10 Playwright end-to-end tests pass. Still unverified: the chatbot (7) and the scraper's AI extraction with a live OpenAI key (the current key is rejected; the scraper falls back to rule-based extraction). Machine-specific notes (plan location, local paths, test logins) live in `CLAUDE.local.md`, which is gitignored.
 
 Git branches:
 - **`main` (GitHub) has everything.** On 2026-11-07 it was fast-forwarded to `automate_test` (`c93044b`, no merge commit), so it contains Phases 1–8 and all later work.
@@ -52,9 +52,9 @@ cd e2e; npx playwright show-report                             # report with scr
 
 - New Python packages: add to `backend/requirements.txt` (pinned), then rebuild `backend`, `celery_worker` and `celery_beat` images.
 - New npm packages: `docker compose exec frontend npm install <pkg>@<version>` (container has its own `node_modules`), then `npm install` on Windows too so VS Code sees the types. Run npm/npx from PowerShell, not Git Bash.
-- In Git Bash, docker builds need `export PATH="/c/Users/Sandhya/AppData/Local/Programs/DockerDesktop/resources/bin:$PATH"` (credential helper).
+- In Git Bash, docker builds need Docker Desktop's `resources/bin` folder on `PATH` (credential helper); see `CLAUDE.local.md`.
 
-URLs: app http://localhost:3000 · mock hospital site http://localhost:8090 (`http://mockhospital/` inside Docker) · API http://localhost:8000/api/ · Django admin http://localhost:8000/admin/ · Mailpit http://localhost:8025 · Elasticsearch http://localhost:9200 · Postgres from Windows `localhost:5433` (db/user/password `mediconnect`; 5432 is the owner's local PostgreSQL 17). Seed logins: doctors `<first>.<last>@mediconnect.dev` / `Doctor@123`. E2E logins (reset by `e2e_setup`): `e2e.patient@mediconnect.dev`, `e2e.doctor@mediconnect.dev` / `E2e@12345`.
+URLs: app http://localhost:3000 · mock hospital site http://localhost:8090 (`http://mockhospital/` inside Docker) · API http://localhost:8000/api/ · Django admin http://localhost:8000/admin/ · Mailpit http://localhost:8025 · Elasticsearch http://localhost:9200 · Postgres from Windows `localhost:5433` (db/user/password `mediconnect`; 5432 is the owner's local PostgreSQL 17). Seed and E2E test logins are created by the `seed` and `e2e_setup` commands (see `CLAUDE.local.md`).
 
 ## Architecture
 
