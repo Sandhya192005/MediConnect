@@ -1,5 +1,7 @@
 # MediConnect
 
+[![Tests](https://github.com/Sandhya192005/MediConnect/actions/workflows/tests.yml/badge.svg)](https://github.com/Sandhya192005/MediConnect/actions/workflows/tests.yml)
+
 Hospital appointment booking app — Next.js frontend, Django REST backend, PostgreSQL/PostGIS, Redis, all in Docker.
 
 ## Run it
