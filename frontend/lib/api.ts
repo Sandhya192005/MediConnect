@@ -16,20 +16,33 @@ export type User = {
 const ACCESS = "mc_access";
 const REFRESH = "mc_refresh";
 
+/**
+ * Login tokens. "Remember me" keeps them in localStorage (survives closing the browser);
+ * without it they live in sessionStorage and are gone when the browser closes.
+ */
+const read = (key: string) =>
+  typeof window === "undefined" ? null : sessionStorage.getItem(key) ?? localStorage.getItem(key);
+
 export const tokens = {
   get access() {
-    return typeof window === "undefined" ? null : localStorage.getItem(ACCESS);
+    return read(ACCESS);
   },
   get refresh() {
-    return typeof window === "undefined" ? null : localStorage.getItem(REFRESH);
+    return read(REFRESH);
   },
-  set(access: string, refresh?: string) {
-    localStorage.setItem(ACCESS, access);
-    if (refresh) localStorage.setItem(REFRESH, refresh);
+  /** `remember` is given at login; a refresh keeps the tokens wherever they already are. */
+  set(access: string, refresh?: string, remember?: boolean) {
+    const keep = remember ?? sessionStorage.getItem(REFRESH) === null;
+    if (remember !== undefined) tokens.clear();
+    const store = keep ? localStorage : sessionStorage;
+    store.setItem(ACCESS, access);
+    if (refresh) store.setItem(REFRESH, refresh);
   },
   clear() {
-    localStorage.removeItem(ACCESS);
-    localStorage.removeItem(REFRESH);
+    for (const store of [localStorage, sessionStorage]) {
+      store.removeItem(ACCESS);
+      store.removeItem(REFRESH);
+    }
   },
 };
 

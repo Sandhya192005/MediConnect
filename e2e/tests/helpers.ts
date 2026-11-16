@@ -25,7 +25,7 @@ export function e2e(): E2EData {
 export async function login(page: Page, email: string, password = e2e().password) {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password); // exact: the "Show password" button also matches
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page.getByRole("button", { name: "Log out" })).toBeVisible();
 }

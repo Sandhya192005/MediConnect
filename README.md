@@ -139,6 +139,25 @@ Real hospital websites and OpenAI are never called by these tests.
 - [x] Phase 7.5 — Hospital lookup from its own website (Playwright) + appointment requests
 - [x] Phase 8 — Playwright end-to-end tests (`e2e/`)
 
+### Dashboards plan (patient / doctor / admin)
+
+Owner decisions (2026-11-16): one admin per hospital; a doctor may open the records of any patient who has had an appointment at their hospital, and every view is logged; the logged-in pages follow the owner's reference design (the public home page keeps its own look).
+
+- [x] Step 1 — New look (frontend only): sidebar layout, login with Patient / Doctor / Admin tabs, and the three dashboards built from existing data. Planned features show "Soon" instead of made-up numbers.
+- [ ] Step 2 — Medical records: patients upload reports, scans and X-rays (stored privately, downloaded only through a permission check); patient IDs; doctors open records by patient ID, with an access log.
+- [ ] Step 3 — Patient queue for doctors: check-in, waiting / in consultation / done, token numbers, live updates.
+- [ ] Step 4 — Hospital management for admins: admins linked to one hospital, staff records for doctors and nurses (join date, salary, department), patient list, staff charts.
+- [ ] Step 5 — Tests, docs and push.
+
+#### The new look (Step 1)
+
+- Logged-in users get the dashboard layout (`components/AppShell.tsx`): a sidebar with the role's menu, a top bar with quick search, notifications and the user. Patients get a dark teal sidebar, doctors and admins a light one. On phones the sidebar slides in from the menu button. `components/AppChrome.tsx` decides which frame a page gets: login/sign-up are full-screen, `/patient`, `/doctor`, `/admin`, `/doctors` and `/hospitals` use the dashboard layout when logged in, everything else the public bar and footer.
+- Menus live in `lib/nav.ts`. Planned items are greyed out with "Soon" and aren't links.
+- Login: role tabs (they only change the wording: the account decides which dashboard opens), show/hide password, and **Remember me** (unticked = the login is kept in `sessionStorage` and ends when the browser closes).
+- Patient dashboard: next appointment, hospitals near you (asks for the location only when you click "Use my location"), MediConnect hospitals with a Book button, upcoming appointments.
+- Doctor dashboard: today's appointments, visits still to see, next patient, today's schedule with status pills, today's duty hours and hospital. It refreshes when a live notification arrives.
+- Admin dashboard: bookable doctors, partner hospitals, today's appointments, and hospitals and appointment requests waiting for approval.
+
 ## Main API endpoints
 
 | Endpoint | Who | What |

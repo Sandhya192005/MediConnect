@@ -15,7 +15,7 @@ type RegisterInput = {
 type AuthState = {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password: string, remember?: boolean) => Promise<User>;
   register: (input: RegisterInput) => Promise<User>;
   logout: () => void;
 };
@@ -40,12 +40,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, remember = true) => {
     const data = await api<{ access: string; refresh: string; user: User }>("/api/auth/login/", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
-    tokens.set(data.access, data.refresh);
+    tokens.set(data.access, data.refresh, remember);
     setUser(data.user);
     return data.user;
   }, []);

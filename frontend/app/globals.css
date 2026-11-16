@@ -58,6 +58,33 @@ h1, h2, .page-title, .section-title {
   color: #0e8073;
 }
 
+/*
+ * ---- Logged-in dashboards (AppShell) ----
+ * Follow the owner's reference design: soft teal-tinted ground, white cards with soft shadows,
+ * semibold headings in Funnel Sans. Scoped to .app-shell so the public pages keep their look.
+ */
+.app-shell {
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(18, 165, 148, 0.08), transparent 60%),
+    #eef5f5;
+  color: #0f2f3a;
+}
+.app-shell h1,
+.app-shell h2,
+.app-shell .page-title,
+.app-shell .section-title {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+.app-shell h1,
+.app-shell .page-title {
+  font-weight: 700;
+}
+.app-shell h2,
+.app-shell .section-title {
+  font-weight: 650;
+}
+
 /* ---- Building blocks used across pages ---- */
 
 /* Base pieces other classes build on (@utility, so they can be used inside @apply). */
@@ -109,5 +136,13 @@ h1, h2, .page-title, .section-title {
   }
   .chip-active {
     @apply inline-flex items-center gap-1 rounded-full bg-teal-600 px-3 py-1 text-xs font-medium text-white;
+  }
+
+  /* Dashboard cards and links (reference design) */
+  .dash-card {
+    @apply rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(15,47,79,0.04),0_10px_28px_-14px_rgba(15,47,79,0.18)];
+  }
+  .dash-link {
+    @apply inline-flex items-center gap-1 text-sm font-[650] text-teal-700 transition hover:gap-1.5 hover:text-teal-800;
   }
 }
