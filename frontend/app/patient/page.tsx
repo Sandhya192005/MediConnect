@@ -6,7 +6,7 @@ import DashboardShell, { EmptyState, IconTile, Panel, SkeletonRows, StatCard, St
 import Icon from "@/components/Icons";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { fmtDateTime, type Appointment, type NearbyResponse } from "@/lib/types";
+import { fmtDate, fmtDateTime, type Appointment, type MedicalRecord, type NearbyResponse } from "@/lib/types";
 
 type PartnerHospital = {
   id: number;
@@ -23,9 +23,11 @@ export default function PatientDashboard() {
   const { user } = useAuth();
   const [upcoming, setUpcoming] = useState<Appointment[] | null>(null);
   const [partners, setPartners] = useState<PartnerHospital[] | null>(null);
+  const [records, setRecords] = useState<MedicalRecord[] | null>(null);
   const [failed, setFailed] = useState({ appointments: false, partners: false });
 
   useEffect(() => {
+    api<MedicalRecord[]>("/api/records/").then(setRecords).catch(() => setRecords([]));
     api<Appointment[]>("/api/appointments/?when=upcoming")
       .then((items) => setUpcoming(items.filter((a) => a.status === "booked" || a.status === "confirmed")))
       .catch(() => {
@@ -64,8 +66,15 @@ export default function PatientDashboard() {
           icon="folder"
           tone="orange"
           label="Medical records"
-          soon="Step 2"
-          detail="Keep your reports, scans and X-rays in one place, ready for your doctor."
+          value={records === null ? "…" : records.length === 0 ? "None yet" : undefined}
+          detail={
+            records === null
+              ? undefined
+              : records.length === 0
+                ? "Keep your reports, scans and X-rays here, ready for your doctor."
+                : `${records.length} ${records.length === 1 ? "file" : "files"} available`
+          }
+          link={{ href: "/patient/records", label: records?.length ? "View records" : "Add a record" }}
         />
       </div>
 
@@ -107,7 +116,8 @@ export default function PatientDashboard() {
           )}
         </Panel>
 
-        <Panel title="My upcoming appointments" action={{ href: "/patient/appointments", label: "View all" }} className="lg:col-span-2">
+        <div className="space-y-6 lg:col-span-2">
+        <Panel title="My upcoming appointments" action={{ href: "/patient/appointments", label: "View all" }}>
           {upcoming === null ? (
             <SkeletonRows rows={3} />
           ) : upcoming.length === 0 ? (
@@ -136,6 +146,31 @@ export default function PatientDashboard() {
             </ul>
           )}
         </Panel>
+
+        <Panel title="Recent medical reports" action={{ href: "/patient/records", label: "View all" }}>
+          {records === null ? (
+            <SkeletonRows rows={2} />
+          ) : records.length === 0 ? (
+            <EmptyState icon="folder" title="No reports yet" text="Upload reports, scans and X-rays to share them with your doctor.">
+              <Link href="/patient/records" className="dash-link mt-3">Add a record <Icon name="arrow" className="h-4 w-4" /></Link>
+            </EmptyState>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {records.slice(0, 3).map((r) => (
+                <li key={r.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  <IconTile icon="file" tone="rose" size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-[650] text-[#0f2f3a]">{r.title}</p>
+                    <p className="truncate text-xs text-slate-500">
+                      {r.record_type_label} · {fmtDate(r.record_date ?? r.created_at)}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+        </div>
       </div>
     </DashboardShell>
   );

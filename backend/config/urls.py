@@ -29,5 +29,6 @@ urlpatterns = [
     path("api/search/", include("apps.search.urls")),
     path("api/chat/", include("apps.chatbot.urls")),
     path("api/scraper/", include("apps.scraper.urls")),
+    path("api/records/", include("apps.records.urls")),
     path("api/", include(router.urls)),
 ]

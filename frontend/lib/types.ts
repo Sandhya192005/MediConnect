@@ -167,7 +167,53 @@ export type Appointment = {
   cancelled_by: string;
 };
 
-export const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+export type RecordType = "lab_report" | "scan" | "xray" | "prescription" | "discharge" | "other";
+
+export const RECORD_TYPES: { value: RecordType; label: string; icon: string }[] = [
+  { value: "lab_report", label: "Lab report", icon: "activity" },
+  { value: "scan", label: "Scan (CT / MRI / ultrasound)", icon: "brain" },
+  { value: "xray", label: "X-ray", icon: "bone" },
+  { value: "prescription", label: "Prescription", icon: "file" },
+  { value: "discharge", label: "Discharge summary", icon: "hospital" },
+  { value: "other", label: "Other", icon: "folder" },
+];
+
+export type MedicalRecord = {
+  id: number;
+  title: string;
+  record_type: RecordType;
+  record_type_label: string;
+  record_date: string | null;
+  notes: string;
+  original_name: string;
+  content_type: string;
+  size: number;
+  created_at: string;
+};
+
+export type RecordAccess = {
+  id: number;
+  viewer_name: string;
+  hospital_name: string;
+  record_title: string;
+  action: "view_list" | "download";
+  action_label: string;
+  created_at: string;
+};
+
+export type PatientLookup = {
+  patient: { patient_id: string; name: string };
+  hospital: string;
+  records: MedicalRecord[];
+};
+
+export const fmtSize = (bytes: number) =>
+  bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+
+export const fmtDate = (iso: string) =>
+  new Date(`${iso.length === 10 ? `${iso}T00:00` : iso}`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+
+export const WEEKDAYS =["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export const fmtDateTime = (iso: string) =>
   new Date(iso).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });

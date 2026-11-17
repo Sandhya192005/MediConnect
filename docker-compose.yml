@@ -48,8 +48,12 @@ services:
     build: ./backend
     command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     env_file: .env
+    environment:
+      # Medical record files: a private volume, outside the code folder (and outside OneDrive).
+      PRIVATE_MEDIA_ROOT: /data/private_media
     volumes:
       - ./backend:/app
+      - record_files:/data/private_media
     ports:
       - "8000:8000"
     depends_on:
@@ -131,3 +135,4 @@ services:
 volumes:
   pgdata:
   esdata:
+  record_files:

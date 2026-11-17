@@ -11,6 +11,8 @@ export type User = {
   last_name: string;
   phone: string;
   role: Role;
+  /** Patients only: the ID they share with a doctor to open their records (null for doctors/admins). */
+  patient_id: string | null;
 };
 
 const ACCESS = "mc_access";
@@ -75,7 +77,10 @@ export async function api<T = unknown>(
   retry = true,
 ): Promise<T> {
   const headers = new Headers(options.headers);
-  if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  // File uploads (FormData): the browser sets the multipart Content-Type itself.
+  if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
   if (tokens.access) headers.set("Authorization", `Bearer ${tokens.access}`);
 
   const res = await fetch(`${API_URL}${path}`, { ...options, headers });
@@ -88,6 +93,29 @@ export async function api<T = unknown>(
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) throw new ApiError(res.status, data);
   return data as T;
+}
+
+/**
+ * Downloads a protected file (e.g. a medical record) with the login token and saves it.
+ * A plain <a href> can't send the token, so the file is fetched and handed to the browser as a blob.
+ */
+export async function downloadFile(path: string, filename: string, retry = true): Promise<void> {
+  const headers = new Headers();
+  if (tokens.access) headers.set("Authorization", `Bearer ${tokens.access}`);
+  const res = await fetch(`${API_URL}${path}`, { headers });
+  if (res.status === 401 && retry && (await refreshAccess())) return downloadFile(path, filename, false);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new ApiError(res.status, text ? JSON.parse(text) : null);
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 /** Turns a DRF error body into one readable line. */

@@ -1,5 +1,7 @@
+import secrets
+
 from django.contrib.auth.models import AbstractUser, BaseUserManager
-from django.db import models
+from django.db import IntegrityError, models, transaction
 
 
 class UserManager(BaseUserManager):
@@ -45,3 +47,35 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.email} ({self.role})"
+
+
+def new_patient_code() -> str:
+    """A random patient ID like "P483920". Random (not P1, P2, P3…) so IDs can't be guessed by counting."""
+    return f"P{secrets.randbelow(900_000) + 100_000}"
+
+
+class PatientProfile(models.Model):
+    """Patient-only details. `patient_id` is the ID a patient shares with a doctor to open their records."""
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="patient_profile")
+    patient_id = models.CharField(max_length=12, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.patient_id} ({self.user.email})"
+
+    @classmethod
+    def for_user(cls, user: User) -> "PatientProfile":
+        """The patient's profile, created with a fresh unique ID the first time it's needed."""
+        existing = cls.objects.filter(user=user).first()
+        if existing:
+            return existing
+        for _ in range(20):  # 900,000 possible IDs: a clash is rare, so a few retries are plenty
+            try:
+                with transaction.atomic():
+                    return cls.objects.create(user=user, patient_id=new_patient_code())
+            except IntegrityError:
+                existing = cls.objects.filter(user=user).first()  # created meanwhile by another request
+                if existing:
+                    return existing
+        raise RuntimeError("Could not generate a unique patient ID")

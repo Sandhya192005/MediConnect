@@ -144,7 +144,7 @@ Real hospital websites and OpenAI are never called by these tests.
 Owner decisions (2026-11-16): one admin per hospital; a doctor may open the records of any patient who has had an appointment at their hospital, and every view is logged; the logged-in pages follow the owner's reference design (the public home page keeps its own look).
 
 - [x] Step 1 — New look (frontend only): sidebar layout, login with Patient / Doctor / Admin tabs, and the three dashboards built from existing data. Planned features show "Soon" instead of made-up numbers.
-- [ ] Step 2 — Medical records: patients upload reports, scans and X-rays (stored privately, downloaded only through a permission check); patient IDs; doctors open records by patient ID, with an access log.
+- [x] Step 2 — Medical records: patients upload reports, scans and X-rays (stored privately, downloaded only through a permission check); patient IDs; doctors open records by patient ID, with an access log.
 - [ ] Step 3 — Patient queue for doctors: check-in, waiting / in consultation / done, token numbers, live updates.
 - [ ] Step 4 — Hospital management for admins: admins linked to one hospital, staff records for doctors and nurses (join date, salary, department), patient list, staff charts.
 - [ ] Step 5 — Tests, docs and push.
@@ -158,6 +158,15 @@ Owner decisions (2026-11-16): one admin per hospital; a doctor may open the reco
 - Doctor dashboard: today's appointments, visits still to see, next patient, today's schedule with status pills, today's duty hours and hospital. It refreshes when a live notification arrives.
 - Admin dashboard: bookable doctors, partner hospitals, today's appointments, and hospitals and appointment requests waiting for approval.
 
+#### Medical records (Step 2)
+
+- **Patient ID:** every patient gets a random ID like `P483920` (`accounts.PatientProfile`, created at sign-up; existing patients got one in a migration). It's in `GET /api/auth/me/` as `patient_id` and on the records page.
+- **Patients** (`/patient/records`): upload PDF, JPG or PNG files up to 10 MB with a title, type (lab report, scan, X-ray, prescription, discharge summary, other), date and notes; download and delete them; see **Who opened your records**. Files are checked by their first bytes, not just the name, so a renamed program is refused.
+- **Private files:** stored in the Docker volume `record_files` (`PRIVATE_MEDIA_ROOT=/data/private_media`), outside the code folder and OneDrive, under random names. They have no public URL: the only way to get one is `GET /api/records/<id>/file/`, which checks who is asking every time and always sends it as a download. Deleting a record (or the account) deletes the file.
+- **Doctors** (`/doctor/records`, or the patient-ID box on the doctor dashboard): enter a patient ID to see the patient's records. Allowed only if the patient has a booked, confirmed or completed appointment with any doctor at the doctor's hospital (cancelled bookings don't count). An unknown ID and "not your hospital's patient" give the same answer, and lookups are limited to 30 a minute, so IDs can't be guessed.
+- **Access log:** every doctor lookup and file download is recorded (`records.RecordAccess`: who, which hospital, which file, when) and shown to the patient. The same doctor repeating the same action within a minute (a reload) counts once. Superusers can read the log in Django admin; the records themselves aren't in Django admin.
+- Admins can't open records yet: per-hospital admins arrive in Step 4.
+
 ## Main API endpoints
 
 | Endpoint | Who | What |
@@ -169,3 +178,7 @@ Owner decisions (2026-11-16): one admin per hospital; a doctor may open the reco
 | `GET/PATCH /api/doctors/me/`, `GET/PUT /api/doctors/me/availability/` | doctor | own profile + hours |
 | `GET/POST /api/appointments/` | patient / doctor / admin | list + book |
 | `POST /api/appointments/<id>/cancel/` `confirm/` `complete/` | by role | change status |
+| `GET/POST /api/records/`, `GET/PATCH/DELETE /api/records/<id>/` | patient | own medical records (upload: multipart `title`, `record_type`, `record_date`, `notes`, `file`) |
+| `GET /api/records/access-log/` | patient | who opened their records |
+| `GET /api/records/patients/<patient_id>/` | doctor | a patient's records, if they have an appointment at the doctor's hospital (logged, 30/min) |
+| `GET /api/records/<id>/file/` | the patient, or a permitted doctor (logged) | download the file |

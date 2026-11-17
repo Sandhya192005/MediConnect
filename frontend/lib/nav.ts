@@ -14,7 +14,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Find hospitals", icon: "hospital", href: "/hospitals" },
     { label: "Find doctors", icon: "stethoscope", href: "/doctors" },
     { label: "My appointments", icon: "calendar", href: "/patient/appointments" },
-    { label: "My medical records", icon: "folder", soon: "Step 2" },
+    { label: "My medical records", icon: "folder", href: "/patient/records" },
     { label: "Profile & settings", icon: "settings", soon: "Later" },
   ],
   doctor: [
@@ -23,7 +23,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Duty schedule", icon: "clock", href: "/doctor/availability" },
     { label: "Appointments", icon: "calendar", href: "/doctor/appointments" },
     { label: "Patient queue", icon: "queue", soon: "Step 3" },
-    { label: "Patient records", icon: "file", soon: "Step 2" },
+    { label: "Patient records", icon: "file", href: "/doctor/records" },
   ],
   admin: [
     { label: "Dashboard", icon: "grid", href: "/admin" },

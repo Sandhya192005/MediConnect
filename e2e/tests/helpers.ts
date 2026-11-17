@@ -7,7 +7,7 @@ export const API = "http://localhost:8000";
 /** Ids and logins created by `manage.py e2e_setup` (see global-setup.ts). */
 export type E2EData = {
   password: string;
-  patient: { email: string; id: number };
+  patient: { email: string; id: number; patient_id: string };
   doctor: { email: string; id: number; name: string };
   partner_hospital: { id: number; name: string };
   mock_hospital: { id: number; name: string };

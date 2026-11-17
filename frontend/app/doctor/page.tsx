@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import DashboardShell, { EmptyState, IconTile, Panel, SkeletonRows, SoonBadge, StatCard, StatusPill, type PillStatus } from "@/components/DashboardShell";
+import DashboardShell, { EmptyState, IconTile, Panel, SkeletonRows, StatCard, StatusPill, type PillStatus } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -140,20 +141,44 @@ export default function DoctorDashboard() {
             )}
           </Panel>
 
-          <section className="dash-card border-dashed p-5" aria-label="Patient records quick access">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-3">
-                <IconTile icon="file" tone="orange" size="sm" />
-                <p className="text-sm font-[650] text-[#0f2f3a]">Quick access to patient records</p>
-              </div>
-              <SoonBadge phase="Step 2" />
-            </div>
-            <p className="mt-3 text-xs text-slate-500">
-              Enter a patient ID to see their reports, scans and X-rays, for patients of your hospital. Every view is logged.
-            </p>
-          </section>
+          <RecordsQuickAccess />
         </div>
       </div>
     </DashboardShell>
+  );
+}
+
+/** Patient ID box: opens the Patient records page for that ID. */
+function RecordsQuickAccess() {
+  const router = useRouter();
+  const [id, setId] = useState("");
+  return (
+    <section className="dash-card p-5" aria-label="Patient records quick access">
+      <div className="flex items-center gap-3">
+        <IconTile icon="file" tone="orange" size="sm" />
+        <p className="text-sm font-[650] text-[#0f2f3a]">Quick access to patient records</p>
+      </div>
+      <p className="mt-2 text-xs text-slate-500">For patients with an appointment at your hospital. Each view is logged for the patient.</p>
+      <form
+        className="mt-3 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const v = id.trim().toUpperCase();
+          if (v) router.push(`/doctor/records?id=${encodeURIComponent(v)}`);
+        }}
+      >
+        <input
+          aria-label="Patient ID"
+          className="input rounded-xl py-2 font-mono uppercase"
+          placeholder="Enter patient ID…"
+          maxLength={12}
+          value={id}
+          onChange={(e) => setId(e.target.value)}
+        />
+        <button className="btn-solid shrink-0 rounded-xl px-3 py-2" aria-label="Open patient records">
+          <Icon name="search" className="h-4 w-4" />
+        </button>
+      </form>
+    </section>
   );
 }

@@ -17,7 +17,9 @@ from django.core.cache import cache
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from apps.accounts.models import PatientProfile
 from apps.appointments.models import Appointment, AppointmentRequest, ExternalAppointment
+from apps.records.models import MedicalRecord, RecordAccess
 from apps.doctors.models import DoctorProfile, WeeklyAvailability
 from apps.hospitals.models import Department, Hospital
 
@@ -78,6 +80,8 @@ class Command(BaseCommand):
             user.chat_sessions.all().delete()
         AppointmentRequest.objects.filter(patient=patient).delete()
         ExternalAppointment.objects.filter(patient=patient).delete()
+        MedicalRecord.objects.filter(patient=patient).delete()  # files are removed after commit (records/signals.py)
+        RecordAccess.objects.filter(patient=patient).delete()
         cache.delete(f"scrape:quota:{patient.id}")  # the website-read test must not hit the hourly limit
         cache.delete(f"chat:rl:{patient.id}")
 
@@ -86,7 +90,8 @@ class Command(BaseCommand):
 
         self.stdout.write(json.dumps({
             "password": PASSWORD,
-            "patient": {"email": PATIENT_EMAIL, "id": patient.id},
+            "patient": {"email": PATIENT_EMAIL, "id": patient.id,
+                        "patient_id": PatientProfile.for_user(patient).patient_id},
             "doctor": {"email": DOCTOR_EMAIL, "id": doctor.id, "name": str(doctor)},
             "partner_hospital": {"id": partner.id, "name": partner.name},
             "mock_hospital": {"id": mock.id, "name": mock.name},

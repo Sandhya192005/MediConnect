@@ -7,10 +7,20 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    # Patients only (null for doctors and admins): the ID they share with a doctor to open their records.
+    patient_id = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "last_name", "phone", "role"]
+        fields = ["id", "email", "first_name", "last_name", "phone", "role", "patient_id"]
         read_only_fields = ["id", "role"]
+
+    def get_patient_id(self, user):
+        if user.role != User.Role.PATIENT:
+            return None
+        from .models import PatientProfile
+
+        return PatientProfile.for_user(user).patient_id
 
 
 class RegisterSerializer(serializers.ModelSerializer):

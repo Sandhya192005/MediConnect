@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "apps.search",
     "apps.chatbot",
     "apps.scraper",
+    "apps.records",
 ]
 
 MIDDLEWARE = [
@@ -107,7 +108,16 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # Limits for views that opt in with ScopedRateThrottle (counted per user, in the Redis cache).
+    "DEFAULT_THROTTLE_RATES": {
+        "record_lookup": "30/min",  # doctors looking up patients by ID: enough for work, too slow for guessing IDs
+    },
 }
+
+# --- Medical records (Step 2) ---
+# Private files: a Docker volume in docker-compose.yml, never served as public media.
+PRIVATE_MEDIA_ROOT = os.environ.get("PRIVATE_MEDIA_ROOT", str(BASE_DIR / "private_media"))
+RECORD_MAX_BYTES = 10 * 1024 * 1024  # 10 MB per file
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
