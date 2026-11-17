@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import DashboardShell, { EmptyState, IconTile, Panel, SkeletonRows, StatCard, StatusPill } from "@/components/DashboardShell";
+import DashboardShell, { EmptyState, IconTile, Panel, pillFor, SkeletonRows, StatCard, StatusPill } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
+import TodayVisit from "@/components/TodayVisit";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fmtDate, fmtDateTime, type Appointment, type MedicalRecord, type NearbyResponse } from "@/lib/types";
@@ -52,6 +53,7 @@ export default function PatientDashboard() {
       subtitle="Take care of your health, always."
       badge
     >
+      <TodayVisit />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           icon="calendar"
@@ -140,7 +142,7 @@ export default function PatientDashboard() {
                       {a.hospital_name && ` · ${a.hospital_name}`}
                     </p>
                   </div>
-                  <StatusPill status={a.status} />
+                  <StatusPill status={pillFor(a)} />
                 </li>
               ))}
             </ul>

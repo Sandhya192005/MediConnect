@@ -3,20 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import DashboardShell, { EmptyState, IconTile, Panel, SkeletonRows, StatCard, StatusPill, type PillStatus } from "@/components/DashboardShell";
+import DashboardShell, { EmptyState, IconTile, Panel, pillFor, SkeletonRows, StatCard, StatusPill } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { NOTIFICATION_EVENT } from "@/lib/notifications";
 import { fmtTime, isoDate, type Appointment, type Doctor } from "@/lib/types";
-
-const isActive = (a: Appointment) => a.status === "booked" || a.status === "confirmed";
-
-/** "now" while the visit's time is running, otherwise the appointment's own status. */
-function pillFor(a: Appointment, now: number): PillStatus {
-  if (isActive(a) && new Date(a.start).getTime() <= now && now < new Date(a.end).getTime()) return "now";
-  return a.status;
-}
 
 /** Python's Monday=0 weekday, as used by WeeklyAvailability. */
 const todayWeekday = () => (new Date().getDay() + 6) % 7;
@@ -42,16 +34,19 @@ export default function DoctorDashboard() {
     api<Doctor>("/api/doctors/me/").then(setMe).catch(() => setMe(null));
   }, [loadToday]);
 
-  // Refresh the schedule when a live notification arrives (a new booking or a cancellation).
+  // Refresh when a live notification arrives (a booking, a cancellation, a patient checking in), and every 30 s.
   useEffect(() => {
+    const timer = setInterval(loadToday, 30_000);
     window.addEventListener(NOTIFICATION_EVENT, loadToday);
-    return () => window.removeEventListener(NOTIFICATION_EVENT, loadToday);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener(NOTIFICATION_EVENT, loadToday);
+    };
   }, [loadToday]);
 
-  const now = Date.now();
   const visits = today?.filter((a) => a.status !== "cancelled") ?? [];
-  const toSee = visits.filter((a) => isActive(a) && new Date(a.end).getTime() > now);
-  const next = toSee[0];
+  const waiting = visits.filter((a) => a.queue_status === "waiting").sort((a, b) => (a.token ?? 0) - (b.token ?? 0));
+  const current = visits.find((a) => a.queue_status === "in_consultation");
   const hours = me?.availability.filter((a) => a.weekday === todayWeekday()) ?? [];
   const surname = user?.last_name || user?.first_name || "";
 
@@ -73,17 +68,18 @@ export default function DoctorDashboard() {
         <StatCard
           icon="users"
           tone="teal"
-          label="Still to see today"
-          value={today === null ? "…" : toSee.length}
-          detail="Booked or confirmed visits not yet finished"
+          label="Patients waiting"
+          value={today === null ? "…" : waiting.length}
+          detail={waiting.length ? `Next: token ${waiting[0].token}, ${waiting[0].patient_name}` : "Checked in and waiting to be called"}
+          link={{ href: "/doctor/queue", label: "Open the queue" }}
         />
         <StatCard
           icon="clock"
           tone="indigo"
-          label="Next patient"
-          value={today === null ? "…" : next ? fmtTime(next.start) : "—"}
-          detail={next ? next.patient_name : today === null ? undefined : "No more visits today"}
-          link={{ href: "/doctor/appointments", label: "Manage appointments" }}
+          label="Current patient"
+          value={today === null ? "…" : current ? `#${current.token}` : "—"}
+          detail={current ? `${current.patient_name} · consulting…` : today === null ? undefined : "No one in consultation"}
+          link={current?.patient_id ? { href: `/doctor/records?id=${current.patient_id}`, label: "Open their records" } : undefined}
         />
       </div>
 
@@ -106,7 +102,8 @@ export default function DoctorDashboard() {
                     <span className="block truncate text-sm font-[650] text-[#0f2f3a]">{a.patient_name}</span>
                     {a.reason && <span className="block truncate text-xs text-slate-500">{a.reason}</span>}
                   </span>
-                  <StatusPill status={pillFor(a, now)} />
+                  {a.token && <span className="text-xs tabular-nums text-slate-400">#{a.token}</span>}
+                  <StatusPill status={pillFor(a)} />
                 </li>
               ))}
             </ul>

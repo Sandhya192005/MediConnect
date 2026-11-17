@@ -5,7 +5,7 @@ from datetime import timedelta
 from smtplib import SMTPException
 
 from celery import shared_task
-from django.db.models import F
+from django.db.models import F, Q
 from django.utils import timezone
 
 from apps.appointments.models import Appointment, ExternalAppointment
@@ -109,6 +109,19 @@ def push_external_reminder_task(ext_id: int, event: str):
 
 @shared_task
 def complete_past_appointments():
-    """Runs hourly. Appointments that ended over an hour ago are marked completed."""
+    """
+    Runs hourly. Appointments that ended over an hour ago are marked completed, except patients who
+    checked in today: they may still be in the queue (the doctor is running late), so they stay
+    until the doctor marks them done, or until the day is over.
+    """
+    from apps.appointments.queue import day_bounds
+
     cutoff = timezone.now() - timedelta(hours=1)
-    return Appointment.objects.active().filter(end__lt=cutoff).update(status=Appointment.Status.COMPLETED)
+    start_of_today, _ = day_bounds()
+    still_in_queue = Q(checked_in_at__isnull=False, start__gte=start_of_today)
+    return (
+        Appointment.objects.active()
+        .filter(end__lt=cutoff)
+        .exclude(still_in_queue)
+        .update(status=Appointment.Status.COMPLETED)
+    )

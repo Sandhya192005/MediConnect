@@ -11,6 +11,7 @@ from apps.doctors.models import DoctorProfile
 from apps.doctors.services import invalidate_slots, is_slot_available
 from apps.notifications.services import notify_appointment
 
+from . import queue as patient_queue
 from .models import Appointment
 from .serializers import AppointmentSerializer
 
@@ -27,7 +28,7 @@ class AppointmentViewSet(
 
     def get_queryset(self):
         user = self.request.user
-        qs = Appointment.objects.select_related("patient", "doctor__user", "doctor__hospital")
+        qs = Appointment.objects.select_related("patient__patient_profile", "doctor__user", "doctor__hospital")
         if user.role == "patient":
             qs = qs.filter(patient=user)
         elif user.role == "doctor":
@@ -92,6 +93,37 @@ class AppointmentViewSet(
     def complete(self, request, pk=None):
         appointment = self._doctor_set_status(Appointment.Status.COMPLETED, allowed_from=("booked", "confirmed"))
         return Response(self.get_serializer(appointment).data)
+
+    # ---- Patient queue (Step 3): see queue.py ----
+
+    @action(detail=True, methods=["post"], url_path="check-in")
+    def check_in(self, request, pk=None):
+        """POST /api/appointments/<id>/check-in/ — the patient ("I've arrived") or their doctor."""
+        if request.user.role not in ("patient", "doctor"):
+            raise PermissionDenied("Only the patient or their doctor can check in.")
+        appointment = patient_queue.check_in(self.get_object(), by=request.user.role)
+        return Response(self.get_serializer(appointment).data)
+
+    @action(detail=True, methods=["post"], url_path="call-in")
+    def call_in(self, request, pk=None):
+        """POST /api/appointments/<id>/call-in/ — the doctor calls a waiting patient in."""
+        if request.user.role != "doctor":
+            raise PermissionDenied("Only the doctor can call a patient in.")
+        appointment = patient_queue.call_in(self.get_object())
+        return Response(self.get_serializer(appointment).data)
+
+    @action(detail=False, methods=["get"], url_path="queue")
+    def queue(self, request):
+        """
+        GET /api/appointments/queue/ — the doctor's queue today:
+        {date, in_consultation, waiting (by token), not_arrived (by time), done}
+        """
+        if request.user.role != "doctor":
+            raise PermissionDenied("Only doctors have a queue.")
+        doctor = DoctorProfile.objects.filter(user=request.user).first()
+        groups = patient_queue.queue_for(doctor.id) if doctor else {k: [] for k in ("in_consultation", "waiting", "not_arrived", "done")}
+        data = {k: self.get_serializer(v, many=True).data for k, v in groups.items()}
+        return Response({"date": timezone.localdate().isoformat(), **data})
 
     def _doctor_set_status(self, new_status, allowed_from):
         if self.request.user.role not in ("doctor", "admin"):

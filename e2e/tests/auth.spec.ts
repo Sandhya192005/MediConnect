@@ -47,9 +47,15 @@ test("each role gets its own dashboard and menu", async ({ page }) => {
   await expect(page.getByRole("region", { name: "Today's schedule" })).toBeVisible();
   const menu = page.getByRole("navigation", { name: "Main menu" });
   await expect(menu.getByRole("link", { name: "Duty schedule" })).toHaveAttribute("href", "/doctor/availability");
-  // Planned features are listed but not clickable yet.
-  await expect(menu.getByText("Patient queue")).toBeVisible();
-  await expect(menu.getByRole("link", { name: /Patient queue/ })).toHaveCount(0);
+  await expect(menu.getByRole("link", { name: "Patient queue" })).toHaveAttribute("href", "/doctor/queue");
+  await expect(menu.getByRole("link", { name: "Patient records" })).toHaveAttribute("href", "/doctor/records");
+});
+
+test("planned features are listed but not clickable yet", async ({ page }) => {
+  await login(page, e2e().patient.email);
+  const menu = page.getByRole("navigation", { name: "Main menu" });
+  await expect(menu.getByText("Profile & settings")).toBeVisible();
+  await expect(menu.getByRole("link", { name: /Profile & settings/ })).toHaveCount(0);
 });
 
 test("unticking Remember me keeps the login only for this browser session", async ({ page }) => {

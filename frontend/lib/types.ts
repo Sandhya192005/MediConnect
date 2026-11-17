@@ -165,6 +165,25 @@ export type Appointment = {
   status: AppointmentStatus;
   reason: string;
   cancelled_by: string;
+  /** The patient's ID (for the doctor, to open their records). */
+  patient_id: string | null;
+  // Patient queue (Step 3)
+  queue_status: QueueStatus;
+  token: number | null;
+  checked_in_at: string | null;
+  consultation_started_at: string | null;
+  /** Waiting patients only: how many are ahead of them. */
+  people_ahead: number | null;
+};
+
+export type QueueStatus = "not_arrived" | "waiting" | "in_consultation" | "done" | "cancelled";
+
+export type DoctorQueue = {
+  date: string;
+  in_consultation: Appointment[];
+  waiting: Appointment[];
+  not_arrived: Appointment[];
+  done: Appointment[];
 };
 
 export type RecordType = "lab_report" | "scan" | "xray" | "prescription" | "discharge" | "other";

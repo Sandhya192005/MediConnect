@@ -27,6 +27,10 @@ class Appointment(models.Model):
     # Set by the reminder task so each reminder is sent only once.
     reminder_24h_sent_at = models.DateTimeField(null=True, blank=True)
     reminder_1h_sent_at = models.DateTimeField(null=True, blank=True)
+    # Patient queue (Step 3), filled in on the day of the visit: see queue.py.
+    checked_in_at = models.DateTimeField(null=True, blank=True)
+    token = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Queue number for the day, per doctor")
+    consultation_started_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -40,11 +44,30 @@ class Appointment(models.Model):
                 fields=["doctor", "start"],
                 condition=Q(status__in=ACTIVE_STATUSES),
                 name="unique_active_slot_per_doctor",
-            )
+            ),
+            # …and a second patient in consultation with the same doctor while one is still in.
+            models.UniqueConstraint(
+                fields=["doctor"],
+                condition=Q(status__in=ACTIVE_STATUSES, consultation_started_at__isnull=False),
+                name="one_consultation_at_a_time_per_doctor",
+            ),
         ]
 
     def __str__(self):
         return f"{self.patient} with {self.doctor} at {self.start:%Y-%m-%d %H:%M}"
+
+    @property
+    def queue_status(self) -> str:
+        """Where the visit is today: not_arrived → waiting → in_consultation → done (or cancelled)."""
+        if self.status == self.Status.CANCELLED:
+            return "cancelled"
+        if self.status == self.Status.COMPLETED:
+            return "done"
+        if self.consultation_started_at:
+            return "in_consultation"
+        if self.checked_in_at:
+            return "waiting"
+        return "not_arrived"
 
 
 class ExternalAppointment(models.Model):

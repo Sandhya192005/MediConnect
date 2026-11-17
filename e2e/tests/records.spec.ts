@@ -1,41 +1,25 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
-import { API, e2e, firstFreeSlot, login } from "./helpers";
+import { API, bookAsPatient, e2e, login } from "./helpers";
 
 const PDF = Buffer.from("%PDF-1.4\n% MediConnect e2e test report\n");
 
-async function patientToken(request: APIRequestContext) {
-  const auth = await request.post(`${API}/api/auth/login/`, { data: { email: e2e().patient.email, password: e2e().password } });
-  expect(auth.ok()).toBeTruthy();
-  return (await auth.json()).access as string;
-}
-
 /**
- * Cancels the E2E patient's active bookings (other tests, e.g. the chatbot one, leave one behind),
- * so this test starts with no link between the patient and the doctor's hospital.
+ * A brand-new patient who has never booked anything: their ID must open nothing for the doctor.
+ * (The shared E2E patient may already have visits at the doctor's hospital from other tests.)
+ * "e2e.new.*" accounts are deleted by the next e2e_setup.
  */
-async function cancelPatientBookings(request: APIRequestContext) {
-  const headers = { Authorization: `Bearer ${await patientToken(request)}` };
-  const res = await request.get(`${API}/api/appointments/?when=upcoming`, { headers });
-  for (const a of (await res.json()) as { id: number; status: string }[]) {
-    if (a.status === "booked" || a.status === "confirmed") {
-      expect((await request.post(`${API}/api/appointments/${a.id}/cancel/`, { headers })).ok()).toBeTruthy();
-    }
-  }
-}
-
-/** Books the E2E doctor for the E2E patient through the API, which links the patient to the doctor's hospital. */
-async function bookAsPatient(request: APIRequestContext) {
-  const access = await patientToken(request);
-  const res = await request.post(`${API}/api/appointments/`, {
-    headers: { Authorization: `Bearer ${access}` },
-    data: { doctor: e2e().doctor.id, start: await firstFreeSlot(request), reason: "Records e2e check" },
+async function newPatientId(request: APIRequestContext) {
+  const email = `e2e.new.records.${Date.now()}@mediconnect.dev`;
+  const reg = await request.post(`${API}/api/auth/register/`, {
+    data: { email, password: "Strong@pass1", first_name: "Never", last_name: "Booked" },
   });
-  expect(res.status()).toBe(201);
+  expect(reg.status()).toBe(201);
+  const auth = await (await request.post(`${API}/api/auth/login/`, { data: { email, password: "Strong@pass1" } })).json();
+  return auth.user.patient_id as string;
 }
 
 test("patient uploads a record, a doctor at their hospital opens it, and the patient sees who looked", async ({ page, browser, request }) => {
   const patientId = e2e().patient.patient_id;
-  await cancelPatientBookings(request);
 
   // Patient: sees their ID and uploads a report.
   await login(page, e2e().patient.email);
@@ -51,14 +35,15 @@ test("patient uploads a record, a doctor at their hospital opens it, and the pat
   const myRecords = page.getByRole("region", { name: /^My records/ });
   await expect(myRecords.getByText("Blood test", { exact: true })).toBeVisible();
 
-  // Doctor: without an appointment at their hospital, the ID opens nothing.
+  // Doctor: a patient without an appointment at their hospital can't be opened.
   const doctorContext = await browser.newContext();
   const doctorPage = await doctorContext.newPage();
   await login(doctorPage, e2e().doctor.email);
-  await doctorPage.goto(`/doctor/records?id=${patientId}`);
-  await expect(doctorPage.getByText(`No patient ${patientId} at your hospital`)).toBeVisible();
+  const stranger = await newPatientId(request);
+  await doctorPage.goto(`/doctor/records?id=${stranger}`);
+  await expect(doctorPage.getByText(`No patient ${stranger} at your hospital`)).toBeVisible();
 
-  // After a booking at the doctor's hospital, the doctor can open and download the record.
+  // With a booking at the doctor's hospital, the doctor can open and download the record.
   await bookAsPatient(request);
   await doctorPage.goto("/doctor");
   await doctorPage.getByLabel("Patient ID").fill(patientId.toLowerCase());

@@ -36,6 +36,44 @@ export function tomorrow(): string {
   return d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 }
 
+/** Today as YYYY-MM-DD in India time. */
+export function today(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+}
+
+/** An API access token for the E2E patient. */
+export async function patientToken(request: APIRequestContext) {
+  const auth = await request.post(`${API}/api/auth/login/`, { data: { email: e2e().patient.email, password: e2e().password } });
+  expect(auth.ok()).toBeTruthy();
+  return (await auth.json()).access as string;
+}
+
+/**
+ * Cancels the E2E patient's active bookings. Tests share the patient (e.g. the chatbot test leaves a booking
+ * behind), so a test that needs a clean start calls this first.
+ */
+export async function cancelPatientBookings(request: APIRequestContext) {
+  const headers = { Authorization: `Bearer ${await patientToken(request)}` };
+  for (const when of ["upcoming", "past"]) {
+    const res = await request.get(`${API}/api/appointments/?when=${when}`, { headers });
+    for (const a of (await res.json()) as { id: number; status: string }[]) {
+      if (a.status === "booked" || a.status === "confirmed") {
+        expect((await request.post(`${API}/api/appointments/${a.id}/cancel/`, { headers })).ok()).toBeTruthy();
+      }
+    }
+  }
+}
+
+/** Books the E2E doctor for the E2E patient through the API (first free slot on `day`); returns the appointment id. */
+export async function bookAsPatient(request: APIRequestContext, day = tomorrow(), reason = "Booked by an e2e test") {
+  const res = await request.post(`${API}/api/appointments/`, {
+    headers: { Authorization: `Bearer ${await patientToken(request)}` },
+    data: { doctor: e2e().doctor.id, start: await firstFreeSlot(request, day), reason },
+  });
+  expect(res.status()).toBe(201);
+  return (await res.json()).id as number;
+}
+
 /** First free slot of the E2E doctor on a day, straight from the API. */
 export async function firstFreeSlot(request: APIRequestContext, day = tomorrow()) {
   const res = await request.get(`${API}/api/doctors/${e2e().doctor.id}/slots/?date=${day}`);

@@ -22,7 +22,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "My hospital & profile", icon: "hospital", href: "/doctor/profile" },
     { label: "Duty schedule", icon: "clock", href: "/doctor/availability" },
     { label: "Appointments", icon: "calendar", href: "/doctor/appointments" },
-    { label: "Patient queue", icon: "queue", soon: "Step 3" },
+    { label: "Patient queue", icon: "queue", href: "/doctor/queue" },
     { label: "Patient records", icon: "file", href: "/doctor/records" },
   ],
   admin: [

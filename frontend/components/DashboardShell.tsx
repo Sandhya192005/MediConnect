@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Role } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { AppointmentStatus } from "@/lib/types";
+import type { Appointment, AppointmentStatus } from "@/lib/types";
 import Icon from "./Icons";
 import RoleGuard from "./RoleGuard";
 
@@ -192,14 +192,22 @@ export function SkeletonRows({ rows = 3 }: { rows?: number }) {
 }
 
 /** Coloured status pill used in dashboard lists (reference: Completed / In progress / Waiting / Confirmed). */
-export type PillStatus = AppointmentStatus | "now";
+export type PillStatus = AppointmentStatus | "waiting" | "in_consultation";
 const PILL: Record<PillStatus, { label: string; cls: string }> = {
-  booked: { label: "Booked", cls: "bg-amber-50 text-amber-700 ring-amber-200" },
+  booked: { label: "Booked", cls: "bg-indigo-50 text-indigo-700 ring-indigo-200" },
   confirmed: { label: "Confirmed", cls: "bg-teal-50 text-teal-700 ring-teal-200" },
+  waiting: { label: "Waiting", cls: "bg-amber-50 text-amber-700 ring-amber-200" },
+  in_consultation: { label: "In progress", cls: "bg-sky-50 text-sky-700 ring-sky-200" },
   completed: { label: "Completed", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
   cancelled: { label: "Cancelled", cls: "bg-slate-100 text-slate-500 ring-slate-200" },
-  now: { label: "Now", cls: "bg-sky-50 text-sky-700 ring-sky-200" },
 };
+
+/** The pill for an appointment: its place in today's queue if it has one, otherwise its booking status. */
+export function pillFor(a: Appointment): PillStatus {
+  if (a.queue_status === "waiting" || a.queue_status === "in_consultation") return a.queue_status;
+  return a.status;
+}
+
 export function StatusPill({ status }: { status: PillStatus }) {
   const p = PILL[status];
   return <span className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-[650] ring-1 ${p.cls}`}>{p.label}</span>;

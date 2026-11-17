@@ -48,6 +48,9 @@ def notify_appointment_in_app(appointment, event: str) -> int:
         ],
         "reminder_24h": [(patient, "Appointment tomorrow", f"{doctor} · {when}", p_link)],
         "reminder_1h": [(patient, "Appointment in 1 hour", f"{doctor} · {when}", p_link)],
+        # Patient queue (Step 3)
+        "checked_in": [(doctor_user, "Patient checked in", f"{patient_name} · token {appointment.token}", "/doctor/queue")],
+        "called_in": [(patient, "It's your turn", f"{doctor} is ready to see you now (token {appointment.token})", p_link)],
     }
     items = messages.get(event, [])
     for user, title, message, link in items:

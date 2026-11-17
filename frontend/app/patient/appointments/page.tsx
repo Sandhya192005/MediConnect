@@ -9,6 +9,7 @@ import RequestList from "@/components/RequestList";
 import Icon from "@/components/Icons";
 import PageHeader from "@/components/PageHeader";
 import RoleGuard from "@/components/RoleGuard";
+import TodayVisit from "@/components/TodayVisit";
 
 function BookedBanner() {
   const booked = useSearchParams().get("booked");
@@ -28,6 +29,9 @@ export default function PatientAppointmentsPage() {
       <Suspense>
         <BookedBanner />
       </Suspense>
+      <div className="mb-6">
+        <TodayVisit />
+      </div>
       <AppointmentList viewer="patient" />
       <RequestList />
       <ExternalAppointmentList />

@@ -145,7 +145,7 @@ Owner decisions (2026-11-16): one admin per hospital; a doctor may open the reco
 
 - [x] Step 1 — New look (frontend only): sidebar layout, login with Patient / Doctor / Admin tabs, and the three dashboards built from existing data. Planned features show "Soon" instead of made-up numbers.
 - [x] Step 2 — Medical records: patients upload reports, scans and X-rays (stored privately, downloaded only through a permission check); patient IDs; doctors open records by patient ID, with an access log.
-- [ ] Step 3 — Patient queue for doctors: check-in, waiting / in consultation / done, token numbers, live updates.
+- [x] Step 3 — Patient queue for doctors: check-in, waiting / in consultation / done, token numbers, live updates.
 - [ ] Step 4 — Hospital management for admins: admins linked to one hospital, staff records for doctors and nurses (join date, salary, department), patient list, staff charts.
 - [ ] Step 5 — Tests, docs and push.
 
@@ -167,6 +167,17 @@ Owner decisions (2026-11-16): one admin per hospital; a doctor may open the reco
 - **Access log:** every doctor lookup and file download is recorded (`records.RecordAccess`: who, which hospital, which file, when) and shown to the patient. The same doctor repeating the same action within a minute (a reload) counts once. Superusers can read the log in Django admin; the records themselves aren't in Django admin.
 - Admins can't open records yet: per-hospital admins arrive in Step 4.
 
+#### Patient queue (Step 3)
+
+On the day of a visit: **not arrived → waiting (token) → in consultation → done**. The rules are in `backend/apps/appointments/queue.py`.
+
+- **Check-in:** the patient taps **I've arrived** on their dashboard or My appointments page (allowed from 2 hours before their slot), or the doctor checks them in from the queue (any time that day). Check-in gives the next **token** for that doctor that day (1, 2, 3… in arrival order). Each step locks the doctor's row, so two patients checking in together never get the same token.
+- **Doctor's queue** (`/doctor/queue`): now consulting (with **Open records** and **Done**), waiting by token (**Call in**), not arrived yet (**Check in**), done today. Only one patient can be in consultation per doctor: the app says "mark them done first", and a database rule (`one_consultation_at_a_time_per_doctor`) guarantees it.
+- **Patient's view:** token number, how many people are ahead (a count only, never who), then **It's your turn**.
+- **Live updates:** "Patient checked in" goes to the doctor and "It's your turn" to the patient, as in-app notifications over the existing WebSocket (no emails: one per queue step would be spam). Pages also refresh every 30 s.
+- **Doctor dashboard:** Patients waiting and Current patient (#token, consulting…), with Waiting / In progress / Completed pills in today's schedule.
+- The hourly auto-complete job no longer completes patients who checked in today: if the doctor is running late, they stay in the queue until marked done or the day ends.
+
 ## Main API endpoints
 
 | Endpoint | Who | What |
@@ -178,6 +189,9 @@ Owner decisions (2026-11-16): one admin per hospital; a doctor may open the reco
 | `GET/PATCH /api/doctors/me/`, `GET/PUT /api/doctors/me/availability/` | doctor | own profile + hours |
 | `GET/POST /api/appointments/` | patient / doctor / admin | list + book |
 | `POST /api/appointments/<id>/cancel/` `confirm/` `complete/` | by role | change status |
+| `POST /api/appointments/<id>/check-in/` | the patient (from 2 h before) or their doctor, on the day | join the queue, get a token |
+| `POST /api/appointments/<id>/call-in/` | doctor | call a waiting patient in (one at a time) |
+| `GET /api/appointments/queue/` | doctor | today's queue: `in_consultation`, `waiting`, `not_arrived`, `done` |
 | `GET/POST /api/records/`, `GET/PATCH/DELETE /api/records/<id>/` | patient | own medical records (upload: multipart `title`, `record_type`, `record_date`, `notes`, `file`) |
 | `GET /api/records/access-log/` | patient | who opened their records |
 | `GET /api/records/patients/<patient_id>/` | doctor | a patient's records, if they have an appointment at the doctor's hospital (logged, 30/min) |
