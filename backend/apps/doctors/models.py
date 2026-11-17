@@ -19,6 +19,7 @@ class DoctorProfile(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
+        db_table = "doctor_profile"
         ordering = ["user__first_name"]
 
     def __str__(self):

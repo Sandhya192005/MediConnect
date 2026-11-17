@@ -45,6 +45,9 @@ class User(AbstractUser):
 
     objects = UserManager()
 
+    class Meta:
+        db_table = "users"  # every login; `role` says which profile table holds the rest
+
     def __str__(self):
         return f"{self.email} ({self.role})"
 
@@ -60,6 +63,9 @@ class PatientProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="patient_profile")
     patient_id = models.CharField(max_length=12, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "patient_profile"
 
     def __str__(self):
         return f"{self.patient_id} ({self.user.email})"

@@ -14,6 +14,10 @@ class HospitalAdmin(models.Model):
     hospital = models.ForeignKey("hospitals.Hospital", on_delete=models.CASCADE, related_name="admins")
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        db_table = "admin_profile"
+        verbose_name = "admin profile (hospital admin)"
+
     def __str__(self):
         return f"{self.user.email} → {self.hospital.name}"
 
@@ -61,6 +65,7 @@ class StaffMember(models.Model):
     objects = StaffQuerySet.as_manager()
 
     class Meta:
+        db_table = "staff_member"
         ordering = ["full_name"]
         indexes = [models.Index(fields=["hospital", "kind"])]
         constraints = [

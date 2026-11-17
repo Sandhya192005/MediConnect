@@ -190,6 +190,22 @@ Owner decisions (2026-11-17): hospital admins open records like doctors (with th
 - **Dashboard:** total doctors, nurses and patients, today's appointments and how many are waiting, the staff chart (doctors and nurses on staff at the end of each of the last 6 months; colours checked with a colour-blindness validator, with marker shapes and end labels as a second cue), and recent activity.
 - A platform admin without a hospital sees the platform overview (hospitals awaiting approval, appointment requests).
 
+## Users and profiles in the database
+
+Every login is one row in `users`; its `role` says which profile table holds the rest (renamed from Django's default names on 2026-11-17, no data changed).
+
+| Table | One row per | Holds |
+|---|---|---|
+| `users` | login (patient, doctor or admin) | email, hashed password, name, phone, `role`, `is_superuser` |
+| `patient_profile` | patient | the general patient ID (e.g. `P319973`) |
+| `doctor_profile` | doctor | hospital, department, specialization, qualification, experience, fee |
+| `admin_profile` | hospital admin | the one hospital they manage |
+| `staff_member` | doctor or nurse on a hospital's staff | join/leave date, monthly salary, department (nurses have no login) |
+
+- **Patients and doctors** sign up on the website.
+- **The platform admin** (the owner) is a user with `is_superuser` on, created once with `docker compose exec backend python manage.py createsuperuser`. It approves hospitals and creates hospital admins.
+- **Hospital admins:** in Django admin (http://localhost:8000/admin/), add a user with role Admin, then an **Admin profile** linking them to their hospital.
+
 ## Main API endpoints
 
 | Endpoint | Who | What |
