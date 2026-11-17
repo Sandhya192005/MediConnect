@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "apps.scraper",
     "apps.records",
     "apps.staff",
+    "apps.support",
 ]
 
 MIDDLEWARE = [
@@ -112,8 +113,15 @@ REST_FRAMEWORK = {
     # Limits for views that opt in with ScopedRateThrottle (counted per user, in the Redis cache).
     "DEFAULT_THROTTLE_RATES": {
         "record_lookup": "30/min",  # doctors looking up patients by ID: enough for work, too slow for guessing IDs
+        "password_reset": "5/hour",  # "Forgot password?" emails and reset attempts, per IP address
+        "support": "10/hour",  # support messages per user
     },
 }
+
+# "Forgot password?" links expire after an hour (and stop working once used).
+PASSWORD_RESET_TIMEOUT = 60 * 60
+# Where support messages are emailed (Mailpit catches it locally).
+SUPPORT_EMAIL = os.environ.get("SUPPORT_EMAIL", "support@mediconnect.dev")
 
 # --- Medical records (Step 2) ---
 # Private files: a Docker volume in docker-compose.yml, never served as public media.

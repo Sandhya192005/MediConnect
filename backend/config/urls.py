@@ -31,5 +31,6 @@ urlpatterns = [
     path("api/scraper/", include("apps.scraper.urls")),
     path("api/records/", include("apps.records.urls")),
     path("api/hospital-admin/", include("apps.staff.urls")),
+    path("api/support/", include("apps.support.urls")),
     path("api/", include(router.urls)),
 ]

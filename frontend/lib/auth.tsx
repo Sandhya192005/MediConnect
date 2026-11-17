@@ -19,6 +19,8 @@ type AuthState = {
   login: (email: string, password: string, remember?: boolean, expectedRole?: Role) => Promise<User>;
   register: (input: RegisterInput) => Promise<User>;
   logout: () => void;
+  /** Reload the logged-in user (e.g. after editing your name on Profile & settings). */
+  refresh: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -68,13 +70,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [login],
   );
 
+  const refresh = useCallback(async () => {
+    setUser(await api<User>("/api/auth/me/"));
+  }, []);
+
   const logout = useCallback(() => {
     tokens.clear();
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

@@ -61,11 +61,28 @@ class PatientProfile(models.Model):
     """Patient-only details. `patient_id` is the ID a patient shares with a doctor to open their records."""
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="patient_profile")
+    class Gender(models.TextChoices):
+        FEMALE = "female", "Female"
+        MALE = "male", "Male"
+        OTHER = "other", "Other"
+
     patient_id = models.CharField(max_length=12, unique=True, editable=False)
+    # Optional details the patient fills in under Profile & settings (shown to doctors with their records).
+    date_of_birth = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=10, choices=Gender.choices, blank=True, help_text="Empty = prefer not to say")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "patient_profile"
+
+    @property
+    def age(self) -> int | None:
+        if not self.date_of_birth:
+            return None
+        from django.utils import timezone
+
+        today, dob = timezone.localdate(), self.date_of_birth
+        return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
 
     def __str__(self):
         return f"{self.patient_id} ({self.user.email})"

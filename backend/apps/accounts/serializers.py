@@ -3,6 +3,8 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+from .models import PatientProfile
+
 User = get_user_model()
 
 
@@ -50,6 +52,52 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
+
+
+class PatientDetailsSerializer(serializers.ModelSerializer):
+    """A patient's own details on Profile & settings."""
+
+    age = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = PatientProfile
+        fields = ["patient_id", "date_of_birth", "gender", "age"]
+        read_only_fields = ["patient_id"]
+
+    def validate_date_of_birth(self, value):
+        from django.utils import timezone
+
+        if value and value > timezone.localdate():
+            raise serializers.ValidationError("The date of birth can't be in the future.")
+        if value and value.year < timezone.localdate().year - 130:
+            raise serializers.ValidationError("Please check the year.")
+        return value
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+
+    def validate_current_password(self, value):
+        if not self.context["request"].user.check_password(value):
+            raise serializers.ValidationError("Your current password isn't right.")
+        return value
+
+    def validate(self, attrs):
+        if attrs["current_password"] == attrs["new_password"]:
+            raise serializers.ValidationError({"new_password": "Choose a password different from your current one."})
+        validate_password(attrs["new_password"], self.context["request"].user)
+        return attrs
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True)
 
 
 class TokenWithRoleSerializer(TokenObtainPairSerializer):

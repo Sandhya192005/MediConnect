@@ -15,7 +15,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Find doctors", icon: "stethoscope", href: "/doctors" },
     { label: "My appointments", icon: "calendar", href: "/patient/appointments" },
     { label: "My medical records", icon: "folder", href: "/patient/records" },
-    { label: "Profile & settings", icon: "settings", soon: "Later" },
+    { label: "Profile & settings", icon: "settings", href: "/settings" },
   ],
   doctor: [
     { label: "Dashboard", icon: "grid", href: "/doctor" },
@@ -24,6 +24,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Appointments", icon: "calendar", href: "/doctor/appointments" },
     { label: "Patient queue", icon: "queue", href: "/doctor/queue" },
     { label: "Patient records", icon: "file", href: "/doctor/records" },
+    { label: "Profile & settings", icon: "settings", href: "/settings" },
   ],
   // Hospital admin: one hospital's staff and patients (Step 4).
   admin: [
@@ -33,6 +34,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Patients", icon: "users", href: "/admin/patients" },
     { label: "Staff & salary", icon: "rupee", href: "/admin/salary" },
     { label: "Reports", icon: "chart", soon: "Later" },
+    { label: "Settings", icon: "settings", href: "/settings" },
   ],
 };
 
@@ -46,15 +48,17 @@ const PLATFORM: NavItem[] = [
 /** The menu for this user: hospital admins get their hospital's menu, platform admins the platform pages. */
 export function navFor(role: Role, user: User | null): NavItem[] {
   if (role !== "admin") return NAV[role];
-  const items = user?.admin_hospital ? NAV.admin : [{ label: "Dashboard", icon: "grid", href: "/admin" }];
+  const items = user?.admin_hospital
+    ? NAV.admin
+    : [{ label: "Dashboard", icon: "grid", href: "/admin" }, { label: "Settings", icon: "settings", href: "/settings" }];
   return user?.is_platform_admin ? [...items, ...PLATFORM] : items;
 }
 
 /** Pages that open inside the dashboard layout for a logged-in user (besides /patient, /doctor, /admin). */
-export const SHELL_PATHS = ["/patient", "/doctor", "/admin", "/doctors", "/hospitals"];
+export const SHELL_PATHS = ["/patient", "/doctor", "/admin", "/doctors", "/hospitals", "/settings", "/support"];
 
-/** Login and sign-up use their own full-screen layout. */
-export const AUTH_PATHS = ["/login", "/register"];
+/** Login, sign-up and password reset use their own full-screen layout. */
+export const AUTH_PATHS = ["/login", "/register", "/forgot-password", "/reset-password"];
 
 export const matches = (pathname: string, base: string) => pathname === base || pathname.startsWith(`${base}/`);
 

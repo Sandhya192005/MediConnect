@@ -93,15 +93,18 @@ function Sidebar({ role, dark }: { role: Role; dark: boolean }) {
         ))}
       </nav>
 
-      <div className={`mt-4 rounded-2xl p-4 ${dark ? "bg-white/10" : "bg-red-50"}`}>
-        <p className={`flex items-center gap-2 text-sm font-[650] ${dark ? "text-white" : "text-red-800"}`}>
-          <Icon name="siren" className="h-4 w-4" /> Emergency?
-        </p>
-        <p className={`mt-1 text-xs ${dark ? "text-white/80" : "text-red-700"}`}>
-          Call <a href="tel:112" className="font-[650] underline">112</a> or an ambulance on{" "}
-          <a href="tel:108" className="font-[650] underline">108</a>. Don&apos;t wait for an online booking.
-        </p>
-      </div>
+      {/* Reference design: "Need Help? Contact Support". The emergency numbers stay just below it. */}
+      <Link href="/support" className={`mt-4 flex items-center gap-3 rounded-2xl p-4 transition ${dark ? "bg-white/10 hover:bg-white/15" : "bg-teal-50 hover:bg-teal-100"}`}>
+        <Icon name="chat" className={`h-5 w-5 ${dark ? "text-white" : "text-teal-700"}`} />
+        <span>
+          <span className={`block text-sm font-[650] ${dark ? "text-white" : "text-[#0f2f3a]"}`}>Need help?</span>
+          <span className={`block text-xs ${dark ? "text-white/75" : "text-slate-500"}`}>Contact support</span>
+        </span>
+      </Link>
+      <p className={`mt-2 px-1 text-[11px] ${dark ? "text-white/70" : "text-red-700"}`}>
+        Emergency? Call <a href="tel:112" className="font-[650] underline">112</a> or ambulance{" "}
+        <a href="tel:108" className="font-[650] underline">108</a>.
+      </p>
 
       <button
         onClick={doLogout}
