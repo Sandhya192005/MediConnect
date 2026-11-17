@@ -102,16 +102,18 @@ export default function LoginPage() {
             </button>
           }
         />
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          <input
-            type="checkbox"
-            checked={remember}
-            onChange={(e) => setRemember(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 accent-teal-600"
-          />
-          Remember me
-          <span className="text-xs text-slate-400">(unticked: logged out when the browser closes)</span>
-        </label>
+        <div className="flex items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-sm text-slate-600" title="Unticked: you're logged out when the browser closes">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 accent-teal-600"
+            />
+            Remember me
+          </label>
+          <Link href="/forgot-password" className="text-sm font-medium text-teal-700 hover:underline">Forgot password?</Link>
+        </div>
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         <button className="btn-primary rounded-xl py-3" disabled={busy}>
           {busy ? "Logging in…" : "Log in"}

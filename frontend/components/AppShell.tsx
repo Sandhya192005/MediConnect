@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Role } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { activeHref, navFor, type NavItem } from "@/lib/nav";
@@ -165,6 +165,65 @@ function SidebarItem({ item, active, dark }: { item: NavItem; active: boolean; d
   );
 }
 
+/** The avatar in the top bar (reference design): opens Profile & settings, Contact support and Log out. */
+function UserMenu({ initials, name, email }: { initials: string; name: string; email: string }) {
+  const { logout } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    const close = (e: MouseEvent) => box.current && !box.current.contains(e.target as Node) && setOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", esc);
+    };
+  }, []);
+
+  const item = "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100";
+  return (
+    <div className="relative" ref={box}>
+      <button
+        onClick={() => setOpen(!open)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Account menu for ${name}`}
+        className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 hover:bg-slate-100"
+      >
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-600 text-sm font-[650] text-white" aria-hidden="true">
+          {initials}
+        </span>
+        <span className="hidden min-w-0 text-left leading-tight sm:block">
+          <span className="block max-w-44 truncate text-sm font-[650] text-slate-900">{name}</span>
+          {email && <span className="block max-w-44 truncate text-xs text-slate-500">{email}</span>}
+        </span>
+        <Icon name="arrow" className="hidden h-3.5 w-3.5 rotate-90 text-slate-400 sm:block" />
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 z-30 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10">
+          <Link role="menuitem" href="/settings" className={item}><Icon name="settings" className="h-4 w-4" /> Profile &amp; settings</Link>
+          <Link role="menuitem" href="/support" className={item}><Icon name="chat" className="h-4 w-4" /> Contact support</Link>
+          <button
+            role="menuitem"
+            onClick={() => {
+              logout();
+              router.push("/login");
+            }}
+            className={`${item} text-red-700 hover:bg-red-50`}
+          >
+            <Icon name="logout" className="h-4 w-4" /> Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TopBar({ onMenu }: { onMenu: () => void }) {
   const { user } = useAuth();
   const router = useRouter();
@@ -205,17 +264,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           {user && <NotificationBell />}
-          {user && (
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-teal-600 text-sm font-[650] text-white" aria-hidden="true">
-                {initials}
-              </span>
-              <span className="hidden min-w-0 leading-tight sm:block">
-                <span className="block max-w-44 truncate text-sm font-[650] text-slate-900">{name}</span>
-                {fullName && <span className="block max-w-44 truncate text-xs text-slate-500">{user.email}</span>}
-              </span>
-            </div>
-          )}
+          {user && <UserMenu initials={initials} name={name} email={fullName ? user.email : ""} />}
         </div>
       </div>
     </header>

@@ -121,6 +121,28 @@ def test_a_made_up_token_is_refused(patient):
 
 
 @pytest.mark.django_db
+def test_reset_emails_are_limited_per_email_address(monkeypatch):
+    from apps.accounts.throttles import ResetEmailThrottle
+
+    monkeypatch.setattr(ResetEmailThrottle, "THROTTLE_RATES", {"password_reset_email": "2/hour"})
+    send = lambda email: client_for().post("/api/auth/password-reset/", {"email": email}, format="json").status_code  # noqa: E731
+    assert [send("x@example.com"), send("X@Example.com"), send("x@example.com")] == [200, 200, 429]
+    assert send("someone.else@example.com") == 200  # another address has its own limit
+
+
+@pytest.mark.django_db
+def test_setting_the_new_password_has_its_own_limit(patient, monkeypatch):
+    from rest_framework.throttling import ScopedRateThrottle
+
+    monkeypatch.setattr(ScopedRateThrottle, "THROTTLE_RATES",
+                        {"password_reset": "1/hour", "password_reset_confirm": "2/hour"})
+    assert client_for().post("/api/auth/password-reset/", {"email": "a@example.com"}, format="json").status_code == 200
+    body = {"uid": "x", "token": "y", "new_password": STRONG}
+    codes = [client_for().post("/api/auth/password-reset/confirm/", body, format="json").status_code for _ in range(3)]
+    assert codes == [400, 400, 429]  # not blocked by the earlier request, but limited itself
+
+
+@pytest.mark.django_db
 def test_reset_requests_are_rate_limited(monkeypatch):
     from rest_framework.throttling import ScopedRateThrottle
 

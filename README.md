@@ -190,6 +190,13 @@ Owner decisions (2026-11-17): hospital admins open records like doctors (with th
 - **Dashboard:** total doctors, nurses and patients, today's appointments and how many are waiting, the staff chart (doctors and nurses on staff at the end of each of the last 6 months; colours checked with a colour-blindness validator, with marker shapes and end labels as a second cue), and recent activity.
 - A platform admin without a hospital sees the platform overview (hospitals awaiting approval, appointment requests).
 
+### Reference-design features, Part 1 (shared by all three users)
+
+- **Avatar menu** (top bar): Profile & settings, Contact support, Sign out.
+- **Profile & settings** (`/settings`): name and phone; for patients, date of birth (age is worked out) and gender, which doctors will see; **change password** (current password required, weak passwords refused).
+- **Forgot password?** (login page → `/forgot-password` → email → `/reset-password`): a one-time link that expires after 1 hour. The answer is the same for unknown emails, and requests are limited to 3 an hour per email address and 20 an hour per network address. Locally the email arrives in Mailpit.
+- **Need help? Contact support** (sidebar card → `/support`): send a message with a topic and see your messages and replies. Support's inbox gets an email (`SUPPORT_EMAIL`). The platform admin answers in Django admin → Support requests; saving a reply marks the request answered and notifies the user. Limited to 10 an hour per user.
+
 ## Users and profiles in the database
 
 Every login is one row in `users`; its `role` says which profile table holds the rest (renamed from Django's default names on 2026-11-17, no data changed).
@@ -197,7 +204,7 @@ Every login is one row in `users`; its `role` says which profile table holds the
 | Table | One row per | Holds |
 |---|---|---|
 | `users` | login (patient, doctor or admin) | email, hashed password, name, phone, `role`, `is_superuser` |
-| `patient_profile` | patient | the general patient ID (e.g. `P319973`) |
+| `patient_profile` | patient | the general patient ID (e.g. `P319973`), date of birth, gender |
 | `doctor_profile` | doctor | hospital, department, specialization, qualification, experience, fee |
 | `admin_profile` | hospital admin | the one hospital they manage |
 | `staff_member` | doctor or nurse on a hospital's staff | join/leave date, monthly salary, department (nurses have no login) |

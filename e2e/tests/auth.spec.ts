@@ -71,10 +71,10 @@ test("each role gets its own dashboard and menu", async ({ page }) => {
 });
 
 test("planned features are listed but not clickable yet", async ({ page }) => {
-  await login(page, e2e().patient.email);
+  await login(page, e2e().admin.email);
   const menu = page.getByRole("navigation", { name: "Main menu" });
-  await expect(menu.getByText("Profile & settings")).toBeVisible();
-  await expect(menu.getByRole("link", { name: /Profile & settings/ })).toHaveCount(0);
+  await expect(menu.getByText("Reports")).toBeVisible();
+  await expect(menu.getByRole("link", { name: /Reports/ })).toHaveCount(0);
 });
 
 test("unticking Remember me keeps the login only for this browser session", async ({ page }) => {

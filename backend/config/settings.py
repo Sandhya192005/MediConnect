@@ -113,7 +113,9 @@ REST_FRAMEWORK = {
     # Limits for views that opt in with ScopedRateThrottle (counted per user, in the Redis cache).
     "DEFAULT_THROTTLE_RATES": {
         "record_lookup": "30/min",  # doctors looking up patients by ID: enough for work, too slow for guessing IDs
-        "password_reset": "5/hour",  # "Forgot password?" emails and reset attempts, per IP address
+        "password_reset": "20/hour",  # "Forgot password?" requests per network (IP) address
+        "password_reset_email": "3/hour",  # reset emails per email address (no inbox flooding)
+        "password_reset_confirm": "20/hour",  # attempts to set a new password, per network address
         "support": "10/hour",  # support messages per user
     },
 }

@@ -13,6 +13,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import PatientProfile
 from .permissions import IsPatient
+from .throttles import ResetEmailThrottle
 from .serializers import (
     ChangePasswordSerializer,
     PasswordResetConfirmSerializer,
@@ -74,12 +75,13 @@ RESET_INVALID = "This reset link is invalid or has expired. Please ask for a new
 class PasswordResetRequestView(APIView):
     """
     POST /api/auth/password-reset/ {email} — emails a one-time reset link.
-    Always the same answer, so nobody can find out which emails have an account. Limited to 5 an hour.
+    Always the same answer, so nobody can find out which emails have an account.
+    Limits: 3 an hour per email address, 20 an hour per network address.
     """
 
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
-    throttle_classes = [ScopedRateThrottle]
+    throttle_classes = [ScopedRateThrottle, ResetEmailThrottle]
     throttle_scope = "password_reset"
 
     def post(self, request):
@@ -99,7 +101,7 @@ class PasswordResetConfirmView(APIView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
     throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "password_reset"
+    throttle_scope = "password_reset_confirm"  # its own limit, so asking for a link doesn't use it up
 
     def post(self, request):
         s = PasswordResetConfirmSerializer(data=request.data)
