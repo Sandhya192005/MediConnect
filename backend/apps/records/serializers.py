@@ -59,4 +59,4 @@ class RecordAccessSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RecordAccess
-        fields = ["id", "viewer_name", "hospital_name", "record_title", "action", "action_label", "created_at"]
+        fields = ["id", "viewer_name", "viewer_role", "hospital_name", "record_title", "action", "action_label", "created_at"]

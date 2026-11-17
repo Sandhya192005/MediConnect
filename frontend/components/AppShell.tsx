@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Role } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { activeHref, NAV, type NavItem } from "@/lib/nav";
+import { activeHref, navFor, type NavItem } from "@/lib/nav";
 import Icon from "./Icons";
 import NotificationBell from "./NotificationBell";
 
@@ -66,10 +66,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 function Sidebar({ role, dark }: { role: Role; dark: boolean }) {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const items = NAV[role];
+  const items = navFor(role, user);
   const current = activeHref(pathname, items);
 
   function doLogout() {

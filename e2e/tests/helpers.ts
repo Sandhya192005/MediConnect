@@ -9,6 +9,8 @@ export type E2EData = {
   password: string;
   patient: { email: string; id: number; patient_id: string };
   doctor: { email: string; id: number; name: string };
+  /** Hospital admin of the E2E Partner Hospital. */
+  admin: { email: string };
   partner_hospital: { id: number; name: string };
   mock_hospital: { id: number; name: string };
   location: { lat: number; lng: number };
@@ -39,6 +41,17 @@ export function tomorrow(): string {
 /** Today as YYYY-MM-DD in India time. */
 export function today(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+}
+
+/**
+ * Deletes all of a test user's notifications (POST /api/notifications/clear/). Other tests' bookings
+ * notify the E2E doctor too, so a test that counts unread notifications starts from zero with this.
+ */
+export async function clearNotifications(request: APIRequestContext, email: string) {
+  const auth = await request.post(`${API}/api/auth/login/`, { data: { email, password: e2e().password } });
+  const { access } = await auth.json();
+  const res = await request.post(`${API}/api/notifications/clear/`, { headers: { Authorization: `Bearer ${access}` } });
+  expect(res.ok()).toBeTruthy();
 }
 
 /** An API access token for the E2E patient. */

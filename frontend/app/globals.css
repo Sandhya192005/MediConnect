@@ -69,6 +69,10 @@ h1, h2, .page-title, .section-title {
     #eef5f5;
   color: #0f2f3a;
 }
+/* The page behind the dashboard layout gets the same ground, so long pages show no strip at the bottom. */
+body:has(.app-shell) {
+  background: #eef5f5;
+}
 .app-shell h1,
 .app-shell h2,
 .app-shell .page-title,

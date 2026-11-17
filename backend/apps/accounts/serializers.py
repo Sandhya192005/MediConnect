@@ -9,11 +9,21 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     # Patients only (null for doctors and admins): the ID they share with a doctor to open their records.
     patient_id = serializers.SerializerMethodField()
+    # Admins: the hospital a hospital admin manages ({id, name} or null), and whether they're a platform admin.
+    admin_hospital = serializers.SerializerMethodField()
+    is_platform_admin = serializers.BooleanField(source="is_superuser", read_only=True)
 
     class Meta:
         model = User
-        fields = ["id", "email", "first_name", "last_name", "phone", "role", "patient_id"]
+        fields = ["id", "email", "first_name", "last_name", "phone", "role", "patient_id",
+                  "admin_hospital", "is_platform_admin"]
         read_only_fields = ["id", "role"]
+
+    def get_admin_hospital(self, user):
+        from .permissions import admin_hospital
+
+        hospital = admin_hospital(user)
+        return {"id": hospital.id, "name": hospital.name} if hospital else None
 
     def get_patient_id(self, user):
         if user.role != User.Role.PATIENT:

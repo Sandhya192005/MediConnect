@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
+from apps.accounts.permissions import admin_hospital, is_platform_admin
 from apps.doctors.models import DoctorProfile
 from apps.doctors.services import invalidate_slots, is_slot_available
 from apps.notifications.services import notify_appointment
@@ -33,6 +34,10 @@ class AppointmentViewSet(
             qs = qs.filter(patient=user)
         elif user.role == "doctor":
             qs = qs.filter(doctor__user=user)
+        elif not is_platform_admin(user):
+            # A hospital admin sees their hospital's appointments; an admin without a hospital sees none.
+            hospital = admin_hospital(user)
+            qs = qs.filter(doctor__hospital=hospital) if hospital else qs.none()
 
         p = self.request.query_params
         now = timezone.now()

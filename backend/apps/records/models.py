@@ -57,6 +57,7 @@ class RecordAccess(models.Model):
 
     patient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="record_access_log")
     viewer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
+    viewer_role = models.CharField(max_length=10, default="doctor", help_text="doctor or admin (hospital admin)")
     viewer_name = models.CharField(max_length=150)
     hospital = models.ForeignKey("hospitals.Hospital", on_delete=models.SET_NULL, null=True, related_name="+")
     hospital_name = models.CharField(max_length=200, blank=True)

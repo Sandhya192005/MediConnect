@@ -53,20 +53,31 @@ def check_upload(file) -> str:
     return content_type
 
 
-def doctor_hospital_for(doctor_user, patient) -> Hospital | None:
+def staff_hospital(user) -> Hospital | None:
+    """The hospital a doctor works at or a hospital admin manages (read fresh from the database)."""
+    if user.role == "doctor":
+        profile = DoctorProfile.objects.select_related("hospital").filter(user=user).first()
+        return profile.hospital if profile else None
+    if user.role == "admin":
+        from apps.accounts.permissions import admin_hospital
+
+        return admin_hospital(user)
+    return None
+
+
+def viewer_hospital_for(user, patient) -> Hospital | None:
     """
-    The doctor's hospital if this doctor may open the patient's records, else None.
-    Allowed when the patient has a booked, confirmed or completed appointment with any doctor
-    at the hospital this doctor works at.
+    The viewer's hospital if this doctor or hospital admin may open the patient's records, else None.
+    Allowed when the patient has a booked, confirmed or completed appointment with any doctor at that
+    hospital (owner decisions 2026-11-16: doctors in Step 2, hospital admins with the same rule in Step 4).
     """
-    # Read fresh from the database (not a copy cached on the user object): the hospital must be current.
-    profile = DoctorProfile.objects.select_related("hospital").filter(user=doctor_user).first()
-    if profile is None or profile.hospital_id is None:
+    hospital = staff_hospital(user)
+    if hospital is None:
         return None
     related = Appointment.objects.filter(
-        patient=patient, doctor__hospital_id=profile.hospital_id, status__in=RELATED_STATUSES
+        patient=patient, doctor__hospital_id=hospital.id, status__in=RELATED_STATUSES
     ).exists()
-    return profile.hospital if related else None
+    return hospital if related else None
 
 
 LOG_REPEAT_WINDOW = timedelta(minutes=1)
@@ -86,6 +97,7 @@ def log_access(*, viewer, patient, hospital: Hospital, action: str, record: Medi
     RecordAccess.objects.create(
         patient=patient,
         viewer=viewer,
+        viewer_role=viewer.role,
         viewer_name=viewer.get_full_name() or viewer.email,
         hospital=hospital,
         hospital_name=hospital.name if hospital else "",

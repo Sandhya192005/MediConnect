@@ -30,5 +30,6 @@ urlpatterns = [
     path("api/chat/", include("apps.chatbot.urls")),
     path("api/scraper/", include("apps.scraper.urls")),
     path("api/records/", include("apps.records.urls")),
+    path("api/hospital-admin/", include("apps.staff.urls")),
     path("api/", include(router.urls)),
 ]

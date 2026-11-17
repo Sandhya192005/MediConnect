@@ -8,13 +8,14 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts.models import PatientProfile
-from apps.accounts.permissions import IsDoctor, IsPatient
+from apps.accounts.permissions import IsPatient, role_required
 
 from .models import MedicalRecord, RecordAccess
 from .serializers import MedicalRecordSerializer, RecordAccessSerializer
-from .services import doctor_hospital_for, log_access
+from .services import log_access, viewer_hospital_for
 
 NOT_FOUND = "No patient with this ID has an appointment at your hospital."
+IsDoctorOrHospitalAdmin = role_required("doctor", "admin")  # admins also need a hospital (checked per patient)
 
 
 class MyRecordViewSet(
@@ -49,13 +50,13 @@ class MyRecordViewSet(
 
 class PatientLookupView(APIView):
     """
-    GET /api/records/patients/<patient_id>/ (doctors only)
-    The patient's name and records, if the patient has had an appointment at the doctor's hospital.
+    GET /api/records/patients/<patient_id>/ (doctors and hospital admins)
+    The patient's name and records, if the patient has had an appointment at the viewer's hospital.
     Every successful lookup is written to the patient's access log.
     Unknown ID and "not your hospital's patient" give the same 404, so IDs can't be probed.
     """
 
-    permission_classes = [IsDoctor]
+    permission_classes = [IsDoctorOrHospitalAdmin]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "record_lookup"
 
@@ -65,7 +66,7 @@ class PatientLookupView(APIView):
             .filter(patient_id=patient_id.strip().upper(), user__role="patient", user__is_active=True)
             .first()
         )
-        hospital = doctor_hospital_for(request.user, profile.user) if profile else None
+        hospital = viewer_hospital_for(request.user, profile.user) if profile else None
         if hospital is None:
             return Response({"detail": NOT_FOUND}, status=404)
 
@@ -84,7 +85,7 @@ class PatientLookupView(APIView):
 
 class RecordFileView(APIView):
     """
-    GET /api/records/<id>/file/ — the file itself, for its patient or a permitted doctor (logged).
+    GET /api/records/<id>/file/ — the file itself, for its patient or a permitted doctor / hospital admin (logged).
     Anyone else gets 404, as if the record didn't exist.
     """
 
@@ -97,7 +98,7 @@ class RecordFileView(APIView):
         user = request.user
         if user.role == "patient" and record.patient_id == user.id:
             pass
-        elif user.role == "doctor" and (hospital := doctor_hospital_for(user, record.patient)):
+        elif user.role in ("doctor", "admin") and (hospital := viewer_hospital_for(user, record.patient)):
             log_access(viewer=user, patient=record.patient, hospital=hospital,
                        action=RecordAccess.Action.DOWNLOAD, record=record)
         else:

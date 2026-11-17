@@ -20,6 +20,7 @@ from django.db import transaction
 from apps.accounts.models import PatientProfile
 from apps.appointments.models import Appointment, AppointmentRequest, ExternalAppointment
 from apps.records.models import MedicalRecord, RecordAccess
+from apps.staff.models import HospitalAdmin, StaffMember
 from apps.doctors.models import DoctorProfile, WeeklyAvailability
 from apps.hospitals.models import Department, Hospital
 
@@ -27,6 +28,7 @@ User = get_user_model()
 PASSWORD = "E2e@12345"
 PATIENT_EMAIL = "e2e.patient@mediconnect.dev"
 DOCTOR_EMAIL = "e2e.doctor@mediconnect.dev"
+ADMIN_EMAIL = "e2e.admin@mediconnect.dev"  # hospital admin of "E2E Partner Hospital"
 NEW_USER_PREFIX = "e2e.new."  # accounts created by the sign-up test, deleted on the next run
 # Chennai, a few km from the real hospitals: the map test puts the browser here.
 LAT, LNG = 13.0500, 80.2400
@@ -53,6 +55,11 @@ class Command(BaseCommand):
                           is_approved=True, location=Point(LNG, LAT, srid=4326), location_verified=True),
         )
         partner.departments.add(cardiology)
+        # A hospital admin for the partner hospital (Step 4), with no staff records at the start of each run.
+        admin_user = self._user(ADMIN_EMAIL, "admin", "Asha", "Admin")
+        HospitalAdmin.objects.update_or_create(user=admin_user, defaults={"hospital": partner})
+        StaffMember.objects.filter(hospital=partner).delete()
+
         doctor = DoctorProfile.objects.get(user=doctor_user)
         doctor.hospital, doctor.department = partner, cardiology
         doctor.specialization, doctor.qualification, doctor.fee = "Cardiologist", "MBBS, MD", 700
@@ -93,6 +100,7 @@ class Command(BaseCommand):
             "patient": {"email": PATIENT_EMAIL, "id": patient.id,
                         "patient_id": PatientProfile.for_user(patient).patient_id},
             "doctor": {"email": DOCTOR_EMAIL, "id": doctor.id, "name": str(doctor)},
+            "admin": {"email": ADMIN_EMAIL},
             "partner_hospital": {"id": partner.id, "name": partner.name},
             "mock_hospital": {"id": mock.id, "name": mock.name},
             "location": {"lat": LAT, "lng": LNG},

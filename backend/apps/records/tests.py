@@ -267,8 +267,8 @@ def test_doctors_and_admins_cannot_use_the_patient_endpoints(world):
         assert c.get("/api/records/").status_code == 403
         assert upload(c).status_code == 403
         assert c.patch(f"/api/records/{world['record'].id}/", {"title": "x"}, format="json").status_code == 403
-    # Admins get no record access in Step 2 (hospital admins come in Step 4).
-    assert client_for(admin).get(f"/api/records/patients/{world['code']}/").status_code == 403
+    # An admin who isn't linked to the patient's hospital gets nothing (hospital admins: see staff/tests.py).
+    assert client_for(admin).get(f"/api/records/patients/{world['code']}/").status_code == 404
     assert client_for(admin).get(f"/api/records/{world['record'].id}/file/").status_code == 404
 
 

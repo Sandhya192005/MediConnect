@@ -13,6 +13,10 @@ export type User = {
   role: Role;
   /** Patients only: the ID they share with a doctor to open their records (null for doctors/admins). */
   patient_id: string | null;
+  /** Hospital admins: the one hospital they manage (null for everyone else). */
+  admin_hospital: { id: number; name: string } | null;
+  /** Django superuser: approves hospitals and answers requests to non-partner hospitals. */
+  is_platform_admin: boolean;
 };
 
 const ACCESS = "mc_access";

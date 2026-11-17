@@ -1,13 +1,14 @@
 import { expect, test } from "@playwright/test";
-import { e2e, login, tomorrow } from "./helpers";
+import { clearNotifications, e2e, login, tomorrow } from "./helpers";
 
 /**
  * The main flow, with two browsers at once: the doctor is logged in and watching,
  * the patient books → the doctor's bell updates live (WebSocket) → the patient cancels.
  */
-test("patient books and cancels; the doctor is notified live", async ({ browser }) => {
+test("patient books and cancels; the doctor is notified live", async ({ browser, request }) => {
   const { doctor, patient } = e2e();
   const reason = `E2E booking test ${Date.now()}`;
+  await clearNotifications(request, doctor.email); // earlier tests' bookings also notify this doctor
 
   const doctorCtx = await browser.newContext();
   const doctorPage = await doctorCtx.newPage();

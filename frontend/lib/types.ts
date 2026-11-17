@@ -213,6 +213,8 @@ export type MedicalRecord = {
 export type RecordAccess = {
   id: number;
   viewer_name: string;
+  /** "doctor" or "admin" (a hospital admin). */
+  viewer_role: "doctor" | "admin";
   hospital_name: string;
   record_title: string;
   action: "view_list" | "download";
@@ -232,7 +234,62 @@ export const fmtSize = (bytes: number) =>
 export const fmtDate = (iso: string) =>
   new Date(`${iso.length === 10 ? `${iso}T00:00` : iso}`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
-export const WEEKDAYS =["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+// ---- Hospital admin (Step 4) ----
+
+export type StaffKind = "doctor" | "nurse";
+
+export type StaffMember = {
+  id: number;
+  kind: StaffKind;
+  full_name: string;
+  doctor: number | null;
+  doctor_email: string | null;
+  department: number | null;
+  department_name: string | null;
+  designation: string;
+  phone: string;
+  email: string;
+  join_date: string;
+  left_on: string | null;
+  monthly_salary: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type DoctorAccount = { id: number; name: string; email: string; specialization: string; department: number | null };
+
+export type StaffChartPoint = { month: string; doctors: number; nurses: number };
+
+export type HospitalOverview = {
+  hospital: { id: number; name: string; city: string };
+  counts: {
+    doctors: number;
+    nurses: number;
+    patients: number;
+    appointments_today: number;
+    waiting_now: number;
+    doctor_accounts_without_record: number;
+  };
+  payroll: { monthly_total: string | number; doctors: string | number; nurses: string | number };
+  staff_chart: StaffChartPoint[];
+  recent_activity: { kind: "staff" | "booking"; title: string; detail: string; at: string }[];
+};
+
+export type HospitalPatient = {
+  patient_id: string | null;
+  name: string;
+  email: string;
+  phone: string;
+  visits: number;
+  last_visit: string | null;
+  next_visit: string | null;
+  records: number;
+};
+
+/** ₹ in Indian grouping, no paise: 1250000 → "₹12,50,000". */
+export const fmtRupees = (v: string | number) => `₹${Math.round(Number(v)).toLocaleString("en-IN")}`;
+
+export const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export const fmtDateTime = (iso: string) =>
   new Date(iso).toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });

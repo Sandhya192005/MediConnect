@@ -1,4 +1,4 @@
-import { API_URL, type Role } from "./api";
+import { API_URL, type Role, type User } from "./api";
 
 /**
  * Sidebar menu for each role.
@@ -25,18 +25,30 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Patient queue", icon: "queue", href: "/doctor/queue" },
     { label: "Patient records", icon: "file", href: "/doctor/records" },
   ],
+  // Hospital admin: one hospital's staff and patients (Step 4).
   admin: [
     { label: "Dashboard", icon: "grid", href: "/admin" },
-    { label: "Hospital management", icon: "hospital", href: "/admin/hospitals" },
-    { label: "Appointment requests", icon: "calendar", href: "/admin/requests" },
-    { label: "Doctors", icon: "stethoscope", soon: "Step 4" },
-    { label: "Nurses", icon: "nurse", soon: "Step 4" },
-    { label: "Patients", icon: "users", soon: "Step 4" },
-    { label: "Staff & salary", icon: "rupee", soon: "Step 4" },
-    { label: "Reports", icon: "chart", soon: "Step 4" },
-    { label: "Django admin", icon: "external", href: `${API_URL}/admin/`, external: true },
+    { label: "Doctors", icon: "stethoscope", href: "/admin/doctors" },
+    { label: "Nurses", icon: "nurse", href: "/admin/nurses" },
+    { label: "Patients", icon: "users", href: "/admin/patients" },
+    { label: "Staff & salary", icon: "rupee", href: "/admin/salary" },
+    { label: "Reports", icon: "chart", soon: "Later" },
   ],
 };
+
+/** Platform admin (Django superuser): approves hospitals and answers requests to non-partner hospitals. */
+const PLATFORM: NavItem[] = [
+  { label: "Hospital approvals", icon: "hospital", href: "/admin/hospitals" },
+  { label: "Appointment requests", icon: "calendar", href: "/admin/requests" },
+  { label: "Django admin", icon: "external", href: `${API_URL}/admin/`, external: true },
+];
+
+/** The menu for this user: hospital admins get their hospital's menu, platform admins the platform pages. */
+export function navFor(role: Role, user: User | null): NavItem[] {
+  if (role !== "admin") return NAV[role];
+  const items = user?.admin_hospital ? NAV.admin : [{ label: "Dashboard", icon: "grid", href: "/admin" }];
+  return user?.is_platform_admin ? [...items, ...PLATFORM] : items;
+}
 
 /** Pages that open inside the dashboard layout for a logged-in user (besides /patient, /doctor, /admin). */
 export const SHELL_PATHS = ["/patient", "/doctor", "/admin", "/doctors", "/hospitals"];

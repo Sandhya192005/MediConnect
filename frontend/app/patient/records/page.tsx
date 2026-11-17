@@ -55,7 +55,7 @@ export default function PatientRecordsPage() {
 
           <Panel title="Who opened your records">
             <p className="-mt-2 mb-4 text-xs text-slate-500">
-              Doctors at a hospital where you have an appointment can open your records with your patient ID. Every time they do, it&apos;s listed here.
+              Doctors and hospital admins at a hospital where you have an appointment can open your records with your patient ID. Every time they do, it&apos;s listed here.
             </p>
             {log === null ? (
               <SkeletonRows rows={2} />
@@ -67,7 +67,8 @@ export default function PatientRecordsPage() {
                   <li key={e.id} className="flex items-start gap-3 py-2.5 text-sm first:pt-0 last:pb-0">
                     <Icon name={e.action === "download" ? "file" : "eye"} className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
                     <span className="min-w-0 flex-1">
-                      <span className="font-[650] text-[#0f2f3a]">Dr. {e.viewer_name}</span>
+                      <span className="font-[650] text-[#0f2f3a]">{e.viewer_role === "admin" ? e.viewer_name : `Dr. ${e.viewer_name}`}</span>
+                      {e.viewer_role === "admin" && <span className="text-slate-500"> (hospital admin)</span>}
                       {e.hospital_name && <span className="text-slate-500"> · {e.hospital_name}</span>}
                       <span className="block text-xs text-slate-500">
                         {e.action_label}

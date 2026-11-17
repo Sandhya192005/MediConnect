@@ -146,7 +146,7 @@ Owner decisions (2026-11-16): one admin per hospital; a doctor may open the reco
 - [x] Step 1 — New look (frontend only): sidebar layout, login with Patient / Doctor / Admin tabs, and the three dashboards built from existing data. Planned features show "Soon" instead of made-up numbers.
 - [x] Step 2 — Medical records: patients upload reports, scans and X-rays (stored privately, downloaded only through a permission check); patient IDs; doctors open records by patient ID, with an access log.
 - [x] Step 3 — Patient queue for doctors: check-in, waiting / in consultation / done, token numbers, live updates.
-- [ ] Step 4 — Hospital management for admins: admins linked to one hospital, staff records for doctors and nurses (join date, salary, department), patient list, staff charts.
+- [x] Step 4 — Hospital management for admins: admins linked to one hospital, staff records for doctors and nurses (join date, salary, department), patient list, staff charts.
 - [ ] Step 5 — Tests, docs and push.
 
 #### The new look (Step 1)
@@ -178,6 +178,18 @@ On the day of a visit: **not arrived → waiting (token) → in consultation →
 - **Doctor dashboard:** Patients waiting and Current patient (#token, consulting…), with Waiting / In progress / Completed pills in today's schedule.
 - The hourly auto-complete job no longer completes patients who checked in today: if the doctor is running late, they stay in the queue until marked done or the day ends.
 
+#### Hospital admins (Step 4)
+
+Owner decisions (2026-11-17): hospital admins open records under the same rule as doctors (logged); nurses are staff records without a login.
+
+- **Two kinds of admin.** A **hospital admin** is a user with role `admin` linked to one hospital (`staff.HospitalAdmin`). They see only that hospital's staff, patients and appointments. The **platform admin** is a Django superuser: hospital approvals, departments, requests to non-partner hospitals and other users' website lookups are platform-only. Before Step 4 any `admin` account could approve any hospital.
+- **Making someone a hospital admin:** in Django admin, create the user with role "admin", then add a **Hospital admin** entry linking them to the hospital. There is no public sign-up for admins.
+- **Doctors / Nurses** (`/admin/doctors`, `/admin/nurses`): staff records (`staff.StaffMember`) with department, designation, phone, email, join date, leaving date and monthly salary. A doctor's record can be linked to their MediConnect doctor account (only accounts at the same hospital, one record per doctor). The database refuses negative salaries, links on nurse records, and leaving before joining. Salaries are visible only to that hospital's admins (and superusers).
+- **Patients** (`/admin/patients`): everyone with a booked, confirmed or completed visit at the hospital, with visits, last and next visit, and how many records they have. **Records** opens them with the same rule and access log as doctors; the patient sees "(hospital admin)" in their log.
+- **Staff & salary** (`/admin/salary`): monthly payroll in total, for doctors and nurses, and by department.
+- **Dashboard:** total doctors, nurses and patients, today's appointments and how many are waiting, the staff chart (doctors and nurses on staff at the end of each of the last 6 months; colours checked with a colour-blindness validator, with marker shapes and end labels as a second cue), and recent activity.
+- A platform admin without a hospital sees the platform overview (hospitals awaiting approval, appointment requests).
+
 ## Main API endpoints
 
 | Endpoint | Who | What |
@@ -192,6 +204,10 @@ On the day of a visit: **not arrived → waiting (token) → in consultation →
 | `POST /api/appointments/<id>/check-in/` | the patient (from 2 h before) or their doctor, on the day | join the queue, get a token |
 | `POST /api/appointments/<id>/call-in/` | doctor | call a waiting patient in (one at a time) |
 | `GET /api/appointments/queue/` | doctor | today's queue: `in_consultation`, `waiting`, `not_arrived`, `done` |
+| `GET /api/hospital-admin/overview/` | hospital admin | dashboard counts, payroll, 6-month staff chart, recent activity |
+| `GET/POST /api/hospital-admin/staff/`, `GET/PATCH/DELETE …/staff/<id>/` | hospital admin | doctors and nurses (`?kind=`, `?q=`, `?status=active\|left`) |
+| `GET /api/hospital-admin/doctor-accounts/` | hospital admin | doctor accounts at the hospital without a staff record |
+| `GET /api/hospital-admin/patients/?q=` | hospital admin | the hospital's patients with visits and record counts |
 | `GET/POST /api/records/`, `GET/PATCH/DELETE /api/records/<id>/` | patient | own medical records (upload: multipart `title`, `record_type`, `record_date`, `notes`, `file`) |
 | `GET /api/records/access-log/` | patient | who opened their records |
 | `GET /api/records/patients/<patient_id>/` | doctor | a patient's records, if they have an appointment at the doctor's hospital (logged, 30/min) |

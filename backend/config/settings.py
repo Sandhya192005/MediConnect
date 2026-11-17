@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "apps.chatbot",
     "apps.scraper",
     "apps.records",
+    "apps.staff",
 ]
 
 MIDDLEWARE = [
