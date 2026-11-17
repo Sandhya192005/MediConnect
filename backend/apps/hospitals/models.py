@@ -56,12 +56,29 @@ class Hospital(models.Model):
     booking_url = models.URLField(blank=True, help_text="The hospital's own online booking page, if it has one")
     scraped_info = models.JSONField(null=True, blank=True, help_text="Phones, emails, timings, notes from the website")
     created_at = models.DateTimeField(auto_now_add=True)
+    # When the hospital was connected to MediConnect (approved), for the platform growth report.
+    approved_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    approved_at_estimated = models.BooleanField(
+        default=False, help_text="Approved before approval dates were recorded: approved_at is the date it was added"
+    )
 
     class Meta:
         ordering = ["name"]
 
     def __str__(self):
         return f"{self.name}, {self.city}"
+
+    def save(self, *args, **kwargs):
+        """Keep approved_at in step with is_approved (approving sets it once; un-approving clears it)."""
+        from django.utils import timezone
+
+        if self.is_approved and self.approved_at is None:
+            self.approved_at, self.approved_at_estimated = timezone.now(), False
+        elif not self.is_approved:
+            self.approved_at, self.approved_at_estimated = None, False
+        if kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = {*kwargs["update_fields"], "approved_at", "approved_at_estimated"}
+        super().save(*args, **kwargs)
 
     @property
     def is_partner(self) -> bool:

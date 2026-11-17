@@ -5,12 +5,13 @@ import { useEffect, useState } from "react";
 import DashboardShell, { EmptyState, IconTile, Panel, SkeletonRows, StatCard } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
 import RoleGuard from "@/components/RoleGuard";
+import { LineChart } from "@/components/Charts";
 import StaffChart from "@/components/StaffChart";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { fmtRupees, isoDate, timeAgo, type Appointment, type AppointmentRequest, type Hospital, type HospitalOverview } from "@/lib/types";
+import { fmtRupees, timeAgo, type AppointmentRequest, type Hospital, type HospitalOverview, type PlatformOverview } from "@/lib/types";
 
-type Counts = { partners: number; awaiting: Hospital[]; doctors: number; today: number };
+type Counts = { awaiting: Hospital[] };
 
 /** Hospital admins see their hospital; the platform admin (Django superuser) sees approvals and requests. */
 export default function AdminDashboard() {
@@ -119,26 +120,24 @@ function HospitalDashboard() {
   );
 }
 
+/**
+ * The platform admin's dashboard (the MediConnect owner): how many patients, doctors and hospitals use the
+ * platform, how that grows, and what's waiting for approval. Numbers from /api/platform/overview/.
+ */
 function PlatformDashboard() {
+  const [o, setO] = useState<PlatformOverview | null>(null);
   const [counts, setCounts] = useState<Partial<Counts>>({});
   const [requests, setRequests] = useState<AppointmentRequest[] | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     const fail = () => setFailed(true);
+    api<PlatformOverview>("/api/platform/overview/").then(setO).catch(fail);
     api<Hospital[]>("/api/hospitals/")
       .then((hs) =>
-        setCounts((c) => ({
-          ...c,
-          partners: hs.filter((h) => h.is_approved).length,
-          // Map imports (source "osm") are listed automatically and don't need approval.
-          awaiting: hs.filter((h) => !h.is_approved && (h.source as string) !== "osm"),
-        })),
+        // Map imports (source "osm") are listed automatically and don't need approval.
+        setCounts((c) => ({ ...c, awaiting: hs.filter((h) => !h.is_approved && (h.source as string) !== "osm") })),
       )
-      .catch(fail);
-    api<unknown[]>("/api/doctors/").then((d) => setCounts((c) => ({ ...c, doctors: d.length }))).catch(fail);
-    api<Appointment[]>(`/api/appointments/?date=${isoDate(new Date())}`)
-      .then((a) => setCounts((c) => ({ ...c, today: a.filter((x) => x.status !== "cancelled").length })))
       .catch(fail);
     api<AppointmentRequest[]>("/api/appointment-requests/?status=pending")
       .then(setRequests)
@@ -148,27 +147,64 @@ function PlatformDashboard() {
       });
   }, []);
 
-  const show = (n: number | undefined) => (n === undefined ? "…" : n);
+  const newThisMonth = (n: number | undefined) => (n ? `+${n} this month` : "None new this month");
 
   return (
-    <DashboardShell role="admin" heading="Admin dashboard" greeting="Platform overview" subtitle="Approve hospitals and answer requests to hospitals that aren't on MediConnect yet." wave={false}>
+    <DashboardShell role="admin" heading="Admin dashboard" greeting="Platform overview" subtitle="How many people use MediConnect, and how it grows." wave={false}>
       {failed && (
         <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
           Some numbers couldn&apos;t be loaded. Refresh the page to try again.
         </p>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon="stethoscope" tone="blue" label="Bookable doctors" value={show(counts.doctors)} detail="Active doctors at approved hospitals" />
-        <StatCard
-          icon="hospital"
-          tone="teal"
-          label="Partner hospitals"
-          value={show(counts.partners)}
-          detail="Approved on MediConnect"
-          link={{ href: "/admin/hospitals", label: "Review approvals" }}
-        />
-        <StatCard icon="calendar" tone="indigo" label="Today's appointments" value={show(counts.today)} detail="Across all doctors, not cancelled" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon="users" tone="teal" label="Patients" value={o ? o.patients.total : "…"}
+                  trend={o?.patients.change_pct} trendLabel="since the start of the month" detail={o ? newThisMonth(o.patients.new_this_month) : undefined} />
+        <StatCard icon="stethoscope" tone="blue" label="Doctors" value={o ? o.doctors.total : "…"}
+                  trend={o?.doctors.change_pct} trendLabel="since the start of the month" detail={o ? newThisMonth(o.doctors.new_this_month) : undefined} />
+        <StatCard icon="hospital" tone="indigo" label="Connected hospitals" value={o ? o.hospitals.total : "…"}
+                  trend={o?.hospitals.change_pct} trendLabel="since the start of the month"
+                  detail={o ? `${o.hospitals.bookable} with instant booking` : undefined}
+                  link={{ href: "/admin/reports#growth", label: "Hospital growth" }} />
+        <StatCard icon="calendar" tone="orange" label="Appointments this month" value={o ? o.appointments.this_month : "…"}
+                  trend={o?.appointments.change_pct} trendLabel="vs the same days last month" />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-5">
+        <Panel title="Platform usage" action={{ href: "/admin/reports", label: "Reports & analytics" }} className="lg:col-span-3">
+          <p className="-mt-2 mb-3 text-xs text-slate-500">Patients and doctors with at least one appointment each month.</p>
+          {o === null ? <SkeletonRows rows={4} /> : (
+            <LineChart
+              ariaLabel="Active patients and doctors per month, last 6 months"
+              labels={o.activity.months}
+              series={[
+                { label: "Patients", values: o.activity.active_patients },
+                { label: "Doctors", values: o.activity.active_doctors },
+              ]}
+            />
+          )}
+        </Panel>
+
+        <Panel title="Recent activity" className="lg:col-span-2">
+          {o === null ? (
+            <SkeletonRows rows={4} />
+          ) : o.recent.length === 0 ? (
+            <EmptyState icon="activity" title="Nothing yet" />
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {o.recent.map((e, i) => (
+                <li key={i} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                  <IconTile icon={e.kind === "hospital" ? "hospital" : e.kind === "doctor" ? "stethoscope" : "user"}
+                            tone={e.kind === "hospital" ? "indigo" : e.kind === "doctor" ? "blue" : "teal"} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-[650] text-[#0f2f3a]">{e.title}</p>
+                    <p className="truncate text-xs text-slate-500">{e.detail} · {e.estimated ? "date approx." : timeAgo(e.at)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
       </div>
 
       <div>

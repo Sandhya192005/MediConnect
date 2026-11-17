@@ -40,6 +40,7 @@ export const NAV: Record<Role, NavItem[]> = {
 
 /** Platform admin (Django superuser): approves hospitals and answers requests to non-partner hospitals. */
 const PLATFORM: NavItem[] = [
+  { label: "Reports & analytics", icon: "chart", href: "/admin/reports" },
   { label: "Hospital approvals", icon: "hospital", href: "/admin/hospitals" },
   { label: "Appointment requests", icon: "calendar", href: "/admin/requests" },
   { label: "Django admin", icon: "external", href: `${API_URL}/admin/`, external: true },
@@ -48,10 +49,10 @@ const PLATFORM: NavItem[] = [
 /** The menu for this user: hospital admins get their hospital's menu, platform admins the platform pages. */
 export function navFor(role: Role, user: User | null): NavItem[] {
   if (role !== "admin") return NAV[role];
-  const items = user?.admin_hospital
-    ? NAV.admin
-    : [{ label: "Dashboard", icon: "grid", href: "/admin" }, { label: "Settings", icon: "settings", href: "/settings" }];
-  return user?.is_platform_admin ? [...items, ...PLATFORM] : items;
+  if (user?.admin_hospital) return user.is_platform_admin ? [...NAV.admin, ...PLATFORM] : NAV.admin;
+  const dashboard: NavItem = { label: "Dashboard", icon: "grid", href: "/admin" };
+  const settings: NavItem = { label: "Settings", icon: "settings", href: "/settings" };
+  return user?.is_platform_admin ? [dashboard, ...PLATFORM, settings] : [dashboard, settings];
 }
 
 /** Pages that open inside the dashboard layout for a logged-in user (besides /patient, /doctor, /admin). */

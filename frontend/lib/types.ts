@@ -287,6 +287,32 @@ export type HospitalPatient = {
   records: number;
 };
 
+// ---- Platform analytics (platform admin) ----
+
+export type Growth = { total: number; new_this_month: number; change_pct: number | null };
+
+export type PlatformOverview = {
+  patients: Growth;
+  doctors: Growth;
+  hospitals: Growth & { bookable: number; listed_not_connected: number };
+  appointments: { this_month: number; change_pct: number | null };
+  activity: { months: string[]; active_patients: number[]; active_doctors: number[] };
+  recent: { kind: "patient" | "doctor" | "hospital"; title: string; detail: string; at: string; estimated?: boolean }[];
+};
+
+export type PlatformReports = {
+  months: string[];
+  usage: Record<
+    "new_patients" | "new_doctors" | "active_patients" | "active_doctors" | "appointments_booked" | "appointments_completed" | "records_uploaded" | "check_ins",
+    number[]
+  >;
+  growth: Record<"new_hospitals" | "total_hospitals" | "total_patients" | "total_doctors", number[]>;
+  hospitals: {
+    id: number; name: string; city: string; connected_on: string | null; estimated: boolean;
+    doctors: number; patients: number; appointments: number; appointments_30d: number;
+  }[];
+};
+
 /** ₹ in Indian grouping, no paise: 1250000 → "₹12,50,000". */
 export const fmtRupees = (v: string | number) => `₹${Math.round(Number(v)).toLocaleString("en-IN")}`;
 

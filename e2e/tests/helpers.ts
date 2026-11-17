@@ -11,6 +11,8 @@ export type E2EData = {
   doctor: { email: string; id: number; name: string };
   /** Hospital admin of the E2E Partner Hospital. */
   admin: { email: string };
+  /** Platform admin (superuser): platform analytics, hospital approvals. */
+  platform: { email: string };
   partner_hospital: { id: number; name: string };
   mock_hospital: { id: number; name: string };
   location: { lat: number; lng: number };
@@ -25,7 +27,8 @@ export function e2e(): E2EData {
 
 /** Log in through the real login form (on the tab that matches the account) and wait for the dashboard. */
 export async function login(page: Page, email: string, password = e2e().password) {
-  const tab = email === e2e().doctor.email ? "Doctor" : email === e2e().admin.email ? "Admin" : "Patient";
+  const d = e2e();
+  const tab = email === d.doctor.email ? "Doctor" : email === d.admin.email || email === d.platform.email ? "Admin" : "Patient";
   await page.goto("/login");
   await page.getByRole("tab", { name: tab }).click();
   await page.getByLabel("Email").fill(email);

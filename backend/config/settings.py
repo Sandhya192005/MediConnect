@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "apps.records",
     "apps.staff",
     "apps.support",
+    "apps.analytics",
 ]
 
 MIDDLEWARE = [

@@ -18,7 +18,10 @@ class HospitalAdmin(admin.GISModelAdmin):
 
     @admin.action(description="Approve selected hospitals")
     def approve(self, request, queryset):
-        queryset.update(is_approved=True)
+        from django.utils import timezone
+
+        # A bulk update skips save(), so record the approval date here too (only for newly approved ones).
+        queryset.filter(is_approved=False).update(is_approved=True, approved_at=timezone.now(), approved_at_estimated=False)
 
     @admin.action(description="Mark location as verified")
     def mark_location_verified(self, request, queryset):

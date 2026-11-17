@@ -94,6 +94,8 @@ export function StatCard({
   detail,
   link,
   soon,
+  trend,
+  trendLabel = "vs last month",
   children,
 }: {
   icon: string;
@@ -104,6 +106,9 @@ export function StatCard({
   link?: { href: string; label: string };
   /** Planned feature: show which phase brings it instead of a number. */
   soon?: string;
+  /** Change in percent (↑ green / ↓ red); null = nothing to compare with yet. */
+  trend?: number | null;
+  trendLabel?: string;
   children?: React.ReactNode;
 }) {
   return (
@@ -114,6 +119,20 @@ export function StatCard({
       </div>
       <p className="mt-4 text-sm font-[650] text-[#0f2f3a]">{label}</p>
       {value !== undefined && <p className="mt-1 text-2xl font-bold tracking-tight text-[#0f2f3a]">{value}</p>}
+      {trend !== undefined && (
+        <p className="mt-1 text-xs text-slate-500">
+          {trend === null ? (
+            "No earlier data to compare"
+          ) : (
+            <>
+              <span className={`font-[650] ${trend > 0 ? "text-emerald-700" : trend < 0 ? "text-rose-700" : "text-slate-600"}`}>
+                {trend > 0 ? "↑" : trend < 0 ? "↓" : "→"} {Math.abs(trend)}%
+              </span>{" "}
+              {trendLabel}
+            </>
+          )}
+        </p>
+      )}
       {detail && <p className="mt-1 text-sm text-slate-500">{detail}</p>}
       {children}
       {link && (

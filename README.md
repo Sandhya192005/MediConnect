@@ -197,6 +197,18 @@ Owner decisions (2026-11-17): hospital admins open records like doctors (with th
 - **Forgot password?** (login page → `/forgot-password` → email → `/reset-password`): a one-time link that expires after 1 hour. The answer is the same for unknown emails, and requests are limited to 3 an hour per email address and 20 an hour per network address. Locally the email arrives in Mailpit.
 - **Need help? Contact support** (sidebar card → `/support`): send a message with a topic and see your messages and replies. Support's inbox gets an email (`SUPPORT_EMAIL`). The platform admin answers in Django admin → Support requests; saving a reply marks the request answered and notifies the user. Limited to 10 an hour per user.
 
+### Platform analytics (platform admin)
+
+The platform admin (the MediConnect owner, a Django superuser) gets a dashboard about the whole platform:
+
+- **Dashboard** (`/admin`): totals of **patients**, **doctors** and **connected hospitals** with growth since the start of the month; **appointments this month** vs the same days last month; a chart of **active patients vs active doctors** (with at least one appointment that month, last 6 months); recent sign-ups and newly connected hospitals; and what's waiting for approval.
+- **Reports & analytics** (`/admin/reports`, period 6 / 12 / 24 months):
+  - **Platform usage:** new sign-ups (patients, doctors), active users, appointments booked vs completed, medical records uploaded, queue check-ins.
+  - **Hospital growth:** connected hospitals at the end of each month, new hospitals per month, total patients and doctors alongside, and a table of every connected hospital with when it joined, its doctors, patients and appointments (all-time and last 30 days).
+- A hospital counts as **connected** once approved. `Hospital.approved_at` records when; hospitals approved before 2026-11-17 use the date they were added, marked "approx.".
+- Charts are plain SVG (`components/Charts.tsx`), one y-axis each, with colours checked for colour blindness, marker shapes, end labels, tooltips and a hidden data table for screen readers.
+- API (platform admin only): `GET /api/platform/overview/`, `GET /api/platform/reports/?months=12`.
+
 ## Users and profiles in the database
 
 Every login is one row in `users`; its `role` says which profile table holds the rest (renamed from Django's default names on 2026-11-17, no data changed).

@@ -29,6 +29,7 @@ PASSWORD = "E2e@12345"
 PATIENT_EMAIL = "e2e.patient@mediconnect.dev"
 DOCTOR_EMAIL = "e2e.doctor@mediconnect.dev"
 ADMIN_EMAIL = "e2e.admin@mediconnect.dev"  # hospital admin of "E2E Partner Hospital"
+PLATFORM_EMAIL = "e2e.platform@mediconnect.dev"  # platform admin (superuser)
 NEW_USER_PREFIX = "e2e.new."  # accounts created by the sign-up test, deleted on the next run
 # Chennai, a few km from the real hospitals: the map test puts the browser here.
 LAT, LNG = 13.0500, 80.2400
@@ -59,6 +60,10 @@ class Command(BaseCommand):
         admin_user = self._user(ADMIN_EMAIL, "admin", "Asha", "Admin")
         HospitalAdmin.objects.update_or_create(user=admin_user, defaults={"hospital": partner})
         StaffMember.objects.filter(hospital=partner).delete()
+        # A platform admin (superuser) for the platform analytics tests. e2e_setup only runs with DEBUG on.
+        platform_user = self._user(PLATFORM_EMAIL, "admin", "Priya", "Platform")
+        platform_user.is_superuser = platform_user.is_staff = True
+        platform_user.save(update_fields=["is_superuser", "is_staff"])
 
         doctor = DoctorProfile.objects.get(user=doctor_user)
         doctor.hospital, doctor.department = partner, cardiology
@@ -101,6 +106,7 @@ class Command(BaseCommand):
                         "patient_id": PatientProfile.for_user(patient).patient_id},
             "doctor": {"email": DOCTOR_EMAIL, "id": doctor.id, "name": str(doctor)},
             "admin": {"email": ADMIN_EMAIL},
+            "platform": {"email": PLATFORM_EMAIL},
             "partner_hospital": {"id": partner.id, "name": partner.name},
             "mock_hospital": {"id": mock.id, "name": mock.name},
             "location": {"lat": LAT, "lng": LNG},
