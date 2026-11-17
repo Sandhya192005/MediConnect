@@ -23,9 +23,11 @@ export function e2e(): E2EData {
   return cached!;
 }
 
-/** Log in through the real login form and wait for the dashboard. */
+/** Log in through the real login form (on the tab that matches the account) and wait for the dashboard. */
 export async function login(page: Page, email: string, password = e2e().password) {
+  const tab = email === e2e().doctor.email ? "Doctor" : email === e2e().admin.email ? "Admin" : "Patient";
   await page.goto("/login");
+  await page.getByRole("tab", { name: tab }).click();
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password); // exact: the "Show password" button also matches
   await page.getByRole("button", { name: "Log in" }).click();

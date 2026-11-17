@@ -153,7 +153,7 @@ Owner decisions (2026-11-16): one admin per hospital; a doctor may open the reco
 
 - Logged-in users get the dashboard layout (`components/AppShell.tsx`): a sidebar with the role's menu, a top bar with quick search, notifications and the user. Patients get a dark teal sidebar, doctors and admins a light one. On phones the sidebar slides in from the menu button. `components/AppChrome.tsx` decides which frame a page gets: login/sign-up are full-screen, `/patient`, `/doctor`, `/admin`, `/doctors` and `/hospitals` use the dashboard layout when logged in, everything else the public bar and footer.
 - Menus live in `lib/nav.ts`. Planned items are greyed out with "Soon" and aren't links.
-- Login: role tabs (they only change the wording: the account decides which dashboard opens), show/hide password, and **Remember me** (unticked = the login is kept in `sessionStorage` and ends when the browser closes).
+- Login: role tabs (an account can only log in on its own tab: a patient account on the Doctor or Admin tab gets "This is a patient account… Choose the Patient tab" and nothing is saved), show/hide password, and **Remember me** (unticked = the login is kept in `sessionStorage` and ends when the browser closes).
 - Patient dashboard: next appointment, hospitals near you (asks for the location only when you click "Use my location"), MediConnect hospitals with a Book button, upcoming appointments.
 - Doctor dashboard: today's appointments, visits still to see, next patient, today's schedule with status pills, today's duty hours and hospital. It refreshes when a live notification arrives.
 - Admin dashboard: bookable doctors, partner hospitals, today's appointments, and hospitals and appointment requests waiting for approval.

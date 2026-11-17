@@ -6,11 +6,12 @@ import { useState } from "react";
 import AuthLayout, { IconInput } from "@/components/AuthLayout";
 import Icon from "@/components/Icons";
 import { errorMessage, type Role } from "@/lib/api";
-import { dashboardFor, useAuth } from "@/lib/auth";
+import { dashboardFor, useAuth, WrongRoleError } from "@/lib/auth";
 
 /**
- * The tabs only tailor the wording: the account itself decides which dashboard opens,
- * so a doctor who logs in on the Patient tab still lands on the doctor dashboard.
+ * The tab must match the account: a patient account can only log in on the Patient tab, and so on
+ * (owner request 2026-11-17). A mismatch shows which tab to use and stores nothing.
+ * The server still checks the role on every request; the tabs are about clarity.
  */
 const TABS: { role: Role; label: string; hint: string }[] = [
   { role: "patient", label: "Patient", hint: "See your appointments and hospitals near you." },
@@ -35,10 +36,15 @@ export default function LoginPage() {
     setBusy(true);
     setError("");
     try {
-      const user = await login(email, password, remember);
+      const user = await login(email, password, remember, tab);
       router.push(dashboardFor(user.role));
     } catch (err) {
-      setError(errorMessage(err));
+      if (err instanceof WrongRoleError) {
+        const right = TABS.find((t) => t.role === err.actual)!.label;
+        setError(`This is a ${right.toLowerCase()} account, not a ${current.label.toLowerCase()} account. Choose the ${right} tab to log in.`);
+      } else {
+        setError(errorMessage(err));
+      }
     } finally {
       setBusy(false);
     }

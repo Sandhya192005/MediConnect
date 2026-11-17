@@ -29,6 +29,25 @@ test("a wrong password shows an error and stays logged out", async ({ page }) =>
   await expect(page.getByRole("button", { name: "Log out" })).toHaveCount(0);
 });
 
+test("an account can only log in on its own tab", async ({ page }) => {
+  await page.goto("/login");
+  for (const tab of ["Doctor", "Admin"]) {
+    await page.getByRole("tab", { name: tab }).click();
+    await page.getByLabel("Email").fill(e2e().patient.email);
+    await page.getByLabel("Password", { exact: true }).fill(e2e().password);
+    await page.getByRole("button", { name: "Log in" }).click();
+    await expect(page.getByText("This is a patient account, not")).toContainText("Choose the Patient tab to log in.");
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(page.getByRole("button", { name: "Log out" })).toHaveCount(0);
+  }
+  // Nothing was stored: reloading still shows the login page, logged out.
+  expect(await page.evaluate(() => localStorage.getItem("mc_access") ?? sessionStorage.getItem("mc_access"))).toBeNull();
+
+  await page.getByRole("tab", { name: "Patient" }).click();
+  await page.getByRole("button", { name: "Log in" }).click();
+  await expect(page).toHaveURL(/\/patient$/);
+});
+
 test("role pages are protected", async ({ page }) => {
   // Logged out → sent to the login page.
   await page.goto("/patient/appointments");
