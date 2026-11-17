@@ -60,7 +60,7 @@ docker compose exec backend python manage.py createsuperuser   # admin login
 
 ### Hospital lookup from its own website (Playwright)
 
-Flow: patient looks up a hospital → served from PostgreSQL if collected < 24 h ago → otherwise a background job: OpenStreetMap (address, pin, website) → URL safety + robots.txt → Playwright (Chromium) reads up to 6 useful pages on that site → OpenAI extracts doctors/departments/timings/contacts (rule-based fallback without a key) → saved with source URL + time → live notification.
+Flow: patient looks up a hospital → served from PostgreSQL if collected < 24 h ago → otherwise a background job: OpenStreetMap (address, pin, website) → URL safety + robots.txt → Playwright (Chromium) reads up to 6 useful pages on that site → built-in patterns extract doctors/departments/timings/contacts (no AI: the OpenAI key is only for the chatbot) → saved with source URL + time → live notification.
 
 - `POST /api/scraper/lookup/` `{q}` or `{url}` → `{matches, job}`; `GET /api/scraper/jobs/<id>/`; `GET /api/scraper/hospitals/<id>/`; `POST /api/scraper/hospitals/<id>/refresh/` (at most hourly per hospital; 10 lookups/hour per user).
 - Doctor pages the homepage doesn't link to (common on big hospital sites, e.g. MIOT's "Meet the doctors" profiles) are found through the site's **sitemap**. A page titled "Dr. Name | …" counts as that doctor's profile, with the specialty taken from its address. Removed (404) pages are skipped, and reading stops after 100 s.
@@ -135,7 +135,7 @@ Real hospital websites and OpenAI are never called by these tests.
 - [x] Phase 4 — Real-time in-app notifications (Django Channels)
 - [x] Phase 5 — Elasticsearch search
 - [x] Phase 6 — Nearby hospitals map (PostGIS + Leaflet)
-- [x] Phase 7 — OpenAI chatbot (live OpenAI call not yet verified: needs a valid API key)
+- [x] Phase 7 — OpenAI chatbot (the key now works; a live chat with it hasn't been checked by hand yet)
 - [x] Phase 7.5 — Hospital lookup from its own website (Playwright) + appointment requests
 - [x] Phase 8 — Playwright end-to-end tests (`e2e/`)
 

@@ -411,3 +411,21 @@ def test_live_mock_site():
     assert "Dr. Farhan Ali" in text  # added by JavaScript: only a real browser sees it
     data = normalize(rule_based(pages), "http://mockhospital/")
     assert len(data["doctors"]) == 6  # incl. Dr. Anand Kumar, found only through the sitemap
+
+
+def test_scraping_never_calls_openai_even_with_a_key(settings, monkeypatch):
+    """Owner decision 2026-11-17: the OpenAI key is for the chatbot only; the scraper always uses its rules."""
+    import openai
+
+    from apps.scraper import extract
+
+    def no_openai(*args, **kwargs):
+        raise AssertionError("the scraper must not call OpenAI")
+
+    settings.OPENAI_API_KEY = "sk-test-key"
+    monkeypatch.setattr(openai, "OpenAI", no_openai)
+    pages = [{"url": "http://mockhospital/", "title": "Greenfield Demo Hospital",
+              "text": "Dr. Kavitha Raman - Cardiologist. Call +91 44 2345 6789.", "links": []}]
+    data, method = extract.extract(pages, "http://mockhospital/")
+    assert method == "rules"
+    assert [d["name"] for d in data["doctors"]] == ["Dr. Kavitha Raman"]

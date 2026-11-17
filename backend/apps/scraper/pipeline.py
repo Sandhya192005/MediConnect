@@ -2,7 +2,7 @@
 One scrape job, start to finish (runs inside the scraper_worker container):
 
   find the hospital (OpenStreetMap) → check URL safety + robots.txt → Playwright reads pages
-  → extract clean data (OpenAI or rules) → save to PostgreSQL with source URL + time → notify
+  → extract clean data (rule-based, no AI) → save to PostgreSQL with source URL + time → notify
 """
 
 import logging
