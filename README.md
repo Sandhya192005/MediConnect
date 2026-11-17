@@ -163,7 +163,7 @@ Owner decisions (2026-11-16): one admin per hospital; a doctor may open the reco
 - **Patient ID:** every patient gets a random ID like `P483920` (`accounts.PatientProfile`, created at sign-up; existing patients got one in a migration). It's in `GET /api/auth/me/` as `patient_id` and on the records page.
 - **Patients** (`/patient/records`): upload PDF, JPG or PNG files up to 10 MB with a title, type (lab report, scan, X-ray, prescription, discharge summary, other), date and notes; download and delete them; see **Who opened your records**. Files are checked by their first bytes, not just the name, so a renamed program is refused.
 - **Private files:** stored in the Docker volume `record_files` (`PRIVATE_MEDIA_ROOT=/data/private_media`), outside the code folder and OneDrive, under random names. They have no public URL: the only way to get one is `GET /api/records/<id>/file/`, which checks who is asking every time and always sends it as a download. Deleting a record (or the account) deletes the file.
-- **Doctors** (`/doctor/records`, or the patient-ID box on the doctor dashboard): enter a patient ID to see the patient's records. Allowed only if the patient has a booked, confirmed or completed appointment with any doctor at the doctor's hospital (cancelled bookings don't count). An unknown ID and "not your hospital's patient" give the same answer, and lookups are limited to 30 a minute, so IDs can't be guessed.
+- **Doctors** (`/doctor/records`, or the patient-ID box on the doctor dashboard): enter a patient ID to see the patient's medical history. **The patient ID is a general ID** (owner decision 2026-11-17, replacing the first rule of "patients with an appointment at your hospital"): any doctor or admin account can open any patient's records with it, wherever the patient was treated. Lookups are limited to 30 a minute per account. Known risk, accepted by the owner: doctor accounts aren't verified, so anyone who signs up as a doctor can do this too.
 - **Access log:** every doctor lookup and file download is recorded (`records.RecordAccess`: who, which hospital, which file, when) and shown to the patient. The same doctor repeating the same action within a minute (a reload) counts once. Superusers can read the log in Django admin; the records themselves aren't in Django admin.
 - Admins can't open records yet: per-hospital admins arrive in Step 4.
 
@@ -180,12 +180,12 @@ On the day of a visit: **not arrived → waiting (token) → in consultation →
 
 #### Hospital admins (Step 4)
 
-Owner decisions (2026-11-17): hospital admins open records under the same rule as doctors (logged); nurses are staff records without a login.
+Owner decisions (2026-11-17): hospital admins open records like doctors (with the general patient ID, logged); nurses are staff records without a login.
 
 - **Two kinds of admin.** A **hospital admin** is a user with role `admin` linked to one hospital (`staff.HospitalAdmin`). They see only that hospital's staff, patients and appointments. The **platform admin** is a Django superuser: hospital approvals, departments, requests to non-partner hospitals and other users' website lookups are platform-only. Before Step 4 any `admin` account could approve any hospital.
 - **Making someone a hospital admin:** in Django admin, create the user with role "admin", then add a **Hospital admin** entry linking them to the hospital. There is no public sign-up for admins.
 - **Doctors / Nurses** (`/admin/doctors`, `/admin/nurses`): staff records (`staff.StaffMember`) with department, designation, phone, email, join date, leaving date and monthly salary. A doctor's record can be linked to their MediConnect doctor account (only accounts at the same hospital, one record per doctor). The database refuses negative salaries, links on nurse records, and leaving before joining. Salaries are visible only to that hospital's admins (and superusers).
-- **Patients** (`/admin/patients`): everyone with a booked, confirmed or completed visit at the hospital, with visits, last and next visit, and how many records they have. **Records** opens them with the same rule and access log as doctors; the patient sees "(hospital admin)" in their log.
+- **Patients** (`/admin/patients`): everyone with a booked, confirmed or completed visit at the hospital, with visits, last and next visit, and how many records they have. **Records** opens them, and **Open by patient ID** opens any patient's history; the patient sees "(hospital admin)" in their log.
 - **Staff & salary** (`/admin/salary`): monthly payroll in total, for doctors and nurses, and by department.
 - **Dashboard:** total doctors, nurses and patients, today's appointments and how many are waiting, the staff chart (doctors and nurses on staff at the end of each of the last 6 months; colours checked with a colour-blindness validator, with marker shapes and end labels as a second cue), and recent activity.
 - A platform admin without a hospital sees the platform overview (hospitals awaiting approval, appointment requests).
@@ -210,5 +210,5 @@ Owner decisions (2026-11-17): hospital admins open records under the same rule a
 | `GET /api/hospital-admin/patients/?q=` | hospital admin | the hospital's patients with visits and record counts |
 | `GET/POST /api/records/`, `GET/PATCH/DELETE /api/records/<id>/` | patient | own medical records (upload: multipart `title`, `record_type`, `record_date`, `notes`, `file`) |
 | `GET /api/records/access-log/` | patient | who opened their records |
-| `GET /api/records/patients/<patient_id>/` | doctor | a patient's records, if they have an appointment at the doctor's hospital (logged, 30/min) |
-| `GET /api/records/<id>/file/` | the patient, or a permitted doctor (logged) | download the file |
+| `GET /api/records/patients/<patient_id>/` | doctor / admin | any patient's records by their general patient ID (logged, 30/min) |
+| `GET /api/records/<id>/file/` | the patient, or any doctor / admin (logged) | download the file |

@@ -12,10 +12,10 @@ from apps.accounts.permissions import IsPatient, role_required
 
 from .models import MedicalRecord, RecordAccess
 from .serializers import MedicalRecordSerializer, RecordAccessSerializer
-from .services import log_access, viewer_hospital_for
+from .services import RECORD_VIEWER_ROLES, log_access, may_open_records, staff_hospital
 
-NOT_FOUND = "No patient with this ID has an appointment at your hospital."
-IsDoctorOrHospitalAdmin = role_required("doctor", "admin")  # admins also need a hospital (checked per patient)
+NOT_FOUND = "No patient with this ID."
+IsRecordViewer = role_required(*RECORD_VIEWER_ROLES)  # doctors and admins
 
 
 class MyRecordViewSet(
@@ -50,13 +50,12 @@ class MyRecordViewSet(
 
 class PatientLookupView(APIView):
     """
-    GET /api/records/patients/<patient_id>/ (doctors and hospital admins)
-    The patient's name and records, if the patient has had an appointment at the viewer's hospital.
-    Every successful lookup is written to the patient's access log.
-    Unknown ID and "not your hospital's patient" give the same 404, so IDs can't be probed.
+    GET /api/records/patients/<patient_id>/ (doctors and admins)
+    The patient ID is a general ID: any doctor or admin gets the patient's name and records with it.
+    Every lookup is written to the patient's access log; lookups are limited to 30 a minute per account.
     """
 
-    permission_classes = [IsDoctorOrHospitalAdmin]
+    permission_classes = [IsRecordViewer]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "record_lookup"
 
@@ -66,11 +65,11 @@ class PatientLookupView(APIView):
             .filter(patient_id=patient_id.strip().upper(), user__role="patient", user__is_active=True)
             .first()
         )
-        hospital = viewer_hospital_for(request.user, profile.user) if profile else None
-        if hospital is None:
+        if profile is None:
             return Response({"detail": NOT_FOUND}, status=404)
 
         patient = profile.user
+        hospital = staff_hospital(request.user)  # for the log only; a viewer without a hospital is allowed too
         log_access(viewer=request.user, patient=patient, hospital=hospital, action=RecordAccess.Action.VIEW_LIST)
         records = MedicalRecord.objects.filter(patient=patient)
         return Response({
@@ -78,15 +77,15 @@ class PatientLookupView(APIView):
                 "patient_id": profile.patient_id,
                 "name": patient.get_full_name() or patient.email,
             },
-            "hospital": hospital.name,
+            "hospital": hospital.name if hospital else None,  # the viewer's hospital, shown on the page
             "records": MedicalRecordSerializer(records, many=True).data,
         })
 
 
 class RecordFileView(APIView):
     """
-    GET /api/records/<id>/file/ — the file itself, for its patient or a permitted doctor / hospital admin (logged).
-    Anyone else gets 404, as if the record didn't exist.
+    GET /api/records/<id>/file/ — the file itself, for its patient, or any doctor or admin (logged).
+    Other patients get 404, as if the record didn't exist.
     """
 
     permission_classes = [IsAuthenticated]
@@ -98,8 +97,8 @@ class RecordFileView(APIView):
         user = request.user
         if user.role == "patient" and record.patient_id == user.id:
             pass
-        elif user.role in ("doctor", "admin") and (hospital := viewer_hospital_for(user, record.patient)):
-            log_access(viewer=user, patient=record.patient, hospital=hospital,
+        elif may_open_records(user):
+            log_access(viewer=user, patient=record.patient, hospital=staff_hospital(user),
                        action=RecordAccess.Action.DOWNLOAD, record=record)
         else:
             raise Http404

@@ -210,7 +210,7 @@ def test_patient_list_shows_only_this_hospitals_patients(world):
 
 
 @pytest.mark.django_db
-def test_hospital_admin_opens_records_like_a_doctor_and_it_is_logged(world):
+def test_hospital_admins_open_records_by_patient_id_and_it_is_logged(world):
     upload = client_for(world["patient"]).post(
         "/api/records/", {"title": "ECG", "record_type": "scan", "file": SimpleUploadedFile("ecg.pdf", PDF)}, format="multipart")
     assert upload.status_code == 201
@@ -223,10 +223,10 @@ def test_hospital_admin_opens_records_like_a_doctor_and_it_is_logged(world):
     log = client_for(world["patient"]).get("/api/records/access-log/").json()
     assert {(e["viewer_role"], e["action"]) for e in log} == {("admin", "view_list"), ("admin", "download")}
 
+    # General patient ID (owner decision 2026-11-17): another hospital's admin can open them too, and it's logged.
     other = client_for(world["other_admin"])
-    assert other.get(f"/api/records/patients/{code}/").status_code == 404
-    assert other.get(f"/api/records/{upload.json()['id']}/file/").status_code == 404
-    assert RecordAccess.objects.filter(viewer=world["other_admin"]).count() == 0
+    assert other.get(f"/api/records/patients/{code}/").status_code == 200
+    assert RecordAccess.objects.filter(viewer=world["other_admin"], hospital_name="Other Hospital").count() == 1
 
 
 @pytest.mark.django_db

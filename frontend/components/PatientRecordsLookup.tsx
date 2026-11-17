@@ -9,7 +9,8 @@ import Icon from "./Icons";
 import RecordList from "./RecordList";
 
 /**
- * Open a patient's records by patient ID (doctors and hospital admins).
+ * Open a patient's records by patient ID (doctors and admins). The patient ID is a general ID:
+ * any doctor or admin can open any patient's records with it (owner decision 2026-11-17).
  * The ID lives in the URL (?id=P123456), so links, the back button and the dashboard's quick access work.
  * The server decides who may see what, and logs every view for the patient.
  */
@@ -73,8 +74,8 @@ export default function PatientRecordsLookup({ basePath }: { basePath: string })
       {state === "notfound" && (
         <EmptyState
           icon="users"
-          title={`No patient ${current} at your hospital`}
-          text="Check the ID with the patient. Records open only for patients with an appointment at your hospital."
+          title={`No patient with ID ${current}`}
+          text="Check the ID with the patient: it looks like P483920."
         />
       )}
       {state === "error" && <p role="alert" className="rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
@@ -86,7 +87,7 @@ export default function PatientRecordsLookup({ basePath }: { basePath: string })
             <div className="min-w-0 flex-1">
               <p className="text-lg font-bold text-[#0f2f3a]">{result.patient.name}</p>
               <p className="text-sm text-slate-500">
-                Patient ID <span className="font-mono">{result.patient.patient_id}</span> · {result.hospital}
+                Patient ID <span className="font-mono">{result.patient.patient_id}</span>
               </p>
             </div>
             <p className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">

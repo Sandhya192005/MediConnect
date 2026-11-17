@@ -23,9 +23,13 @@ export default function AdminPatientsPage() {
 
   return (
     <RoleGuard role="admin">
-      <div className="mb-6">
-        <h1 className="page-title">Patients</h1>
-        <p className="page-subtitle text-sm">Patients with a visit booked or completed at your hospital. Open a patient to see their records.</p>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="page-title">Patients</h1>
+          <p className="page-subtitle text-sm">Patients with a visit booked or completed at your hospital. Open a patient to see their records.</p>
+        </div>
+        {/* The patient ID is general: any patient's history can be opened with it, not only this list. */}
+        <Link href="/admin/patients/records" className="btn-outline rounded-xl px-4 py-2.5">Open by patient ID</Link>
       </div>
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
 

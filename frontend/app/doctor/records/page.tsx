@@ -10,7 +10,7 @@ export default function DoctorRecordsPage() {
       <div className="mb-6">
         <h1 className="page-title">Patient records</h1>
         <p className="page-subtitle text-sm">
-          Enter a patient ID to see their reports, scans and X-rays. Only patients with an appointment at your hospital can be opened.
+          Enter a patient&apos;s ID to see their medical history: reports, scans and X-rays. Each view is shown to the patient.
         </p>
       </div>
       <Suspense>

@@ -1,9 +1,10 @@
 """
 Rules for medical records:
 - what a valid upload is (PDF / JPG / PNG, checked by content, not only by name; size limit);
-- which doctors may open a patient's records (owner decision 2026-11-16: a patient who has had an
-  appointment at the doctor's hospital; cancelled-only bookings don't count);
-- the access log the patient can read.
+- who may open a patient's records: the patient ID is a GENERAL ID (owner decision 2026-11-17, replacing the
+  earlier "patients of your hospital only" rule): any doctor or admin account can open any patient's records
+  with it. The owner accepted the risk that a self-registered "doctor" account can do this too;
+- the access log the patient can read (every view by someone else is still logged).
 """
 
 import os
@@ -27,7 +28,7 @@ ALLOWED = {
     ".jpeg": ("image/jpeg", (b"\xff\xd8\xff",)),
 }
 
-# Appointment statuses that make a doctor's hospital "the patient's hospital".
+# Appointment statuses that make someone a patient of a hospital (used for the hospital admin's patient list).
 RELATED_STATUSES = [Appointment.Status.BOOKED, Appointment.Status.CONFIRMED, Appointment.Status.COMPLETED]
 
 
@@ -65,25 +66,18 @@ def staff_hospital(user) -> Hospital | None:
     return None
 
 
-def viewer_hospital_for(user, patient) -> Hospital | None:
-    """
-    The viewer's hospital if this doctor or hospital admin may open the patient's records, else None.
-    Allowed when the patient has a booked, confirmed or completed appointment with any doctor at that
-    hospital (owner decisions 2026-11-16: doctors in Step 2, hospital admins with the same rule in Step 4).
-    """
-    hospital = staff_hospital(user)
-    if hospital is None:
-        return None
-    related = Appointment.objects.filter(
-        patient=patient, doctor__hospital_id=hospital.id, status__in=RELATED_STATUSES
-    ).exists()
-    return hospital if related else None
+RECORD_VIEWER_ROLES = ("doctor", "admin")
+
+
+def may_open_records(user) -> bool:
+    """General patient ID: any doctor or admin account may open any patient's records (patients: only their own)."""
+    return user.role in RECORD_VIEWER_ROLES
 
 
 LOG_REPEAT_WINDOW = timedelta(minutes=1)
 
 
-def log_access(*, viewer, patient, hospital: Hospital, action: str, record: MedicalRecord | None = None):
+def log_access(*, viewer, patient, hospital: Hospital | None, action: str, record: MedicalRecord | None = None):
     """
     Writes one access-log line. The same doctor repeating the same action within a minute
     (a page reload, a double click) is one visit, so it isn't written twice.

@@ -1,12 +1,11 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
-import { API, bookAsPatient, e2e, login } from "./helpers";
+import { API, e2e, login } from "./helpers";
 
 const PDF = Buffer.from("%PDF-1.4\n% MediConnect e2e test report\n");
 
 /**
- * A brand-new patient who has never booked anything: their ID must open nothing for the doctor.
- * (The shared E2E patient may already have visits at the doctor's hospital from other tests.)
- * "e2e.new.*" accounts are deleted by the next e2e_setup.
+ * A brand-new patient who has never booked anything. With the general patient ID, a doctor can still open
+ * their history. "e2e.new.*" accounts are deleted by the next e2e_setup.
  */
 async function newPatientId(request: APIRequestContext) {
   const email = `e2e.new.records.${Date.now()}@mediconnect.dev`;
@@ -18,7 +17,7 @@ async function newPatientId(request: APIRequestContext) {
   return auth.user.patient_id as string;
 }
 
-test("patient uploads a record, a doctor at their hospital opens it, and the patient sees who looked", async ({ page, browser, request }) => {
+test("patient uploads a record, a doctor opens it with the general patient ID, and the patient sees who looked", async ({ page, browser, request }) => {
   const patientId = e2e().patient.patient_id;
 
   // Patient: sees their ID and uploads a report.
@@ -35,16 +34,19 @@ test("patient uploads a record, a doctor at their hospital opens it, and the pat
   const myRecords = page.getByRole("region", { name: /^My records/ });
   await expect(myRecords.getByText("Blood test", { exact: true })).toBeVisible();
 
-  // Doctor: a patient without an appointment at their hospital can't be opened.
+  // Doctor: an ID that doesn't exist opens nothing…
   const doctorContext = await browser.newContext();
   const doctorPage = await doctorContext.newPage();
   await login(doctorPage, e2e().doctor.email);
-  const stranger = await newPatientId(request);
-  await doctorPage.goto(`/doctor/records?id=${stranger}`);
-  await expect(doctorPage.getByText(`No patient ${stranger} at your hospital`)).toBeVisible();
+  await doctorPage.goto("/doctor/records?id=P000000");
+  await expect(doctorPage.getByText("No patient with ID P000000")).toBeVisible();
 
-  // With a booking at the doctor's hospital, the doctor can open and download the record.
-  await bookAsPatient(request);
+  // …but any real ID does, even for a patient who never booked anything (general patient ID).
+  const neverBooked = await newPatientId(request);
+  await doctorPage.goto(`/doctor/records?id=${neverBooked}`);
+  await expect(doctorPage.getByRole("region", { name: "Patient" }).getByText("Never Booked")).toBeVisible();
+
+  // The doctor opens and downloads the E2E patient's record from the dashboard's quick access.
   await doctorPage.goto("/doctor");
   await doctorPage.getByLabel("Patient ID").fill(patientId.toLowerCase());
   await doctorPage.getByRole("button", { name: "Open patient records" }).click();

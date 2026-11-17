@@ -55,7 +55,7 @@ export default function PatientRecordsPage() {
 
           <Panel title="Who opened your records">
             <p className="-mt-2 mb-4 text-xs text-slate-500">
-              Doctors and hospital admins at a hospital where you have an appointment can open your records with your patient ID. Every time they do, it&apos;s listed here.
+              Any doctor or hospital admin on MediConnect can open your records with your patient ID. Every time they do, it&apos;s listed here.
             </p>
             {log === null ? (
               <SkeletonRows rows={2} />
@@ -122,7 +122,7 @@ function PatientIdCard() {
         </div>
       </div>
       <p className="p-5 text-xs text-slate-500">
-        Share this ID with your doctor. Only doctors at a hospital where you have a booking can use it, and you can see each time they do.
+        Your general health ID: show it at any hospital, and any doctor there can see your medical history. You can see each time someone does.
       </p>
     </section>
   );

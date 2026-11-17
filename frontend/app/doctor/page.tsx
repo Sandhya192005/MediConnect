@@ -155,7 +155,7 @@ function RecordsQuickAccess() {
         <IconTile icon="file" tone="orange" size="sm" />
         <p className="text-sm font-[650] text-[#0f2f3a]">Quick access to patient records</p>
       </div>
-      <p className="mt-2 text-xs text-slate-500">For patients with an appointment at your hospital. Each view is logged for the patient.</p>
+      <p className="mt-2 text-xs text-slate-500">Any patient&apos;s medical history, with their patient ID. Each view is logged for the patient.</p>
       <form
         className="mt-3 flex gap-2"
         onSubmit={(e) => {

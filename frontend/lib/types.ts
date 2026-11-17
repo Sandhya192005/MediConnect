@@ -224,7 +224,8 @@ export type RecordAccess = {
 
 export type PatientLookup = {
   patient: { patient_id: string; name: string };
-  hospital: string;
+  /** The viewer's own hospital (null if they have none). */
+  hospital: string | null;
   records: MedicalRecord[];
 };
 

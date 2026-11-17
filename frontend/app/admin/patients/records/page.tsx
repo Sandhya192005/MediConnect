@@ -15,7 +15,7 @@ export default function AdminPatientRecordsPage() {
       <div className="mb-6">
         <h1 className="page-title">Patient records</h1>
         <p className="page-subtitle text-sm">
-          Reports, scans and X-rays of patients with an appointment at your hospital. Each view is shown to the patient.
+          Enter a patient&apos;s ID to see their medical history: reports, scans and X-rays. Each view is shown to the patient.
         </p>
       </div>
       <Suspense>

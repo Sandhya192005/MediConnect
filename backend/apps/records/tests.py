@@ -229,34 +229,37 @@ def test_a_quick_repeat_is_logged_once_but_a_later_visit_is_logged_again(world):
 
 
 @pytest.mark.django_db
-def test_any_doctor_at_that_hospital_may_open_them(world):
-    # Owner decision: the patient's hospital, not only the doctor they booked.
-    assert client_for(world["colleague"]).get(f"/api/records/patients/{world['code']}/").status_code == 200
+def test_the_patient_id_is_general_any_doctor_can_open_the_records(world):
+    # Owner decision 2026-11-17: no appointment or hospital needed. Still logged.
+    Appointment.objects.filter(patient=world["patient"]).delete()  # no visits anywhere
+    for user in (world["stranger"], world["colleague"]):  # another hospital; same hospital, never met
+        c = client_for(user)
+        assert c.get(f"/api/records/patients/{world['code']}/").status_code == 200
+        assert c.get(f"/api/records/{world['record'].id}/file/").status_code == 200
+    assert RecordAccess.objects.filter(viewer=world["stranger"], hospital_name="Other Hospital").count() == 2
 
 
 @pytest.mark.django_db
-def test_doctor_at_another_hospital_gets_the_same_404_as_an_unknown_id(world):
-    stranger = client_for(world["stranger"])
-    denied = stranger.get(f"/api/records/patients/{world['code']}/")
-    unknown = stranger.get("/api/records/patients/P000000/")
-    assert denied.status_code == unknown.status_code == 404
-    assert denied.json() == unknown.json()  # can't tell "exists" from "not yours"
-    assert stranger.get(f"/api/records/{world['record'].id}/file/").status_code == 404
-    assert not RecordAccess.objects.exists()
+def test_a_doctor_or_admin_without_a_hospital_can_open_them_too(world):
+    loner, _ = make_doctor("loner@example.com", None)
+    admin = User.objects.create_user("admin@example.com", "pw", role="admin")
+    for user in (loner, admin):
+        r = client_for(user).get(f"/api/records/patients/{world['code']}/")
+        assert r.status_code == 200 and r.json()["hospital"] is None
+    assert RecordAccess.objects.filter(viewer=admin, viewer_role="admin", hospital_name="").count() == 1
 
 
 @pytest.mark.django_db
-def test_a_cancelled_booking_does_not_give_access(world):
-    Appointment.objects.filter(patient=world["patient"]).update(status="cancelled")
-    assert client_for(world["treating"]).get(f"/api/records/patients/{world['code']}/").status_code == 404
+def test_an_unknown_id_is_404(world):
+    r = client_for(world["treating"]).get("/api/records/patients/P000000/")
+    assert r.status_code == 404 and r.json() == {"detail": "No patient with this ID."}
 
 
 @pytest.mark.django_db
-def test_a_past_completed_visit_still_gives_access(world):
-    Appointment.objects.filter(patient=world["patient"]).delete()
-    _, treating = make_doctor("past@example.com", world["hospital"])
-    book(world["patient"], treating, status="completed", days=-30)
-    assert client_for(world["treating"]).get(f"/api/records/patients/{world['code']}/").status_code == 200
+def test_other_patients_still_cannot_read_a_patients_records(world):
+    other = client_for(User.objects.create_user("other2@example.com", "pw"))
+    assert other.get(f"/api/records/patients/{world['code']}/").status_code == 403
+    assert other.get(f"/api/records/{world['record'].id}/file/").status_code == 404
 
 
 @pytest.mark.django_db
@@ -267,9 +270,6 @@ def test_doctors_and_admins_cannot_use_the_patient_endpoints(world):
         assert c.get("/api/records/").status_code == 403
         assert upload(c).status_code == 403
         assert c.patch(f"/api/records/{world['record'].id}/", {"title": "x"}, format="json").status_code == 403
-    # An admin who isn't linked to the patient's hospital gets nothing (hospital admins: see staff/tests.py).
-    assert client_for(admin).get(f"/api/records/patients/{world['code']}/").status_code == 404
-    assert client_for(admin).get(f"/api/records/{world['record'].id}/file/").status_code == 404
 
 
 @pytest.mark.django_db
