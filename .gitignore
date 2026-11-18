@@ -16,3 +16,6 @@ shots/
 
 # Machine-specific Claude Code notes
 CLAUDE.local.md
+
+# Demo logins written by manage.py demo_setup (contains the demo password)
+backend/.demo-logins.json

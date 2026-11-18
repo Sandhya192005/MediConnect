@@ -116,6 +116,26 @@ npx playwright show-report       # HTML report; failed tests keep a screenshot, 
 
 Before each run, `global-setup.ts` calls `manage.py e2e_setup`. It resets its own `e2e.*` accounts (password `E2e@12345`), an "E2E Partner Hospital" with a doctor who works every day, and an "E2E Mock Website Hospital" whose website is the mock site. It never touches other data, and refuses to run unless `DJANGO_DEBUG=1`. To remove that test data afterwards (e.g. to keep your own accounts and dashboards clean), run `docker compose exec backend python manage.py e2e_cleanup`: it deletes only `e2e.*` accounts (with everything they created) and the "E2E …" hospitals, then rebuilds the search index.
 
+### Demo data for a project review
+
+`demo_setup` creates a clearly-labelled demo you can show live, and `demo_cleanup` removes it again. It never touches other data and only runs with `DJANGO_DEBUG=1`.
+
+```powershell
+docker compose exec backend python manage.py demo_setup      # run it on the morning of the review
+docker compose exec backend python manage.py demo_cleanup    # afterwards
+```
+
+- **Made-up hospital:** "MediConnect Demo Hospital", Chennai (connected). It has no real address and an unverified map pin, because it doesn't exist. A real hospital's name is never used for demo data.
+- **Doctors:** two, Cardiology and General Medicine, working 08:00–20:00 every day, so a live booking always works.
+- **Hospital login:** a hospital admin with staff records (the 2 doctors and 3 nurses, with salaries).
+- **Patients:** three, with health details: one with an allergy, one who answered "No" to everything, one with conditions and medicines.
+- **Appointments:**
+  - 8 completed visits over the past four weeks;
+  - 5 upcoming bookings;
+  - today's queue: one patient checked in with token 1, and one still to arrive. This only works between 08:00 and 20:00, which is why the command is run on the review day.
+- **Logins:** written to `backend/.demo-logins.json` (gitignored). All demo accounts share one password: a new random one each run, or your own with `--password`. Accounts are `demo.*@mediconnect.dev`.
+- **Platform dashboard:** while the demo exists, its counts include the demo accounts and the demo hospital.
+
 | Test | What it proves |
 |---|---|
 | `auth.spec.ts` | sign up, log out, wrong password, role-protected pages |
