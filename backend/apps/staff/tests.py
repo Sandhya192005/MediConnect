@@ -111,6 +111,37 @@ def test_admin_adds_edits_and_lists_nurses(world):
 
 
 @pytest.mark.django_db
+def test_admin_adds_other_staff_and_filters_them(world):
+    c = client_for(world["admin"])
+    add_staff(c)  # a nurse
+    r = add_staff(c, kind="pharmacist", full_name="Ravi P", monthly_salary="25000")
+    assert r.status_code == 201 and r.json()["kind_label"] == "Pharmacist"
+    add_staff(c, kind="lab_technician", full_name="Lakshmi T", monthly_salary="22000")
+    add_staff(c, kind="receptionist", full_name="Anu R", monthly_salary="18000")
+
+    names = lambda url: sorted(s["full_name"] for s in c.get(url).json())  # noqa: E731
+    assert names("/api/hospital-admin/staff/?kind=other_staff") == ["Anu R", "Lakshmi T", "Ravi P"]  # no nurses
+    assert names("/api/hospital-admin/staff/?kind=pharmacist,receptionist") == ["Anu R", "Ravi P"]
+    assert names("/api/hospital-admin/staff/?kind=nurse") == ["Meena S"]
+
+    # "Other" needs a job title.
+    r = add_staff(c, kind="other", full_name="Kumar")
+    assert r.status_code == 400 and "job title" in str(r.json()["designation"])
+    assert add_staff(c, kind="other", full_name="Kumar", designation="Ambulance driver").status_code == 201
+    assert add_staff(c, kind="astronaut").status_code == 400
+    # Only doctors link a doctor account.
+    assert "doctor" in add_staff(c, kind="pharmacist", doctor=world["doc"].id).json()
+
+    o = c.get("/api/hospital-admin/overview/").json()
+    assert (o["counts"]["nurses"], o["counts"]["other_staff"]) == (1, 4)
+    assert float(o["payroll"]["other_staff"]) == 25000 + 22000 + 18000 + 32000  # the driver used the default salary
+    assert float(o["payroll"]["monthly_total"]) == 32000 + float(o["payroll"]["other_staff"])
+    titles = [a["title"] for a in o["recent_activity"] if a["kind"] == "staff"]
+    assert "New ambulance driver added" in titles and "New pharmacist added" in titles
+    assert "New lab technician added" in titles and "New nurse added" in titles
+
+
+@pytest.mark.django_db
 def test_a_doctor_record_can_link_the_doctors_account_and_takes_its_name(world):
     c = client_for(world["admin"])
     assert [d["name"] for d in c.get("/api/hospital-admin/doctor-accounts/").json()] == ["Priya Raman"]

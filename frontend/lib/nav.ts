@@ -32,6 +32,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Dashboard", icon: "grid", href: "/admin" },
     { label: "Doctors", icon: "stethoscope", href: "/admin/doctors" },
     { label: "Nurses", icon: "nurse", href: "/admin/nurses" },
+    { label: "Other staff", icon: "user", href: "/admin/staff" },
     { label: "Patients", icon: "users", href: "/admin/patients" },
     { label: "Staff & salary", icon: "rupee", href: "/admin/salary" },
     { label: "Reports", icon: "chart", soon: "Later" },

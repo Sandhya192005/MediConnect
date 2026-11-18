@@ -236,6 +236,17 @@ Owner decisions (2026-11-17): hospital admins open records like doctors (with th
 - **Forgot password?** (login page → `/forgot-password` → email → `/reset-password`): a one-time link that expires after 1 hour. The answer is the same for unknown emails, and requests are limited to 3 an hour per email address and 20 an hour per network address. Locally the email arrives in Mailpit.
 - **Need help? Contact support** (sidebar card → `/support`): send a message with a topic and see your messages and replies. Support's inbox gets an email (`SUPPORT_EMAIL`). The platform admin answers in Django admin → Support requests; saving a reply marks the request answered and notifies the user. Limited to 10 an hour per user.
 
+### Other staff (hospital accounts)
+
+Owner request (2026-11-18): besides doctors and nurses, a hospital manages its **other staff**.
+- **Menu:** Doctors · Nurses · **Other staff** · Patients · Staff & salary.
+- **Roles:** lab technician, pharmacist, receptionist, office / admin staff, housekeeping, security, and **Other**, which needs a job title (e.g. "Ambulance driver").
+- **Other staff page** (`/admin/staff`): the same features as Doctors and Nurses (search, working now / left, add, edit with a leaving date, delete), plus a role filter.
+- **API:** `GET /api/hospital-admin/staff/?kind=other_staff` (every kind except doctors and nurses) or `?kind=pharmacist,receptionist`.
+- **Dashboard:** an "Other staff" card; the payroll and recent activity include them ("New ambulance driver added"). **Staff & salary** has an Other staff card and column.
+- The staff chart still compares doctors and nurses.
+- `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
+
 ### Reference-design features, Part 2 (login and patient)
 
 - **Login and sign-up panel:**

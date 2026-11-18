@@ -15,11 +15,12 @@ class StaffMemberSerializer(serializers.ModelSerializer):
     doctor = serializers.PrimaryKeyRelatedField(queryset=DoctorProfile.objects.all(), required=False, allow_null=True)
     doctor_email = serializers.EmailField(source="doctor.user.email", read_only=True, default=None)
     full_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    kind_label = serializers.CharField(source="get_kind_display", read_only=True)
 
     class Meta:
         model = StaffMember
         fields = [
-            "id", "kind", "full_name", "doctor", "doctor_email", "department", "department_name", "designation",
+            "id", "kind", "kind_label", "full_name", "doctor", "doctor_email", "department", "department_name", "designation",
             "phone", "email", "join_date", "left_on", "monthly_salary", "is_active", "created_at",
         ]
         read_only_fields = ["created_at"]
@@ -51,6 +52,10 @@ class StaffMemberSerializer(serializers.ModelSerializer):
         if not name:
             raise serializers.ValidationError({"full_name": "Enter the staff member's name."})
         attrs["full_name"] = name
+
+        # "Other" says nothing by itself, so it needs a job title (e.g. "Ambulance driver").
+        if kind == StaffMember.Kind.OTHER and not (get("designation") or "").strip():
+            raise serializers.ValidationError({"designation": "Enter the job title for staff of the kind \"Other\"."})
 
         join, left = get("join_date"), get("left_on")
         if join and left and left < join:

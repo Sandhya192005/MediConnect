@@ -72,7 +72,7 @@ function HospitalDashboard() {
         </section>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           icon="stethoscope"
           tone="blue"
@@ -82,6 +82,8 @@ function HospitalDashboard() {
           link={{ href: "/admin/doctors", label: "Manage doctors" }}
         />
         <StatCard icon="nurse" tone="rose" label="Total nurses" value={n(o?.counts.nurses)} detail="On staff today" link={{ href: "/admin/nurses", label: "Manage nurses" }} />
+        <StatCard icon="user" tone="orange" label="Other staff" value={n(o?.counts.other_staff)} detail="Lab, pharmacy, front desk and more"
+                  link={{ href: "/admin/staff", label: "Manage staff" }} />
         <StatCard icon="users" tone="teal" label="Total patients" value={n(o?.counts.patients)} detail="With a visit booked or done here" link={{ href: "/admin/patients", label: "View patients" }} />
         <StatCard
           icon="calendar"

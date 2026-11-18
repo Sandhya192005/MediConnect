@@ -25,12 +25,15 @@ from .serializers import StaffMemberSerializer
 
 User = get_user_model()
 CHART_MONTHS = 6
+# Everyone who isn't a doctor or a nurse: the "Other staff" page.
+OTHER_STAFF_KINDS = [k for k in StaffMember.Kind.values if k not in (StaffMember.Kind.DOCTOR, StaffMember.Kind.NURSE)]
 
 
 class StaffViewSet(viewsets.ModelViewSet):
     """
     /api/hospital-admin/staff/ — the hospital's doctors and nurses.
-    Filters: ?kind=doctor|nurse, ?q=name/designation/email, ?status=active|left
+    Doctors, nurses and other staff. Filters: ?kind=doctor (or several: ?kind=pharmacist,receptionist, or
+    ?kind=other_staff for every kind except doctors and nurses), ?q=name/designation/email, ?status=active|left
     """
 
     serializer_class = StaffMemberSerializer
@@ -41,7 +44,8 @@ class StaffViewSet(viewsets.ModelViewSet):
         qs = StaffMember.objects.filter(hospital=self.request.admin_hospital).select_related("department", "doctor__user")
         p = self.request.query_params
         if kind := p.get("kind"):
-            qs = qs.filter(kind=kind)
+            kinds = OTHER_STAFF_KINDS if kind == "other_staff" else kind.split(",")
+            qs = qs.filter(kind__in=kinds)
         if q := p.get("q", "").strip():
             qs = qs.filter(Q(full_name__icontains=q) | Q(designation__icontains=q) | Q(email__icontains=q))
         if p.get("status") == "active":
@@ -117,6 +121,15 @@ class PatientsView(APIView):
         ])
 
 
+def _role_words(s: StaffMember) -> str:
+    """How to name a staff member's role in a sentence: "nurse", "housekeeping staff", "ambulance driver"."""
+    if s.kind == StaffMember.Kind.OTHER:
+        return s.designation.strip().lower() or "staff member"
+    if s.kind in (StaffMember.Kind.HOUSEKEEPING, StaffMember.Kind.SECURITY, StaffMember.Kind.OFFICE):
+        return f"{s.get_kind_display().split(' /')[0].lower()} staff"
+    return s.get_kind_display().lower()
+
+
 def _month_ends(today: date, months: int) -> list[date]:
     """The last day of each of the last `months` months, oldest first (this month: today)."""
     ends, y, m = [], today.year, today.month
@@ -154,6 +167,7 @@ class OverviewView(APIView):
             "counts": {
                 "doctors": active.filter(kind="doctor").count(),
                 "nurses": active.filter(kind="nurse").count(),
+                "other_staff": active.filter(kind__in=OTHER_STAFF_KINDS).count(),
                 "patients": hospital_patients(hospital).count(),
                 "appointments_today": todays.exclude(status="cancelled").count(),
                 "waiting_now": todays.filter(status__in=ACTIVE_STATUSES, checked_in_at__isnull=False,
@@ -165,6 +179,7 @@ class OverviewView(APIView):
                 "monthly_total": active.aggregate(t=Sum("monthly_salary"))["t"] or 0,
                 "doctors": active.filter(kind="doctor").aggregate(t=Sum("monthly_salary"))["t"] or 0,
                 "nurses": active.filter(kind="nurse").aggregate(t=Sum("monthly_salary"))["t"] or 0,
+                "other_staff": active.filter(kind__in=OTHER_STAFF_KINDS).aggregate(t=Sum("monthly_salary"))["t"] or 0,
             },
             "staff_chart": chart,
             "recent_activity": self._recent(hospital, staff),
@@ -173,7 +188,7 @@ class OverviewView(APIView):
     def _recent(self, hospital, staff, limit=6):
         """Newest staff records and bookings at the hospital, merged by time."""
         items = [
-            {"kind": "staff", "title": f"New {s.get_kind_display().lower()} added", "detail": s.full_name, "at": s.created_at}
+            {"kind": "staff", "title": f"New {_role_words(s)} added", "detail": s.full_name, "at": s.created_at}
             for s in staff.order_by("-created_at")[:limit]
         ]
         bookings = (Appointment.objects.filter(doctor__hospital=hospital).select_related("patient", "doctor__user")

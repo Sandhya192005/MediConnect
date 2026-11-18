@@ -2,21 +2,27 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
-import { fmtDate, fmtRupees, isoDate, type Department, type DoctorAccount, type StaffKind, type StaffMember } from "@/lib/types";
+import { fmtDate, fmtRupees, isoDate, OTHER_STAFF_KINDS, type Department, type DoctorAccount, type OtherStaffKind, type StaffKind, type StaffMember } from "@/lib/types";
 import { EmptyState, IconTile, Panel, SkeletonRows } from "./DashboardShell";
 import Icon from "./Icons";
 import RoleGuard from "./RoleGuard";
 
-const WORDS: Record<StaffKind, { one: string; many: string; icon: string; designation: string }> = {
+/** The three staff pages: Doctors, Nurses and Other staff (every other kind, e.g. pharmacists). */
+export type StaffPage = "doctor" | "nurse" | "other_staff";
+
+const WORDS: Record<StaffPage, { one: string; many: string; icon: string; designation: string }> = {
   doctor: { one: "doctor", many: "Doctors", icon: "stethoscope", designation: "e.g. Senior Consultant" },
   nurse: { one: "nurse", many: "Nurses", icon: "nurse", designation: "e.g. Staff Nurse" },
+  other_staff: { one: "staff member", many: "Other staff", icon: "user", designation: "e.g. Senior Pharmacist" },
 };
+const ROLES = Object.entries(OTHER_STAFF_KINDS) as [OtherStaffKind, string][];
 
 type Status = "active" | "left" | "";
 
-/** The hospital admin's list of doctors or nurses, with add / edit / remove (Step 4). */
-export default function StaffManager({ kind }: { kind: StaffKind }) {
+/** The hospital admin's list of doctors, nurses or other staff, with add / edit / remove (Step 4). */
+export default function StaffManager({ kind }: { kind: StaffPage }) {
   const w = WORDS[kind];
+  const [role, setRole] = useState<OtherStaffKind | "">(""); // Other staff: one role or all
   const [items, setItems] = useState<StaffMember[] | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<Status>("active");
@@ -24,9 +30,9 @@ export default function StaffManager({ kind }: { kind: StaffKind }) {
   const [error, setError] = useState("");
 
   const load = useCallback(() => {
-    const params = new URLSearchParams({ kind, ...(q.trim() && { q: q.trim() }), ...(status && { status }) });
+    const params = new URLSearchParams({ kind: role || kind, ...(q.trim() && { q: q.trim() }), ...(status && { status }) });
     api<StaffMember[]>(`/api/hospital-admin/staff/?${params}`).then(setItems).catch((e) => setError(errorMessage(e)));
-  }, [kind, q, status]);
+  }, [kind, role, q, status]);
 
   useEffect(() => {
     const t = setTimeout(load, 250); // wait for typing to pause
@@ -48,7 +54,12 @@ export default function StaffManager({ kind }: { kind: StaffKind }) {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="page-title">{w.many}</h1>
-          <p className="page-subtitle text-sm">Your hospital&apos;s {w.many.toLowerCase()}: department, join date and salary. Only your hospital&apos;s admins can see this.</p>
+          <p className="page-subtitle text-sm">
+            {kind === "other_staff"
+              ? "Lab technicians, pharmacists, receptionists, office, housekeeping, security and others"
+              : `Your hospital's ${w.many.toLowerCase()}`}
+            : department, join date and salary. Only your hospital&apos;s admins can see this.
+          </p>
         </div>
         <button onClick={() => setEditing("new")} className="btn-solid rounded-xl px-4 py-2.5">
           <Icon name="user" className="h-4 w-4" /> Add {w.one}
@@ -72,6 +83,12 @@ export default function StaffManager({ kind }: { kind: StaffKind }) {
         <div className="mb-4 flex flex-col gap-2 sm:flex-row">
           <input className="input rounded-xl py-2" placeholder="Search by name, designation or email" aria-label={`Search ${w.many.toLowerCase()}`}
                  value={q} onChange={(e) => setQ(e.target.value)} />
+          {kind === "other_staff" && (
+            <select className="input rounded-xl py-2 sm:w-56" aria-label="Role" value={role} onChange={(e) => setRole(e.target.value as OtherStaffKind | "")}>
+              <option value="">All roles</option>
+              {ROLES.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+            </select>
+          )}
           <select className="input rounded-xl py-2 sm:w-56" aria-label="Show" value={status} onChange={(e) => setStatus(e.target.value as Status)}>
             <option value="active">Working here now</option>
             <option value="left">Left</option>
@@ -81,14 +98,14 @@ export default function StaffManager({ kind }: { kind: StaffKind }) {
         {items === null ? (
           <SkeletonRows rows={4} />
         ) : items.length === 0 ? (
-          <EmptyState icon={w.icon} title={q || status !== "active" ? `No ${w.many.toLowerCase()} match` : `No ${w.many.toLowerCase()} added yet`}
+          <EmptyState icon={w.icon} title={q || role || status !== "active" ? `No ${w.many.toLowerCase()} match` : `No ${w.many.toLowerCase()} added yet`}
                       text={`Use "Add ${w.one}" to create the first record.`} />
         ) : (
           <ul className="divide-y divide-slate-100">
             {items.map((s) => (
               <li key={s.id} className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 md:flex-row md:items-center">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <IconTile icon={w.icon} tone={kind === "doctor" ? "blue" : "rose"} size="sm" />
+                  <IconTile icon={w.icon} tone={kind === "doctor" ? "blue" : kind === "nurse" ? "rose" : "indigo"} size="sm" />
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2 text-sm font-[650] text-[#0f2f3a]">
                       {s.full_name}
@@ -96,7 +113,12 @@ export default function StaffManager({ kind }: { kind: StaffKind }) {
                       {!s.is_active && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">{s.left_on ? `Left ${fmtDate(s.left_on)}` : "Not started yet"}</span>}
                     </p>
                     <p className="truncate text-xs text-slate-500">
-                      {[s.designation, s.department_name].filter(Boolean).join(" · ") || "No department"} · joined {fmtDate(s.join_date)}
+                      {[
+                        kind === "other_staff" && s.kind_label,
+                        // skip a job title that just repeats the role ("Pharmacist · Pharmacist")
+                        !(kind === "other_staff" && s.designation.trim().toLowerCase() === s.kind_label.toLowerCase()) && s.designation,
+                        s.department_name,
+                      ].filter(Boolean).join(" · ") || "No department"} · joined {fmtDate(s.join_date)}
                     </p>
                   </div>
                 </div>
@@ -116,8 +138,10 @@ export default function StaffManager({ kind }: { kind: StaffKind }) {
   );
 }
 
-function StaffForm({ kind, member, onClose, onSaved }: { kind: StaffKind; member: StaffMember | null; onClose: () => void; onSaved: () => void }) {
+function StaffForm({ kind, member, onClose, onSaved }: { kind: StaffPage; member: StaffMember | null; onClose: () => void; onSaved: () => void }) {
   const w = WORDS[kind];
+  // On the Other staff page the admin picks the role; on the other pages it's fixed.
+  const [staffKind, setStaffKind] = useState<StaffKind | "">(member?.kind ?? (kind === "other_staff" ? "" : kind));
   const [departments, setDepartments] = useState<Department[]>([]);
   const [accounts, setAccounts] = useState<DoctorAccount[]>([]);
   const [f, setF] = useState({
@@ -157,7 +181,7 @@ function StaffForm({ kind, member, onClose, onSaved }: { kind: StaffKind; member
     setBusy(true);
     setError("");
     const body = {
-      kind,
+      kind: staffKind,
       full_name: f.full_name,
       doctor: f.doctor ? Number(f.doctor) : null,
       department: f.department ? Number(f.department) : null,
@@ -199,6 +223,15 @@ function StaffForm({ kind, member, onClose, onSaved }: { kind: StaffKind; member
             </select>
           </label>
         )}
+        {kind === "other_staff" && (
+          <label className={label}>
+            Role
+            <select className="input mt-1" required value={staffKind} onChange={(e) => setStaffKind(e.target.value as StaffKind)}>
+              <option value="" disabled>Choose a role</option>
+              {ROLES.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+            </select>
+          </label>
+        )}
         <label className={label}>Full name<input className="input mt-1" value={f.full_name} onChange={set("full_name")} maxLength={150} required={!f.doctor} /></label>
         <label className={label}>
           Department
@@ -207,7 +240,11 @@ function StaffForm({ kind, member, onClose, onSaved }: { kind: StaffKind; member
             {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </label>
-        <label className={label}>Designation<input className="input mt-1" value={f.designation} onChange={set("designation")} maxLength={100} placeholder={w.designation} /></label>
+        <label className={label}>
+          {staffKind === "other" ? "Job title" : "Designation"}
+          <input className="input mt-1" value={f.designation} onChange={set("designation")} maxLength={100} required={staffKind === "other"}
+                 placeholder={staffKind === "other" ? "e.g. Ambulance driver" : w.designation} />
+        </label>
         <label className={label}>Join date<input className="input mt-1" type="date" value={f.join_date} onChange={set("join_date")} required /></label>
         <label className={label}>
           Monthly salary (₹)

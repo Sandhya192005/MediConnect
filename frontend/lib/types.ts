@@ -287,11 +287,23 @@ export const fmtDate = (iso: string) =>
 
 // ---- Hospital admin (Step 4) ----
 
-export type StaffKind = "doctor" | "nurse";
+/** Other hospital staff (owner request 2026-11-18); same keys as StaffMember.Kind on the server. */
+export const OTHER_STAFF_KINDS = {
+  lab_technician: "Lab technician",
+  pharmacist: "Pharmacist",
+  receptionist: "Receptionist",
+  office: "Office / admin staff",
+  housekeeping: "Housekeeping",
+  security: "Security",
+  other: "Other",
+} as const;
+export type OtherStaffKind = keyof typeof OTHER_STAFF_KINDS;
+export type StaffKind = "doctor" | "nurse" | OtherStaffKind;
 
 export type StaffMember = {
   id: number;
   kind: StaffKind;
+  kind_label: string;
   full_name: string;
   doctor: number | null;
   doctor_email: string | null;
@@ -317,12 +329,13 @@ export type HospitalOverview = {
   counts: {
     doctors: number;
     nurses: number;
+    other_staff: number;
     patients: number;
     appointments_today: number;
     waiting_now: number;
     doctor_accounts_without_record: number;
   };
-  payroll: { monthly_total: string | number; doctors: string | number; nurses: string | number };
+  payroll: { monthly_total: string | number; doctors: string | number; nurses: string | number; other_staff: string | number };
   staff_chart: StaffChartPoint[];
   recent_activity: { kind: "staff" | "booking"; title: string; detail: string; at: string }[];
 };

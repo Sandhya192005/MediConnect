@@ -44,9 +44,17 @@ class StaffMember(models.Model):
     class Kind(models.TextChoices):
         DOCTOR = "doctor", "Doctor"
         NURSE = "nurse", "Nurse"
+        # Other hospital staff (owner request 2026-11-18): shown on the "Other staff" page.
+        LAB_TECHNICIAN = "lab_technician", "Lab technician"
+        PHARMACIST = "pharmacist", "Pharmacist"
+        RECEPTIONIST = "receptionist", "Receptionist"
+        OFFICE = "office", "Office / admin staff"
+        HOUSEKEEPING = "housekeeping", "Housekeeping"
+        SECURITY = "security", "Security"
+        OTHER = "other", "Other"
 
     hospital = models.ForeignKey("hospitals.Hospital", on_delete=models.CASCADE, related_name="staff")
-    kind = models.CharField(max_length=10, choices=Kind.choices)
+    kind = models.CharField(max_length=20, choices=Kind.choices)
     full_name = models.CharField(max_length=150)
     doctor = models.OneToOneField(
         "doctors.DoctorProfile", on_delete=models.SET_NULL, null=True, blank=True, related_name="staff_record",

@@ -34,9 +34,25 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   await nurseForm.getByRole("button", { name: "Add nurse" }).click();
   await expect(page.getByRole("region", { name: /^Nurses/ }).getByText("Meena S")).toBeVisible();
 
-  // Staff & salary: the payroll adds up.
+  // Other staff: a pharmacist, and "Other" needs a job title.
+  await menu.getByRole("link", { name: "Other staff" }).click();
+  await page.getByRole("button", { name: "Add staff member" }).click();
+  const staffForm = page.getByRole("region", { name: "Add staff member" });
+  await staffForm.getByLabel("Role").selectOption("pharmacist");
+  await staffForm.getByLabel("Full name").fill("Ravi P");
+  await staffForm.getByLabel("Monthly salary (₹)").fill("25000");
+  await staffForm.getByRole("button", { name: "Add staff member" }).click();
+  const others = page.getByRole("region", { name: /^Other staff/ });
+  await expect(others.getByText("Ravi P")).toBeVisible();
+  await expect(others).toContainText("Pharmacist");
+  await page.getByLabel("Role", { exact: true }).selectOption("receptionist"); // the list's role filter
+  await expect(others.getByText("No other staff match")).toBeVisible();
+  await page.getByLabel("Role", { exact: true }).selectOption("");
+
+  // Staff & salary: the payroll adds up (doctor + nurse + pharmacist).
   await menu.getByRole("link", { name: "Staff & salary" }).click();
-  await expect(page.getByText("₹1,82,000").first()).toBeVisible();
+  await expect(page.getByText("₹2,07,000").first()).toBeVisible();
+  await expect(page.getByText("₹25,000").first()).toBeVisible();
 
   // Dashboard: real counts and the staff chart.
   await menu.getByRole("link", { name: "Dashboard" }).click();

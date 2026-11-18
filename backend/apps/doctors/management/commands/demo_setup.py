@@ -53,6 +53,10 @@ HOSPITALS = [
         # The main demo hospital: open 08:00–20:00 every day, so a live booking during the review always works.
         "admin": ("demo.hospital", "Hospital", "Manager"),
         "nurses": [("Divya S", "Staff Nurse", 210, 28000), ("Ramesh K", "Staff Nurse", 120, 26000), ("Selvi M", "Head Nurse", 400, 38000)],
+        # Other staff: (kind, name, job title, days since joining, monthly salary)
+        "others": [("receptionist", "Kavitha J", "Front desk", 330, 18000), ("lab_technician", "Prakash V", "Senior Lab Technician", 280, 24000),
+                   ("pharmacist", "Nisha R", "Pharmacist", 190, 26000), ("housekeeping", "Muthu S", "Housekeeping", 150, 14000),
+                   ("security", "Rajan P", "Night security", 90, 15000), ("other", "Babu K", "Ambulance driver", 60, 17000)],
         "doctors": [
             ("cardio", "Kavya", "Raman", "Cardiology", "Cardiologist", "MBBS, MD, DM (Cardiology)", 800, 12, DAILY, 8, 20),
             ("general", "Arun", "Prakash", "General Medicine", "General Physician", "MBBS, MD", 500, 7, DAILY, 8, 20),
@@ -62,6 +66,8 @@ HOSPITALS = [
         "name": "Demo Children's Hospital", "city": "Chennai", "lat": 13.0850, "lng": 80.2100,
         "admin": ("demo.hospital.children", "Children's Hospital", "Manager"),
         "nurses": [("Priya R", "Paediatric Nurse", 300, 30000), ("Anitha V", "Staff Nurse", 90, 25000)],
+        "others": [("receptionist", "Deepika M", "Front desk", 240, 17000), ("pharmacist", "Arjun K", "Pharmacist", 120, 25000),
+                   ("office", "Sundar L", "Billing", 200, 21000)],
         "doctors": [
             ("peds1", "Nandini", "Iyer", "Pediatrics", "Pediatrician", "MBBS, DCH, MD (Pediatrics)", 600, 10, MON_SAT, 9, 17),
             ("peds2", "Karthik", "Subramanian", "Pediatrics", "Pediatric Neonatologist", "MBBS, MD, DM (Neonatology)", 900, 15, MON_SAT, 10, 18),
@@ -183,6 +189,9 @@ class Command(BaseCommand):
                         join_date=today - timedelta(days=300 - 120 * i), monthly_salary=60000 + doc.fee * 100)
                 for name, designation, joined, salary in spec["nurses"]:
                     StaffMember.objects.create(hospital=hospital, kind="nurse", full_name=name, designation=designation,
+                                               join_date=today - timedelta(days=joined), monthly_salary=salary)
+                for kind, name, designation, joined, salary in spec.get("others", []):
+                    StaffMember.objects.create(hospital=hospital, kind=kind, full_name=name, designation=designation,
                                                join_date=today - timedelta(days=joined), monthly_salary=salary)
 
         # Patients with health details.
