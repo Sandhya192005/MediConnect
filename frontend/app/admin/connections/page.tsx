@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { EmptyState, IconTile, Panel, SkeletonRows } from "@/components/DashboardShell";
 import RoleGuard from "@/components/RoleGuard";
-import { api, errorMessage } from "@/lib/api";
+import { api, ApiError, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { fmtDate, timeAgo, type ConnectionRequest } from "@/lib/types";
 
@@ -38,7 +38,13 @@ export default function ConnectionRequestsPage() {
       await api(`/api/platform/connection-requests/${r.id}/${action}/`, { method: "POST", body: JSON.stringify({ note: notes[r.id] ?? "" }) });
       load();
     } catch (e) {
-      setError(errorMessage(e));
+      // The hospital may have been deleted meanwhile (e.g. a test hospital): say so and refresh the list.
+      if (e instanceof ApiError && e.status === 404) {
+        setError(`The request from ${r.hospital_name} no longer exists. The list has been refreshed.`);
+        load();
+      } else {
+        setError(errorMessage(e));
+      }
     } finally {
       setBusy(null);
     }

@@ -13,6 +13,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.hospitals.models import Hospital
+from apps.notifications.models import Notification
 
 User = get_user_model()
 
@@ -30,7 +31,10 @@ class Command(BaseCommand):
             hospitals = Hospital.objects.filter(name__startswith="E2E ")
             n_hospitals = hospitals.count()
             hospitals.delete()  # their staff records go too
-        self.stdout.write(f"Removed {n_users} e2e accounts and {n_hospitals} E2E hospitals.")
+            # Test hospitals asking to connect notify every platform admin, including real ones: remove
+            # those notifications too (they point to hospitals that no longer exist).
+            n_notes, _ = Notification.objects.filter(kind__startswith="connection_", message__contains="E2E ").delete()
+        self.stdout.write(f"Removed {n_users} e2e accounts, {n_hospitals} E2E hospitals and {n_notes} notifications about them.")
         try:
             from apps.search.documents import rebuild_all
 
