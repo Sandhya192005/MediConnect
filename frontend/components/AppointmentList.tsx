@@ -1,9 +1,25 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { NOTIFICATION_EVENT } from "@/lib/notifications";
-import { fmtDateTime, type Appointment } from "@/lib/types";
+import { areaOf, fmtDateTime, type Appointment } from "@/lib/types";
+
+// Leaflet needs the browser: load the map only there, and only when "Show on map" is pressed.
+const HospitalMap = dynamic(() => import("./HospitalMap"), { ssr: false, loading: () => <div className="h-[220px] animate-pulse rounded-xl bg-slate-100" /> });
+
+/**
+ * Directions to the hospital in Google Maps (owner request 2026-11-18). The patient's phone fills in
+ * where they are; MediConnect never sees it. An unverified pin could be wrong, so then we send the
+ * hospital's name and address instead and let Maps find it.
+ */
+export function directionsUrl(name: string, h: NonNullable<Appointment["hospital"]>): string {
+  const destination = h.latitude != null && h.location_verified
+    ? `${h.latitude},${h.longitude}`
+    : [name, h.address, h.city].filter(Boolean).join(", ");
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+}
 import Icon from "./Icons";
 import { Avatar } from "./PageHeader";
 import StatusBadge from "./StatusBadge";
@@ -15,6 +31,7 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
   const [when, setWhen] = useState<"upcoming" | "past">("upcoming");
   const [items, setItems] = useState<Appointment[] | null>(null);
   const [error, setError] = useState("");
+  const [mapFor, setMapFor] = useState<number | null>(null); // the appointment whose map is open
 
   const load = useCallback(() => {
     setItems(null);
@@ -93,8 +110,43 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
                     {a.cancelled_by === "hospital" && a.cancel_reason && (
                       <p className="text-sm text-slate-600">Declined by the hospital: {a.cancel_reason}</p>
                     )}
+                    {viewer === "patient" && a.hospital && a.status !== "cancelled" && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                        <span className="flex items-center gap-1 text-slate-600">
+                          <Icon name="pin" className="h-3.5 w-3.5" /> {areaOf(a.hospital)}
+                        </span>
+                        <a href={directionsUrl(a.hospital_name ?? "", a.hospital)} target="_blank" rel="noopener noreferrer"
+                           className="btn-outline px-3 py-1 text-xs" aria-label={`Get directions to ${a.hospital_name}`}>
+                          <Icon name="map" className="h-3.5 w-3.5" /> Get directions
+                        </a>
+                        {a.hospital.latitude != null && (
+                          <button onClick={() => setMapFor(mapFor === a.id ? null : a.id)} aria-expanded={mapFor === a.id}
+                                  className="btn-ghost px-3 py-1 text-xs">
+                            <Icon name="pin" className="h-3.5 w-3.5" /> {mapFor === a.id ? "Hide map" : "Show on map"}
+                          </button>
+                        )}
+                        {a.hospital.phone && (
+                          <a href={`tel:${a.hospital.phone.replace(/\s+/g, "")}`} className="btn-ghost px-3 py-1 text-xs">
+                            <Icon name="phone" className="h-3.5 w-3.5" /> Call hospital
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
+                {mapFor === a.id && a.hospital?.latitude != null && (
+                  <div className="w-full overflow-hidden rounded-xl" aria-label={`Map of ${a.hospital_name}`} role="region">
+                    <HospitalMap
+                      hospitals={[{ id: a.hospital.id, name: a.hospital_name ?? "", address: a.hospital.address, city: a.hospital.city,
+                                    latitude: a.hospital.latitude, longitude: a.hospital.longitude,
+                                    location_verified: a.hospital.location_verified, is_partner: true }]}
+                      height={220}
+                    />
+                    {!a.hospital.location_verified && (
+                      <p className="mt-1 text-xs text-slate-500">Approximate location: confirm with the hospital before you travel.</p>
+                    )}
+                  </div>
+                )}
                 {active && when === "upcoming" && (
                   <div className="flex gap-2 text-sm">
                     {viewer === "doctor" && a.status === "booked" && (

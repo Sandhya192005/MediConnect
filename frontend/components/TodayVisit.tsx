@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { NOTIFICATION_EVENT } from "@/lib/notifications";
 import { fmtTime, isoDate, type Appointment } from "@/lib/types";
+import { directionsUrl } from "./AppointmentList";
 import Icon from "./Icons";
 
 const REFRESH_MS = 30_000;
@@ -107,10 +108,19 @@ function VisitCard({ a, onChange }: { a: Appointment; onChange: () => void }) {
         </p>
         {error && <p role="alert" className="mt-1 text-sm text-red-600">{error}</p>}
       </div>
-      <button onClick={checkIn} disabled={busy} className="btn-solid px-5 py-2.5">
-        <Icon name="pin" className="h-4 w-4" />
-        {busy ? "Checking in…" : "I've arrived"}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        {/* On the way: directions to the hospital (owner request 2026-11-18). */}
+        {a.hospital && (
+          <a href={directionsUrl(a.hospital_name ?? "", a.hospital)} target="_blank" rel="noopener noreferrer"
+             className="btn-outline px-4 py-2.5" aria-label={`Get directions to ${a.hospital_name}`}>
+            <Icon name="map" className="h-4 w-4" /> Directions
+          </a>
+        )}
+        <button onClick={checkIn} disabled={busy} className="btn-solid px-5 py-2.5">
+          <Icon name="pin" className="h-4 w-4" />
+          {busy ? "Checking in…" : "I've arrived"}
+        </button>
+      </div>
     </section>
   );
 }

@@ -276,6 +276,16 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Directions to the hospital (patients)
+
+Owner request (2026-11-18): from their appointments, patients can find their way to the hospital.
+- **Each upcoming appointment** (My appointments) shows the hospital's area plus three buttons:
+  - **Get directions:** opens Google Maps in a new tab with the route. The patient's phone or browser supplies their own location; MediConnect never sees it. Verified pins use their exact coordinates; unverified ones use the hospital's name and address, since the pin could be wrong.
+  - **Show on map:** a small OpenStreetMap map inside the card ("Approximate location: confirm with the hospital before you travel" when the pin isn't verified).
+  - **Call hospital.**
+- **"Your visit today"** has a **Directions** button next to "I've arrived".
+- **API:** appointments include `hospital` (`id`, `address`, `city`, `phone`, `latitude`, `longitude`, `location_verified`).
+
 ### Reference-design features, Part 2 (login and patient)
 
 - **Login and sign-up panel:**

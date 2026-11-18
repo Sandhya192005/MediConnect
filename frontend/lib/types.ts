@@ -158,6 +158,11 @@ export type Appointment = {
   doctor_name: string;
   specialization: string;
   hospital_name: string | null;
+  /** Where to go: the hospital's address and map pin (latitude null = no pin yet). */
+  hospital: {
+    id: number; address: string; city: string; phone: string;
+    latitude: number | null; longitude: number | null; location_verified: boolean;
+  } | null;
   patient_name: string;
   patient_email: string;
   start: string;

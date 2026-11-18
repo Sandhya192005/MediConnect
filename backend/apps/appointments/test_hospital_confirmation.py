@@ -154,3 +154,15 @@ def test_only_the_hospitals_own_admins_confirm_and_unconfirmed_visits_have_no_qu
     complete_past_appointments()
     a.refresh_from_db()
     assert a.status == "booked"
+
+
+@pytest.mark.django_db
+def test_appointments_carry_the_hospitals_place_for_directions(world):
+    from django.contrib.gis.geos import Point
+
+    world["hospital"].address, world["hospital"].phone = "Lake Road, Anna Nagar", "044 1234"
+    world["hospital"].location, world["hospital"].location_verified = Point(80.21, 13.08, srid=4326), True
+    world["hospital"].save()
+    appt = book(world).json()
+    assert appt["hospital"] == {"id": world["hospital"].id, "address": "Lake Road, Anna Nagar", "city": "Chennai",
+                                "phone": "044 1234", "latitude": 13.08, "longitude": 80.21, "location_verified": True}

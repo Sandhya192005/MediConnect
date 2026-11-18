@@ -10,6 +10,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
     doctor_name = serializers.SerializerMethodField()
     specialization = serializers.CharField(source="doctor.specialization", read_only=True)
     hospital_name = serializers.CharField(source="doctor.hospital.name", read_only=True, default=None)
+    # Where to go (owner request 2026-11-18): directions and a small map on the patient's appointments.
+    hospital = serializers.SerializerMethodField()
     patient_name = serializers.SerializerMethodField()
     patient_email = serializers.EmailField(source="patient.email", read_only=True)
     # Patient queue (Step 3)
@@ -20,7 +22,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = [
-            "id", "doctor", "doctor_name", "specialization", "hospital_name",
+            "id", "doctor", "doctor_name", "specialization", "hospital_name", "hospital",
             "patient_name", "patient_email", "patient_id", "start", "end", "status", "reason",
             "cancelled_by", "cancel_reason", "awaiting_hospital", "created_at",
             "queue_status", "token", "checked_in_at", "consultation_started_at", "people_ahead",
@@ -29,6 +31,18 @@ class AppointmentSerializer(serializers.ModelSerializer):
         # The view checks slot availability itself and returns a friendly message,
         # so skip DRF's auto-generated "unique set" validator.
         validators = []
+
+    def get_hospital(self, obj):
+        """The hospital's place: id, address, city, phone and its map pin (None if it has none yet)."""
+        h = obj.doctor.hospital
+        if h is None:
+            return None
+        return {
+            "id": h.id, "address": h.address, "city": h.city, "phone": h.phone,
+            "latitude": h.location.y if h.location else None,
+            "longitude": h.location.x if h.location else None,
+            "location_verified": h.location_verified,
+        }
 
     def get_doctor_name(self, obj):
         return str(obj.doctor)

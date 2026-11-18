@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { API, e2e } from "./helpers";
+import { API, bookAsPatient, cancelPatientBookings, e2e, login } from "./helpers";
 
 const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
 const PASSWORD = "Start-pass-71!";
@@ -40,4 +40,25 @@ test("patient dashboard: Book appointment menu, report download and the nearest 
   await expect(nearest).toContainText(/0\.0 km · .*Chennai/);
   await expect(nearest).toHaveAttribute("href", `/hospitals/${e2e().partner_hospital.id}`);
   await ctx.close();
+});
+
+test("an upcoming appointment shows where the hospital is: directions and a map", async ({ page, request }) => {
+  await cancelPatientBookings(request);
+  await bookAsPatient(request, undefined, "Directions test");
+  await login(page, e2e().patient.email);
+  await page.goto("/patient/appointments");
+  const card = page.locator("li", { hasText: "Directions test" });
+  await expect(card).toContainText("Chennai");
+
+  // The E2E hospital's pin is verified, so directions go to its exact coordinates.
+  const { lat, lng } = e2e().location;
+  const directions = card.getByRole("link", { name: `Get directions to ${e2e().partner_hospital.name}` });
+  await expect(directions).toHaveAttribute("href", `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${lat},${lng}`)}`);
+  await expect(directions).toHaveAttribute("target", "_blank");
+
+  await card.getByRole("button", { name: "Show on map" }).click();
+  await expect(card.getByRole("region", { name: `Map of ${e2e().partner_hospital.name}` }).locator(".leaflet-container")).toBeVisible();
+  await card.getByRole("button", { name: "Hide map" }).click();
+  await expect(card.locator(".leaflet-container")).toHaveCount(0);
+  await cancelPatientBookings(request);
 });
