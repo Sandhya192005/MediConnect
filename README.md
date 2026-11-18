@@ -236,6 +236,19 @@ Owner decisions (2026-11-17): hospital admins open records like doctors (with th
 - **Forgot password?** (login page → `/forgot-password` → email → `/reset-password`): a one-time link that expires after 1 hour. The answer is the same for unknown emails, and requests are limited to 3 an hour per email address and 20 an hour per network address. Locally the email arrives in Mailpit.
 - **Need help? Contact support** (sidebar card → `/support`): send a message with a topic and see your messages and replies. Support's inbox gets an email (`SUPPORT_EMAIL`). The platform admin answers in Django admin → Support requests; saving a reply marks the request answered and notifies the user. Limited to 10 an hour per user.
 
+### Reference-design features, Part 2 (login and patient)
+
+- **Login and sign-up panel:**
+  - a drawn hospital illustration (`components/HospitalThumb.tsx`). It's drawn rather than a photo, because a photo would suggest a specific real hospital. It's hidden on screens under 800 px tall, so the panel never scrolls.
+  - four feature icons: Book appointments, Hospitals near you, **Access medical records**, Trusted & secure.
+  - Each tab's button says what it creates: "Create a patient / doctor / hospital account".
+  - The button still says "Log in" rather than the reference's "Sign In", to match the rest of the site.
+- **Patient menu:** "Find doctors" is now **Book appointment** (the MediConnect hospitals and their doctors, where booking starts).
+- **Patient dashboard:**
+  - **Download** buttons on Recent medical reports.
+  - The Nearby hospitals card shows, after the patient shares their location, the **nearest hospital**: a small drawn picture, name, distance ("about" when its map pin isn't verified), area and "Instant booking" for partners. The area comes from the address without house numbers or postcodes.
+  - No star ratings: MediConnect has no reviews, and made-up ratings would mislead patients.
+
 ### Platform analytics (platform admin)
 
 The platform admin (the MediConnect owner, a Django superuser) gets a dashboard about the whole platform:

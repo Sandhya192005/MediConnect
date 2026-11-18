@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 import DashboardShell, { EmptyState, IconTile, Panel, pillFor, SkeletonRows, StatCard, StatusPill } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
 import TodayVisit from "@/components/TodayVisit";
-import { api } from "@/lib/api";
+import { api, downloadFile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { fmtDate, fmtDateTime, type Appointment, type MedicalRecord, type NearbyResponse } from "@/lib/types";
+import HospitalThumb from "@/components/HospitalThumb";
+import { fmtDate, fmtDateTime, type Appointment, type MedicalRecord, type NearbyHospital, type NearbyResponse } from "@/lib/types";
 
 type PartnerHospital = {
   id: number;
@@ -167,6 +168,7 @@ export default function PatientDashboard() {
                       {r.record_type_label} · {fmtDate(r.record_date ?? r.created_at)}
                     </p>
                   </div>
+                  <DownloadButton id={r.id} title={r.title} fileName={r.original_name} />
                 </li>
               ))}
             </ul>
@@ -179,12 +181,55 @@ export default function PatientDashboard() {
 }
 
 /**
- * "Nearby hospitals": only asks for the device location when the patient clicks.
- * Declining is fine: the map lets them pick a city or area by hand.
+ * The area to show for a hospital, e.g. "T. Nagar, Chennai": the last part of its address that's a name
+ * (no digits, so never a postcode or house number; not the city itself), then the city.
+ */
+function areaOf(h: { address: string; city: string }): string {
+  const parts = (h.address || "").split(",").map((p) => p.trim())
+    .filter((p) => p && !/\d/.test(p) && p.toLowerCase() !== h.city.toLowerCase() && !/tamil nadu|india/i.test(p));
+  const area = parts.at(-1);
+  return area && area.length <= 30 ? `${area}, ${h.city}` : h.city;
+}
+
+/** Download a record from the dashboard (files need the login token, so it's a button, not a plain link). */
+function DownloadButton({ id, title, fileName }: { id: number; title: string; fileName: string }) {
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  async function download() {
+    setBusy(true);
+    setFailed(false);
+    try {
+      await downloadFile(`/api/records/${id}/file/`, fileName);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={download}
+      disabled={busy}
+      aria-label={`Download ${title}`}
+      title={failed ? "Download failed. Try again." : "Download"}
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 transition ${
+        failed ? "text-red-600 ring-red-200" : "text-teal-700 ring-slate-200 hover:bg-teal-50"
+      }`}
+    >
+      <Icon name={busy ? "clock" : "download"} className="h-4 w-4" />
+    </button>
+  );
+}
+
+/**
+ * "Nearby hospitals": only asks for the device location when the patient clicks, then shows the nearest
+ * hospital with its distance and area. Declining is fine: the map lets them pick a city or area by hand.
  */
 function NearbyCard() {
   const [state, setState] = useState<"idle" | "locating" | "done" | "denied" | "error">("idle");
   const [count, setCount] = useState(0);
+  const [nearest, setNearest] = useState<NearbyHospital | null>(null);
 
   function locate() {
     if (!("geolocation" in navigator)) return setState("denied");
@@ -195,6 +240,7 @@ function NearbyCard() {
           const { latitude: lat, longitude: lng } = pos.coords;
           const r = await api<NearbyResponse>(`/api/hospitals/nearby/?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}&radius_km=${NEARBY_KM}&limit=50`);
           setCount(r.count);
+          setNearest(r.results.find((h) => h.distance_km !== null) ?? null); // results come nearest first
           setState("done");
         } catch {
           setState("error");
@@ -222,6 +268,24 @@ function NearbyCard() {
       detail={detail}
       link={{ href: "/hospitals", label: state === "done" ? "Explore on the map" : "Open the map" }}
     >
+      {state === "done" && nearest && (
+        <Link
+          href={`/hospitals/${nearest.id}`}
+          className="mt-3 flex items-center gap-3 rounded-xl border border-slate-100 p-2.5 transition hover:border-teal-200 hover:bg-teal-50/40"
+        >
+          <HospitalThumb />
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs text-slate-500">Nearest to you</span>
+            <span className="block truncate text-sm font-[650] text-[#0f2f3a]">{nearest.name}</span>
+            <span className="block truncate text-xs text-slate-500">
+              {/* An unverified map pin gives an approximate distance, so say "about". */}
+              {nearest.location_verified ? "" : "about "}
+              {nearest.distance_km!.toFixed(1)} km · {areaOf(nearest)}
+              {nearest.is_partner && " · Instant booking"}
+            </span>
+          </span>
+        </Link>
+      )}
       {(state === "idle" || state === "locating") && (
         <button onClick={locate} disabled={state === "locating"} className="btn-outline mt-3 self-start px-3 py-1.5 text-xs">
           <Icon name="pin" className="h-4 w-4" />

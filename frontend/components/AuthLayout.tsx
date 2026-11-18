@@ -1,10 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
+import { HospitalIllustration } from "./HospitalThumb";
 import Icon from "./Icons";
 
 const POINTS = [
   { icon: "calendar", text: "Book appointments" },
   { icon: "hospital", text: "Hospitals near you" },
+  { icon: "folder", text: "Access medical records" },
   { icon: "shield", text: "Trusted & secure" },
 ];
 
@@ -34,9 +36,11 @@ export default function AuthLayout({ title, subtitle, children }: { title: strin
           <p className="mt-5 text-lg text-slate-600">
             Book appointments, find the right specialist near you, and stay connected with your healthcare team, all in one place.
           </p>
-          <ul className="mt-10 flex flex-wrap gap-8">
+          {/* Drawn, not a photo (owner's choice); hidden on short screens so the panel never needs scrolling. */}
+          <HospitalIllustration className="mt-8 w-full max-w-[460px] [@media(max-height:800px)]:hidden" />
+          <ul className="mt-8 grid grid-cols-4 gap-4">
             {POINTS.map((p) => (
-              <li key={p.text} className="flex w-28 flex-col gap-2">
+              <li key={p.text} className="flex flex-col gap-2">
                 <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-teal-600 shadow-sm">
                   <Icon name={p.icon} className="h-6 w-6" />
                 </span>

@@ -12,7 +12,8 @@ export const NAV: Record<Role, NavItem[]> = {
   patient: [
     { label: "Dashboard", icon: "grid", href: "/patient" },
     { label: "Find hospitals", icon: "hospital", href: "/hospitals" },
-    { label: "Find doctors", icon: "stethoscope", href: "/doctors" },
+    // Reference design: "Book appointment" (the MediConnect hospitals and their doctors, where booking starts).
+    { label: "Book appointment", icon: "stethoscope", href: "/doctors" },
     { label: "My appointments", icon: "calendar", href: "/patient/appointments" },
     { label: "My medical records", icon: "folder", href: "/patient/records" },
     { label: "Profile & settings", icon: "settings", href: "/settings" },
