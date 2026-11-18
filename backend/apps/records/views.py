@@ -8,6 +8,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts.models import PatientProfile
+from apps.accounts.serializers import PatientDetailsSerializer
 from apps.accounts.permissions import IsPatient, role_required
 
 from .models import MedicalRecord, RecordAccess
@@ -77,6 +78,8 @@ class PatientLookupView(APIView):
                 "patient_id": profile.patient_id,
                 "name": patient.get_full_name() or patient.email,
             },
+            # Age, gender, body details, allergies, conditions, medicines, emergency contact (read-only here).
+            "details": PatientDetailsSerializer(profile).data,
             "hospital": hospital.name if hospital else None,  # the viewer's hospital, shown on the page
             "records": MedicalRecordSerializer(records, many=True).data,
         })

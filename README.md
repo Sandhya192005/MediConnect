@@ -193,7 +193,14 @@ Owner decisions (2026-11-17): hospital admins open records like doctors (with th
 ### Reference-design features, Part 1 (shared by all three users)
 
 - **Avatar menu** (top bar): Profile & settings, Contact support, Sign out.
-- **Profile & settings** (`/settings`): name and phone; for patients, date of birth (age is worked out) and gender, which doctors will see; **change password** (current password required, weak passwords refused).
+- **Profile & settings** (`/settings`): name and phone; **change password** (current password required, weak passwords refused).
+- **Health details** (patients, on Profile & settings; owner request 2026-11-18). All optional:
+  - date of birth (age is worked out), gender, height, weight (with its "updated on" date), BMI (worked out), blood group;
+  - allergies, long-term conditions (tick list + other), current medicines, emergency contact.
+  - "No known allergies", "None of these" and "Not taking any" are answers of their own, so a doctor can tell "none" from "not filled in".
+  - A "Profile X% complete" bar counts the 9 questions.
+  - Range checks: height 30–250 cm, weight 1–300 kg, phone 7–15 digits.
+  - Doctors and admins see them read-only when they open the patient's records by patient ID, with allergies first in red.
 - **Forgot password?** (login page → `/forgot-password` → email → `/reset-password`): a one-time link that expires after 1 hour. The answer is the same for unknown emails, and requests are limited to 3 an hour per email address and 20 an hour per network address. Locally the email arrives in Mailpit.
 - **Need help? Contact support** (sidebar card → `/support`): send a message with a topic and see your messages and replies. Support's inbox gets an email (`SUPPORT_EMAIL`). The platform admin answers in Django admin → Support requests; saving a reply marks the request answered and notifies the user. Limited to 10 an hour per user.
 
@@ -217,7 +224,7 @@ Every login is one row in `users`; its `role` says which profile table holds the
 | Table | One row per | Holds |
 |---|---|---|
 | `users` | login (patient, doctor or admin) | email, hashed password, name, phone, `role`, `is_superuser` |
-| `patient_profile` | patient | the general patient ID (e.g. `P319973`), date of birth, gender |
+| `patient_profile` | patient | the general patient ID (e.g. `P319973`), date of birth, gender, health details (height, weight, blood group, allergies, conditions, medicines, emergency contact) |
 | `doctor_profile` | doctor | hospital, department, specialization, qualification, experience, fee |
 | `admin_profile` | hospital admin | the one hospital they manage |
 | `staff_member` | doctor or nurse on a hospital's staff | join/leave date, monthly salary, department (nurses have no login) |

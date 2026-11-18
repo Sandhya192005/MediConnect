@@ -50,6 +50,45 @@ def test_patients_save_date_of_birth_and_gender_and_see_their_age(patient):
 
 
 @pytest.mark.django_db
+def test_patients_save_health_details_and_see_bmi_and_completeness(patient):
+    c = client_for(patient)
+    assert c.get("/api/auth/me/patient/").json()["completeness"] == 0
+    r = c.patch("/api/auth/me/patient/", {
+        "height_cm": 160, "weight_kg": 64.0, "blood_group": "O+",
+        "allergies": "Penicillin", "conditions": ["high_bp", "diabetes", "diabetes"],
+        "no_current_medicines": True,
+        "emergency_contact_name": "Ravi", "emergency_contact_relation": "Brother",
+        "emergency_contact_phone": "+91 98765 43210",
+    }, format="json")
+    assert r.status_code == 200, r.json()
+    d = r.json()
+    assert d["bmi"] == 25.0  # 64 / 1.6²
+    assert d["conditions"] == ["diabetes", "high_bp"]  # duplicates removed
+    assert d["weight_updated_on"] == timezone.localdate().isoformat() and d["health_updated_at"]
+    assert d["completeness"] == 78  # 7 of 9: no date of birth or gender yet
+
+    # Ticking "no known allergies" clears the list, so the answers can't contradict each other.
+    d = c.patch("/api/auth/me/patient/", {"no_known_allergies": True}, format="json").json()
+    assert (d["allergies"], d["no_known_allergies"]) == ("", True)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("body", [
+    {"height_cm": 20}, {"height_cm": 300}, {"weight_kg": 0.5}, {"weight_kg": 400},
+    {"blood_group": "C+"}, {"conditions": ["flu"]}, {"emergency_contact_phone": "call me"},
+    {"emergency_contact_phone": "123"},
+])
+def test_impossible_health_details_are_rejected(patient, body):
+    assert client_for(patient).patch("/api/auth/me/patient/", body, format="json").status_code == 400
+
+
+@pytest.mark.django_db
+def test_doctors_cannot_edit_patient_details():
+    doctor = User.objects.create_user("doc@example.com", "pw", role="doctor")
+    assert client_for(doctor).patch("/api/auth/me/patient/", {"height_cm": 170}, format="json").status_code == 403
+
+
+@pytest.mark.django_db
 def test_only_patients_have_patient_details():
     doc = User.objects.create_user("doc@example.com", "pw", role="doctor")
     assert client_for(doc).get("/api/auth/me/patient/").status_code == 403

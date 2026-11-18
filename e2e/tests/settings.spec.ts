@@ -58,6 +58,44 @@ test("profile, health details and change password", async ({ page, request }) =>
   await expect(page).toHaveURL(/\/patient$/);
 });
 
+test("a patient fills in health details and a doctor sees them, allergies first", async ({ page, browser, request }) => {
+  const email = await newPatient(request);
+  await loginByForm(page, email, START);
+  await expect(page).toHaveURL(/\/patient$/);
+  await page.goto("/settings");
+
+  const health = page.getByRole("region", { name: "Health details" });
+  await expect(health.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
+  await health.getByLabel("Date of birth").fill("1996-05-20");
+  await health.getByLabel("Height (cm)").fill("160");
+  await health.getByLabel("Weight (kg)").fill("64");
+  await expect(health).toContainText("25 · overweight"); // BMI shows while typing
+  await health.getByLabel("Blood group").selectOption("O+");
+  await health.getByLabel(/allergic to/).fill("Penicillin");
+  await health.getByLabel("Diabetes").check();
+  await health.getByLabel("I'm not taking any medicines").check();
+  await health.getByLabel("Name").fill("Ravi");
+  await health.getByLabel("Relation").fill("Brother");
+  await health.getByLabel("Phone").fill("98765 43210");
+  await health.getByRole("button", { name: "Save health details" }).click();
+  await expect(health.getByRole("status")).toHaveText("Saved.");
+  await expect(health.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "89"); // 8 of 9 answered (no gender)
+  await expect(health).toContainText("Age 30");
+
+  const patientId = (await health.locator(".font-mono").first().textContent())!.trim();
+  const doctorContext = await browser.newContext();
+  const doctorPage = await doctorContext.newPage();
+  await login(doctorPage, e2e().doctor.email);
+  await doctorPage.goto(`/doctor/records?id=${patientId}`);
+  await expect(doctorPage.getByRole("region", { name: "Patient" })).toContainText("30 years");
+  const summary = doctorPage.getByRole("region", { name: "Health details" });
+  await expect(summary.getByText("Allergies: Penicillin")).toBeVisible();
+  await expect(summary).toContainText("O+");
+  await expect(summary).toContainText("Diabetes");
+  await expect(summary).toContainText("Ravi (Brother) 98765 43210");
+  await doctorContext.close();
+});
+
 test("forgot password: the emailed link sets a new password", async ({ page, request }) => {
   const email = await newPatient(request);
   await page.goto("/login");

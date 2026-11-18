@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, ApiError, errorMessage } from "@/lib/api";
-import type { PatientLookup } from "@/lib/types";
+import { bloodGroupLabel, bmiBand, CONDITIONS, fmtDate, timeAgo, type PatientDetails, type PatientLookup } from "@/lib/types";
 import { EmptyState, IconTile, Panel, SkeletonRows } from "./DashboardShell";
 import Icon from "./Icons";
 import RecordList from "./RecordList";
@@ -88,17 +88,70 @@ export default function PatientRecordsLookup({ basePath }: { basePath: string })
               <p className="text-lg font-bold text-[#0f2f3a]">{result.patient.name}</p>
               <p className="text-sm text-slate-500">
                 Patient ID <span className="font-mono">{result.patient.patient_id}</span>
+                {result.details.age !== null && ` · ${result.details.age} years`}
+                {result.details.gender && ` · ${result.details.gender[0].toUpperCase()}${result.details.gender.slice(1)}`}
               </p>
             </div>
             <p className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
               <Icon name="eye" className="h-4 w-4" /> This visit is shown in the patient&apos;s access log.
             </p>
           </section>
+          <HealthSummary d={result.details} />
           <Panel title={`Records (${result.records.length})`}>
             <RecordList records={result.records} empty={{ title: "This patient hasn't uploaded any records yet" }} />
           </Panel>
         </>
       )}
     </div>
+  );
+}
+
+/** "Not given" when the patient left a question empty: different from "None", which is an answer. */
+const NOT_GIVEN = <span className="text-slate-400">Not given</span>;
+
+/**
+ * The patient's health details for the doctor or admin, read-only. Allergies come first and in red,
+ * because they're what can hurt the patient if missed.
+ */
+function HealthSummary({ d }: { d: PatientDetails }) {
+  const conditions = [...d.conditions.map((c) => CONDITIONS[c] ?? c), ...(d.conditions_other ? [d.conditions_other] : [])];
+  const hasAllergies = d.allergies.trim() !== "";
+  const rows: [string, React.ReactNode][] = [
+    ["Height", d.height_cm ? `${d.height_cm} cm` : NOT_GIVEN],
+    ["Weight", d.weight_kg ? <>{d.weight_kg} kg{d.weight_updated_on && <span className="text-slate-400"> · {fmtDate(d.weight_updated_on)}</span>}</> : NOT_GIVEN],
+    ["BMI", d.bmi ? `${d.bmi} · ${bmiBand(d.bmi)}` : NOT_GIVEN],
+    ["Blood group", d.blood_group ? bloodGroupLabel(d.blood_group) : NOT_GIVEN],
+    ["Long-term conditions", conditions.length ? conditions.join(", ") : d.no_conditions ? "None" : NOT_GIVEN],
+    ["Current medicines", d.current_medicines ? <span className="whitespace-pre-line">{d.current_medicines}</span> : d.no_current_medicines ? "None" : NOT_GIVEN],
+    ["Emergency contact", d.emergency_contact_name || d.emergency_contact_phone
+      ? [d.emergency_contact_name, d.emergency_contact_relation && `(${d.emergency_contact_relation})`, d.emergency_contact_phone].filter(Boolean).join(" ")
+      : NOT_GIVEN],
+  ];
+
+  return (
+    <Panel title="Health details">
+      <p className="-mt-2 mb-4 text-xs text-slate-500">
+        Filled in by the patient{d.health_updated_at ? `, last updated ${timeAgo(d.health_updated_at)}` : ""}. Confirm important details with them.
+      </p>
+      <div
+        className={`mb-4 flex items-start gap-3 rounded-xl px-4 py-3 text-sm ${
+          hasAllergies ? "border border-red-200 bg-red-50 text-red-800" : "bg-slate-50 text-slate-700"
+        }`}
+      >
+        <Icon name="siren" className="mt-0.5 h-4 w-4 shrink-0" />
+        <p>
+          <span className="font-[650]">Allergies: </span>
+          {hasAllergies ? <span className="whitespace-pre-line">{d.allergies}</span> : d.no_known_allergies ? "No known allergies" : "Not given"}
+        </p>
+      </div>
+      <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+        {rows.map(([k, v]) => (
+          <div key={k}>
+            <dt className="text-xs uppercase tracking-wider text-slate-400">{k}</dt>
+            <dd className="mt-0.5 text-[#0f2f3a]">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </Panel>
   );
 }

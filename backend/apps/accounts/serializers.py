@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
@@ -54,15 +56,72 @@ class RegisterSerializer(serializers.ModelSerializer):
         return User.objects.create_user(**validated_data)
 
 
+HEALTH_FIELDS = [
+    "height_cm", "weight_kg", "blood_group", "allergies", "no_known_allergies", "conditions", "conditions_other",
+    "no_conditions", "current_medicines", "no_current_medicines", "emergency_contact_name",
+    "emergency_contact_relation", "emergency_contact_phone",
+]
+
+
 class PatientDetailsSerializer(serializers.ModelSerializer):
-    """A patient's own details on Profile & settings."""
+    """
+    A patient's own details on Profile & settings: date of birth, gender and health details.
+    Doctors and admins get the same data (read-only) when they open the patient's records.
+    """
 
     age = serializers.IntegerField(read_only=True)
+    bmi = serializers.FloatField(read_only=True)
+    height_cm = serializers.IntegerField(required=False, allow_null=True, min_value=30, max_value=250)
+    weight_kg = serializers.DecimalField(max_digits=4, decimal_places=1, required=False, allow_null=True,
+                                         min_value=Decimal("1"), max_value=Decimal("300"), coerce_to_string=False)
+    conditions = serializers.ListField(child=serializers.ChoiceField(choices=list(PatientProfile.CONDITIONS)),
+                                       required=False, max_length=len(PatientProfile.CONDITIONS))
+    completeness = serializers.SerializerMethodField()
 
     class Meta:
         model = PatientProfile
-        fields = ["patient_id", "date_of_birth", "gender", "age"]
-        read_only_fields = ["patient_id"]
+        fields = ["patient_id", "date_of_birth", "gender", "age", "bmi", *HEALTH_FIELDS,
+                  "weight_updated_on", "health_updated_at", "completeness"]
+        read_only_fields = ["patient_id", "weight_updated_on", "health_updated_at"]
+
+    def get_completeness(self, p: PatientProfile) -> int:
+        """Percent of the questions answered. "None" counts as an answer."""
+        answered = [
+            p.date_of_birth, p.gender, p.height_cm, p.weight_kg, p.blood_group,
+            p.allergies or p.no_known_allergies,
+            p.conditions or p.conditions_other or p.no_conditions,
+            p.current_medicines or p.no_current_medicines,
+            p.emergency_contact_name and p.emergency_contact_phone,
+        ]
+        return round(100 * sum(1 for a in answered if a) / len(answered))
+
+    def validate_emergency_contact_phone(self, value):
+        value = value.strip()
+        digits = sum(c.isdigit() for c in value)
+        if value and (not all(c.isdigit() or c in "+- ()" for c in value) or not 7 <= digits <= 15):
+            raise serializers.ValidationError("Enter a phone number of 7 to 15 digits.")
+        return value
+
+    def validate(self, attrs):
+        # Ticking "none" clears the list, so the two answers can't contradict each other.
+        if attrs.get("no_known_allergies"):
+            attrs["allergies"] = ""
+        if attrs.get("no_conditions"):
+            attrs["conditions"], attrs["conditions_other"] = [], ""
+        if attrs.get("no_current_medicines"):
+            attrs["current_medicines"] = ""
+        if "conditions" in attrs:
+            attrs["conditions"] = sorted(set(attrs["conditions"]))
+        return attrs
+
+    def update(self, instance, validated_data):
+        from django.utils import timezone
+
+        if "weight_kg" in validated_data and validated_data["weight_kg"] != instance.weight_kg:
+            instance.weight_updated_on = timezone.localdate() if validated_data["weight_kg"] is not None else None
+        if any(f in validated_data and validated_data[f] != getattr(instance, f) for f in HEALTH_FIELDS):
+            instance.health_updated_at = timezone.now()
+        return super().update(instance, validated_data)
 
     def validate_date_of_birth(self, value):
         from django.utils import timezone

@@ -280,3 +280,16 @@ def test_patient_id_lookups_are_rate_limited(world, monkeypatch):
     doc = client_for(world["stranger"])
     codes = [doc.get(f"/api/records/patients/P{n}/").status_code for n in range(100000, 100003)]
     assert codes == [404, 404, 429]
+
+
+@pytest.mark.django_db
+def test_doctors_see_the_patients_health_details_with_the_records(world):
+    profile = PatientProfile.objects.get(user=world["patient"])
+    profile.height_cm, profile.weight_kg, profile.blood_group = 170, 72, "B+"
+    profile.allergies = "Sulfa drugs"
+    profile.save()
+
+    details = client_for(world["treating"]).get(f"/api/records/patients/{world['code']}/").json()["details"]
+    assert (details["blood_group"], details["bmi"], details["allergies"]) == ("B+", 24.9, "Sulfa drugs")
+    # Read-only for doctors: the only way to change them is the patient's own settings.
+    assert client_for(world["treating"]).patch("/api/auth/me/patient/", {"allergies": ""}, format="json").status_code == 403

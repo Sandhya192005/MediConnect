@@ -47,7 +47,7 @@ class MeView(generics.RetrieveUpdateAPIView):
 
 
 class PatientDetailsView(generics.RetrieveUpdateAPIView):
-    """GET/PATCH /api/auth/me/patient/ — a patient's date of birth and gender (and their patient ID)."""
+    """GET/PATCH /api/auth/me/patient/ — a patient's date of birth, gender and health details (and patient ID)."""
 
     serializer_class = PatientDetailsSerializer
     permission_classes = [IsPatient]

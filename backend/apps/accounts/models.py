@@ -70,10 +70,68 @@ class PatientProfile(models.Model):
     # Optional details the patient fills in under Profile & settings (shown to doctors with their records).
     date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(max_length=10, choices=Gender.choices, blank=True, help_text="Empty = prefer not to say")
+
+    # ---- Health details (owner request 2026-11-18). All optional; the patient fills them in. ----
+    class BloodGroup(models.TextChoices):
+        A_POS = "A+", "A+"
+        A_NEG = "A-", "A−"
+        B_POS = "B+", "B+"
+        B_NEG = "B-", "B−"
+        AB_POS = "AB+", "AB+"
+        AB_NEG = "AB-", "AB−"
+        O_POS = "O+", "O+"
+        O_NEG = "O-", "O−"
+        UNKNOWN = "unknown", "Don't know"
+
+    CONDITIONS = {  # long-term conditions a patient can tick; anything else goes in conditions_other
+        "diabetes": "Diabetes",
+        "high_bp": "High blood pressure",
+        "asthma": "Asthma",
+        "thyroid": "Thyroid problem",
+        "heart": "Heart disease",
+        "kidney": "Kidney disease",
+    }
+
+    height_cm = models.PositiveSmallIntegerField(null=True, blank=True)
+    weight_kg = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    weight_updated_on = models.DateField(null=True, blank=True)  # weight changes: doctors see how recent it is
+    blood_group = models.CharField(max_length=8, choices=BloodGroup.choices, blank=True)
+    # For allergies, conditions and medicines, "none" is an answer of its own: a doctor must be able to tell
+    # "has no allergies" apart from "didn't fill it in".
+    allergies = models.TextField(blank=True, max_length=1000)
+    no_known_allergies = models.BooleanField(default=False)
+    conditions = models.JSONField(default=list, blank=True)  # keys of CONDITIONS
+    conditions_other = models.CharField(max_length=300, blank=True)
+    no_conditions = models.BooleanField(default=False)
+    current_medicines = models.TextField(blank=True, max_length=1000)
+    no_current_medicines = models.BooleanField(default=False)
+    emergency_contact_name = models.CharField(max_length=120, blank=True)
+    emergency_contact_relation = models.CharField(max_length=60, blank=True)
+    emergency_contact_phone = models.CharField(max_length=20, blank=True)
+    health_updated_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "patient_profile"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(height_cm__isnull=True) | models.Q(height_cm__gte=30, height_cm__lte=250),
+                name="patient_height_in_range",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(weight_kg__isnull=True) | models.Q(weight_kg__gte=1, weight_kg__lte=300),
+                name="patient_weight_in_range",
+            ),
+        ]
+
+    @property
+    def bmi(self) -> float | None:
+        """Body mass index = weight (kg) / height (m)², from the latest height and weight."""
+        if not self.height_cm or not self.weight_kg:
+            return None
+        metres = self.height_cm / 100
+        return round(float(self.weight_kg) / (metres * metres), 1)
 
     @property
     def age(self) -> int | None:

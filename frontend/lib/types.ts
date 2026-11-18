@@ -222,8 +222,58 @@ export type RecordAccess = {
   created_at: string;
 };
 
+/** A patient's details and health details: their own (Profile & settings) or, read-only, for doctors and admins. */
+export type PatientDetails = {
+  patient_id: string;
+  date_of_birth: string | null;
+  gender: "" | "female" | "male" | "other";
+  age: number | null;
+  height_cm: number | null;
+  weight_kg: number | null;
+  weight_updated_on: string | null;
+  bmi: number | null;
+  blood_group: "" | "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-" | "unknown";
+  allergies: string;
+  no_known_allergies: boolean;
+  conditions: ConditionKey[];
+  conditions_other: string;
+  no_conditions: boolean;
+  current_medicines: string;
+  no_current_medicines: boolean;
+  emergency_contact_name: string;
+  emergency_contact_relation: string;
+  emergency_contact_phone: string;
+  health_updated_at: string | null;
+  /** Percent of the questions answered ("none" counts as an answer). */
+  completeness: number;
+};
+
+/** Same keys as PatientProfile.CONDITIONS on the server. */
+export const CONDITIONS = {
+  diabetes: "Diabetes",
+  high_bp: "High blood pressure",
+  asthma: "Asthma",
+  thyroid: "Thyroid problem",
+  heart: "Heart disease",
+  kidney: "Kidney disease",
+} as const;
+export type ConditionKey = keyof typeof CONDITIONS;
+
+export const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
+/** "A-" is stored with a plain hyphen; shown with a real minus sign. */
+export const bloodGroupLabel = (g: PatientDetails["blood_group"]) => (g === "unknown" ? "Don't know" : g.replace("-", "−"));
+
+/** BMI bands (WHO adult cut-offs). */
+export function bmiBand(bmi: number): string {
+  if (bmi < 18.5) return "underweight";
+  if (bmi < 25) return "healthy range";
+  if (bmi < 30) return "overweight";
+  return "obese range";
+}
+
 export type PatientLookup = {
   patient: { patient_id: string; name: string };
+  details: PatientDetails;
   /** The viewer's own hospital (null if they have none). */
   hospital: string | null;
   records: MedicalRecord[];

@@ -1,31 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Panel } from "@/components/DashboardShell";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { isoDate } from "@/lib/types";
-
-type PatientDetails = { patient_id: string; date_of_birth: string | null; gender: "" | "female" | "male" | "other"; age: number | null };
+import HealthDetailsForm from "@/components/HealthDetailsForm";
 
 const label = "block text-sm font-medium text-slate-700";
 
-/** Profile & settings for every role: name and phone, a patient's details, and change password. */
+/** Profile & settings for every role: name and phone, change password, and a patient's health details. */
 export default function SettingsPage() {
   const { user } = useAuth();
   return (
     <RoleGuard>
       <div className="mb-6">
         <h1 className="page-title">Profile &amp; settings</h1>
-        <p className="page-subtitle text-sm">Your details and password.</p>
+        <p className="page-subtitle text-sm">
+          {user?.role === "patient" ? "Your details, health details and password." : "Your details and password."}
+        </p>
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-6">
+      <div className="space-y-6">
+        <div className="grid gap-6 lg:grid-cols-2">
           <ProfileForm />
-          {user?.role === "patient" && <PatientDetailsForm />}
+          <PasswordForm />
         </div>
-        <PasswordForm />
+        {/* Full width: it's the longest form. */}
+        {user?.role === "patient" && <HealthDetailsForm />}
       </div>
     </RoleGuard>
   );
@@ -72,65 +73,6 @@ function ProfileForm() {
         <Status ok={ok} error={error} />
         <button className="btn-solid rounded-xl px-5 py-2.5" disabled={busy}>{busy ? "Saving…" : "Save profile"}</button>
       </form>
-    </Panel>
-  );
-}
-
-function PatientDetailsForm() {
-  const [d, setD] = useState<PatientDetails | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [ok, setOk] = useState("");
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    api<PatientDetails>("/api/auth/me/patient/").then(setD).catch((e) => setError(errorMessage(e)));
-  }, []);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!d) return;
-    setBusy(true);
-    setOk("");
-    setError("");
-    try {
-      setD(await api<PatientDetails>("/api/auth/me/patient/", {
-        method: "PATCH",
-        body: JSON.stringify({ date_of_birth: d.date_of_birth || null, gender: d.gender }),
-      }));
-      setOk("Saved.");
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Panel title="Health details">
-      <p className="-mt-2 mb-4 text-xs text-slate-500">Doctors see these with your records. Both are optional.</p>
-      {d && (
-        <form onSubmit={submit} className="space-y-3">
-          <p className="text-sm text-slate-600">Patient ID <span className="font-mono font-[650] text-[#0f2f3a]">{d.patient_id}</span>{d.age !== null && ` · Age ${d.age}`}</p>
-          <div className="grid grid-cols-2 gap-3">
-            <label className={label}>
-              Date of birth
-              <input className="input mt-1" type="date" max={isoDate(new Date())} value={d.date_of_birth ?? ""} onChange={(e) => setD({ ...d, date_of_birth: e.target.value || null })} />
-            </label>
-            <label className={label}>
-              Gender
-              <select className="input mt-1" value={d.gender} onChange={(e) => setD({ ...d, gender: e.target.value as PatientDetails["gender"] })}>
-                <option value="">Prefer not to say</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="other">Other</option>
-              </select>
-            </label>
-          </div>
-          <Status ok={ok} error={error} />
-          <button className="btn-solid rounded-xl px-5 py-2.5" disabled={busy}>{busy ? "Saving…" : "Save health details"}</button>
-        </form>
-      )}
-      {!d && <Status ok="" error={error} />}
     </Panel>
   );
 }
