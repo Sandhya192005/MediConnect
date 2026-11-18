@@ -8,11 +8,13 @@ Hospital appointment booking app — Next.js frontend, Django REST backend, Post
 
 ```bash
 cp .env.example .env          # then set DJANGO_SECRET_KEY
-docker compose up -d --build
+docker compose up -d --build                                   # everything except the frontend
 docker compose exec backend python manage.py seed              # sample hospitals + doctors
 docker compose exec backend python manage.py createsuperuser   # admin login
+cd frontend; npm install; npm run dev                          # the frontend, on Windows (port 3000)
 ```
 
+- The frontend runs on Windows with `npm run dev`, not in Docker. Its Docker service has a compose **profile** (`frontend`), so `docker compose up` and Docker Desktop's ▶ Start don't start it, and it can't take port 3000 by accident. To run it in Docker instead (and not `npm run dev` at the same time): `docker compose --profile frontend up -d frontend`.
 - App: http://localhost:3000
 - API: http://localhost:8000/api/
 - Django admin: http://localhost:8000/admin/

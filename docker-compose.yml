@@ -118,6 +118,10 @@ services:
       - "1025:1025"
 
   frontend:
+    # Optional (owner decision 2026-11-18): the owner runs the frontend on Windows with `npm run dev`.
+    # With a profile, `docker compose up` and Docker Desktop's Start button no longer start this container,
+    # so it can't take port 3000. Start it only on purpose: docker compose --profile frontend up -d frontend
+    profiles: ["frontend"]
     build: ./frontend
     command: npm run dev
     environment:
