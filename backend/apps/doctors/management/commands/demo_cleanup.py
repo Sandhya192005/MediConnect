@@ -4,7 +4,7 @@ Removes everything demo_setup created:
     docker compose exec backend python manage.py demo_cleanup
 
 Deletes only demo.*@mediconnect.dev accounts (with everything they created: appointments, records,
-notifications...) and the "MediConnect Demo Hospital" (with its staff records), then rebuilds the search
+notifications...) and the demo hospitals (with their staff records), then rebuilds the search
 index and deletes backend/.demo-logins.json. Refuses to run unless DEBUG is on.
 """
 
@@ -15,13 +15,13 @@ from django.db import transaction
 
 from apps.hospitals.models import Hospital
 
-from .demo_setup import DEMO_DOMAIN, DEMO_PREFIX, HOSPITAL_NAME, LOGINS_FILE
+from .demo_setup import DEMO_DOMAIN, DEMO_PREFIX, HOSPITAL_NAMES, LOGINS_FILE
 
 User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Remove the demo accounts and the demo hospital created by demo_setup"
+    help = "Remove the demo accounts and demo hospitals created by demo_setup"
 
     def handle(self, *args, **options):
         if not settings.DEBUG:
@@ -30,9 +30,11 @@ class Command(BaseCommand):
             users = User.objects.filter(email__startswith=DEMO_PREFIX, email__endswith=DEMO_DOMAIN)
             n_users = users.count()
             users.delete()
-            n_hospitals, _ = Hospital.objects.filter(name=HOSPITAL_NAME).delete()
+            hospitals = Hospital.objects.filter(name__in=HOSPITAL_NAMES)
+            n_hospitals = hospitals.count()
+            hospitals.delete()  # their staff records and admin links go too
         LOGINS_FILE.unlink(missing_ok=True)
-        self.stdout.write(f"Removed {n_users} demo accounts and the demo hospital ({'yes' if n_hospitals else 'not found'}).")
+        self.stdout.write(f"Removed {n_users} demo accounts and {n_hospitals} demo hospitals.")
         try:
             from apps.search.documents import rebuild_all
 

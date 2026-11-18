@@ -125,16 +125,16 @@ docker compose exec backend python manage.py demo_setup      # run it on the mor
 docker compose exec backend python manage.py demo_cleanup    # afterwards
 ```
 
-- **Made-up hospital:** "MediConnect Demo Hospital", Chennai (connected). It has no real address and an unverified map pin, because it doesn't exist. A real hospital's name is never used for demo data.
-- **Doctors:** two, Cardiology and General Medicine, working 08:00–20:00 every day, so a live booking always works.
-- **Hospital login:** a hospital admin with staff records (the 2 doctors and 3 nurses, with salaries).
+- **Five made-up hospitals, all connected:** "MediConnect Demo Hospital", "Demo Children's Hospital", "Demo Bone & Joint Clinic" and "Demo Women's Care Hospital" in Chennai, plus "Demo Multispeciality Hospital" in Coimbatore. They have no real address and an unverified map pin, because they don't exist. A real hospital's name is never used for demo data.
+- **11 doctors** across Cardiology, General Medicine, Pediatrics, Orthopedics, Neurology, Gynecology, Dermatology and ENT. The main demo hospital's two doctors work 08:00–20:00 every day, so a live booking always works; the others work Monday–Saturday.
+- **Hospital logins:** two of the hospitals (the main one and the Children's) have one, with staff records (doctors and nurses, with salaries). So the platform dashboard shows 5 connected hospitals but 2 hospital accounts.
 - **Patients:** three, with health details: one with an allergy, one who answered "No" to everything, one with conditions and medicines.
 - **Appointments:**
-  - 8 completed visits over the past four weeks;
-  - 5 upcoming bookings;
+  - 15 completed visits over the past four weeks;
+  - 8 upcoming bookings, only on each doctor's working days;
   - today's queue: one patient checked in with token 1, and one still to arrive. This only works between 08:00 and 20:00, which is why the command is run on the review day.
 - **Logins:** written to `backend/.demo-logins.json` (gitignored). All demo accounts share one password: a new random one each run, or your own with `--password`. Accounts are `demo.*@mediconnect.dev`.
-- **Platform dashboard:** while the demo exists, its counts include the demo accounts and the demo hospital.
+- **Platform dashboard:** while the demo exists, its counts include the demo accounts and demo hospitals.
 
 | Test | What it proves |
 |---|---|
