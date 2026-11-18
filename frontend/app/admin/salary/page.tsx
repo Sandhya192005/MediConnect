@@ -36,7 +36,7 @@ export default function AdminSalaryPage() {
     <RoleGuard role="admin">
       <div className="mb-6">
         <h1 className="page-title">Staff &amp; salary</h1>
-        <p className="page-subtitle text-sm">Monthly payroll of the doctors, nurses and other staff working at your hospital now. Edit salaries on the Doctors, Nurses and Other staff pages.</p>
+        <p className="page-subtitle text-sm">Monthly payroll of the doctors, nurses and other staff working at your hospital now. Edit salaries under Doctor, Nurse and Staff management.</p>
       </div>
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
 

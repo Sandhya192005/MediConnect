@@ -12,7 +12,7 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   await expect(menu.getByRole("link", { name: "Hospital approvals" })).toHaveCount(0);
 
   // Doctors: link the doctor's MediConnect account; the name comes from the account.
-  await menu.getByRole("link", { name: "Doctors" }).click();
+  await menu.getByRole("link", { name: "Doctor management" }).click();
   await page.getByRole("button", { name: "Add doctor" }).click();
   const form = page.getByRole("region", { name: "Add doctor" });
   await form.getByLabel("MediConnect account").selectOption({ label: `Eshwar Testdoctor (${e2e().doctor.email})` });
@@ -26,7 +26,7 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   await expect(doctors.getByText("₹1,50,000")).toBeVisible();
 
   // Nurses: staff records without a login.
-  await menu.getByRole("link", { name: "Nurses" }).click();
+  await menu.getByRole("link", { name: "Nurse management" }).click();
   await page.getByRole("button", { name: "Add nurse" }).click();
   const nurseForm = page.getByRole("region", { name: "Add nurse" });
   await nurseForm.getByLabel("Full name").fill("Meena S");
@@ -35,7 +35,7 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   await expect(page.getByRole("region", { name: /^Nurses/ }).getByText("Meena S")).toBeVisible();
 
   // Other staff: a pharmacist, and "Other" needs a job title.
-  await menu.getByRole("link", { name: "Other staff" }).click();
+  await menu.getByRole("link", { name: "Staff management" }).click();
   await page.getByRole("button", { name: "Add staff member" }).click();
   const staffForm = page.getByRole("region", { name: "Add staff member" });
   await staffForm.getByLabel("Role").selectOption("pharmacist");
@@ -59,7 +59,7 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   await expect(page.getByRole("region", { name: "Staff summary" }).getByRole("img", { name: /Doctors and nurses on staff/ })).toBeVisible();
 
   // Patients: the booked patient is listed; their records open (and the view is logged for them).
-  await menu.getByRole("link", { name: "Patients" }).click();
+  await menu.getByRole("link", { name: "Patient management" }).click();
   await page.getByRole("link", { name: "Records of Esha Patient" }).click();
   await expect(page).toHaveURL(new RegExp(`/admin/patients/records\\?id=${e2e().patient.patient_id}$`));
   await expect(page.getByRole("region", { name: "Patient" }).getByText("Esha Patient")).toBeVisible();

@@ -10,10 +10,11 @@ import RoleGuard from "./RoleGuard";
 /** The three staff pages: Doctors, Nurses and Other staff (every other kind, e.g. pharmacists). */
 export type StaffPage = "doctor" | "nurse" | "other_staff";
 
-const WORDS: Record<StaffPage, { one: string; many: string; icon: string; designation: string }> = {
-  doctor: { one: "doctor", many: "Doctors", icon: "stethoscope", designation: "e.g. Senior Consultant" },
-  nurse: { one: "nurse", many: "Nurses", icon: "nurse", designation: "e.g. Staff Nurse" },
-  other_staff: { one: "staff member", many: "Other staff", icon: "user", designation: "e.g. Senior Pharmacist" },
+// page = the heading, matching the sidebar (owner request 2026-11-18); many = the list's title.
+const WORDS: Record<StaffPage, { page: string; one: string; many: string; icon: string; designation: string }> = {
+  doctor: { page: "Doctor management", one: "doctor", many: "Doctors", icon: "stethoscope", designation: "e.g. Senior Consultant" },
+  nurse: { page: "Nurse management", one: "nurse", many: "Nurses", icon: "nurse", designation: "e.g. Staff Nurse" },
+  other_staff: { page: "Staff management", one: "staff member", many: "Other staff", icon: "user", designation: "e.g. Senior Pharmacist" },
 };
 const ROLES = Object.entries(OTHER_STAFF_KINDS) as [OtherStaffKind, string][];
 
@@ -53,7 +54,7 @@ export default function StaffManager({ kind }: { kind: StaffPage }) {
     <RoleGuard role="admin">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="page-title">{w.many}</h1>
+          <h1 className="page-title">{w.page}</h1>
           <p className="page-subtitle text-sm">
             {kind === "other_staff"
               ? "Lab technicians, pharmacists, receptionists, office, housekeeping, security and others"
