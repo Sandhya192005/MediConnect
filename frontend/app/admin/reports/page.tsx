@@ -108,6 +108,13 @@ function Reports({ r, months }: { r: PlatformReports; months: number }) {
             <BarChart ariaLabel={`Hospitals connected each month, ${period}`} labels={r.months}
                       series={{ label: "New hospitals", values: g.new_hospitals }} />
           </Panel>
+          <Panel title="Connected vs hospital accounts" className="lg:col-span-2">
+            <p className="-mt-2 mb-3 text-xs text-slate-500">
+              Connected = patients can book there. Hospital account = the hospital also runs its staff and patient records on MediConnect.
+            </p>
+            <LineChart ariaLabel={`Connected hospitals and hospital accounts at the end of each month, ${period}`} labels={r.months}
+                       series={[{ label: "Connected", values: g.total_hospitals }, { label: "Accounts", values: g.total_hospital_accounts }]} />
+          </Panel>
           <Panel title="People on the platform" className="lg:col-span-2">
             <p className="-mt-2 mb-3 text-xs text-slate-500">Total patient and doctor accounts at the end of each month, growing alongside the hospitals above.</p>
             <LineChart ariaLabel={`Total patients and doctors at the end of each month, ${period}`} labels={r.months}
@@ -122,11 +129,13 @@ function Reports({ r, months }: { r: PlatformReports; months: number }) {
             </EmptyState>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-left text-sm">
+              <table className="w-full min-w-[820px] text-left text-sm">
                 <thead className="text-xs uppercase tracking-wider text-slate-400">
                   <tr>
                     <th className="pb-2 font-medium">Hospital</th>
                     <th className="pb-2 font-medium">Connected</th>
+                    <th className="pb-2 font-medium">Hospital account</th>
+                    <th className="pb-2 text-right font-medium">Staff</th>
                     <th className="pb-2 text-right font-medium">Doctors</th>
                     <th className="pb-2 text-right font-medium">Patients</th>
                     <th className="pb-2 text-right font-medium">Appointments</th>
@@ -141,6 +150,12 @@ function Reports({ r, months }: { r: PlatformReports; months: number }) {
                         {h.connected_on ? fmtDate(h.connected_on) : "—"}
                         {h.estimated && <span className="ml-1 text-xs text-slate-400" title="Connected before approval dates were recorded: this is the date it was added">(approx.)</span>}
                       </td>
+                      <td className="py-2.5">
+                        {h.has_account
+                          ? <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-[650] text-teal-700">Yes</span>
+                          : <span className="text-xs text-slate-400">No</span>}
+                      </td>
+                      <td className="py-2.5 text-right tabular-nums">{h.staff}</td>
                       <td className="py-2.5 text-right tabular-nums">{h.doctors}</td>
                       <td className="py-2.5 text-right tabular-nums">{h.patients}</td>
                       <td className="py-2.5 text-right tabular-nums">{h.appointments}</td>

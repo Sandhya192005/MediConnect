@@ -157,7 +157,7 @@ function PlatformDashboard() {
         </p>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard icon="users" tone="teal" label="Patients" value={o ? o.patients.total : "…"}
                   trend={o?.patients.change_pct} trendLabel="since the start of the month" detail={o ? newThisMonth(o.patients.new_this_month) : undefined} />
         <StatCard icon="stethoscope" tone="blue" label="Doctors" value={o ? o.doctors.total : "…"}
@@ -166,6 +166,9 @@ function PlatformDashboard() {
                   trend={o?.hospitals.change_pct} trendLabel="since the start of the month"
                   detail={o ? `${o.hospitals.bookable} with instant booking` : undefined}
                   link={{ href: "/admin/reports#growth", label: "Hospital growth" }} />
+        <StatCard icon="settings" tone="rose" label="Hospital accounts" value={o ? o.hospital_accounts.total : "…"}
+                  trend={o?.hospital_accounts.change_pct} trendLabel="since the start of the month"
+                  detail={o ? `Run staff & patient records here · ${o.hospital_accounts.with_staff_records} with staff records` : undefined} />
         <StatCard icon="calendar" tone="orange" label="Appointments this month" value={o ? o.appointments.this_month : "…"}
                   trend={o?.appointments.change_pct} trendLabel="vs the same days last month" />
       </div>
@@ -194,8 +197,8 @@ function PlatformDashboard() {
             <ul className="divide-y divide-slate-100">
               {o.recent.map((e, i) => (
                 <li key={i} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-                  <IconTile icon={e.kind === "hospital" ? "hospital" : e.kind === "doctor" ? "stethoscope" : "user"}
-                            tone={e.kind === "hospital" ? "indigo" : e.kind === "doctor" ? "blue" : "teal"} size="sm" />
+                  <IconTile icon={e.kind === "hospital" ? "hospital" : e.kind === "hospital_account" ? "settings" : e.kind === "doctor" ? "stethoscope" : "user"}
+                            tone={e.kind === "hospital" ? "indigo" : e.kind === "hospital_account" ? "rose" : e.kind === "doctor" ? "blue" : "teal"} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-[650] text-[#0f2f3a]">{e.title}</p>
                     <p className="truncate text-xs text-slate-500">{e.detail} · {e.estimated ? "date approx." : timeAgo(e.at)}</p>

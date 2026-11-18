@@ -127,3 +127,30 @@ def test_approval_date_follows_approval():
     h.save(update_fields=["is_approved"])
     h.refresh_from_db()
     assert h.approved_at is None
+
+
+@pytest.mark.django_db
+def test_hospital_accounts_count_hospitals_that_manage_on_mediconnect(world, boss):
+    from datetime import date
+
+    from apps.staff.models import HospitalAdmin, StaffMember
+
+    manager = User.objects.create_user("manager@old.example", "pw", role="admin")
+    link = HospitalAdmin.objects.create(user=manager, hospital=world["old"])
+    HospitalAdmin.objects.filter(pk=link.pk).update(created_at=NOW - timedelta(days=25))  # opened in October
+    StaffMember.objects.create(hospital=world["old"], kind="nurse", full_name="Meena", join_date=date(2026, 1, 1),
+                               monthly_salary=30000)
+    StaffMember.objects.create(hospital=world["old"], kind="nurse", full_name="Gone", join_date=date(2026, 1, 1),
+                               left_on=date(2026, 6, 1), monthly_salary=30000)
+
+    o = client_for(boss).get("/api/platform/overview/").json()
+    # Only "Old Hospital" runs its management here; "New Hospital" is connected for bookings only.
+    assert o["hospital_accounts"] == {"total": 1, "new_this_month": 0, "change_pct": 0.0, "with_staff_records": 1}
+    assert any(e["kind"] == "hospital_account" for e in o["recent"])
+
+    r = client_for(boss).get("/api/platform/reports/?months=3").json()
+    assert r["growth"]["new_hospital_accounts"] == [0, 1, 0]
+    assert r["growth"]["total_hospital_accounts"] == [0, 1, 1]
+    table = {h["name"]: h for h in r["hospitals"]}
+    assert (table["Old Hospital"]["has_account"], table["Old Hospital"]["staff"]) == (True, 1)  # people who left don't count
+    assert (table["New Hospital"]["has_account"], table["New Hospital"]["staff"]) == (False, 0)

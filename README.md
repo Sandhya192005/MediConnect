@@ -114,7 +114,7 @@ npx playwright test --headed     # watch the browser
 npx playwright show-report       # HTML report; failed tests keep a screenshot, video and trace
 ```
 
-Before each run, `global-setup.ts` calls `manage.py e2e_setup`. It resets its own `e2e.*` accounts (password `E2e@12345`), an "E2E Partner Hospital" with a doctor who works every day, and an "E2E Mock Website Hospital" whose website is the mock site. It never touches other data, and refuses to run unless `DJANGO_DEBUG=1`.
+Before each run, `global-setup.ts` calls `manage.py e2e_setup`. It resets its own `e2e.*` accounts (password `E2e@12345`), an "E2E Partner Hospital" with a doctor who works every day, and an "E2E Mock Website Hospital" whose website is the mock site. It never touches other data, and refuses to run unless `DJANGO_DEBUG=1`. To remove that test data afterwards (e.g. to keep your own accounts and dashboards clean), run `docker compose exec backend python manage.py e2e_cleanup`: it deletes only `e2e.*` accounts (with everything they created) and the "E2E …" hospitals, then rebuilds the search index.
 
 | Test | What it proves |
 |---|---|
@@ -205,6 +205,7 @@ The platform admin (the MediConnect owner, a Django superuser) gets a dashboard 
 - **Reports & analytics** (`/admin/reports`, period 6 / 12 / 24 months):
   - **Platform usage:** new sign-ups (patients, doctors), active users, appointments booked vs completed, medical records uploaded, queue check-ins.
   - **Hospital growth:** connected hospitals at the end of each month, new hospitals per month, total patients and doctors alongside, and a table of every connected hospital with when it joined, its doctors, patients and appointments (all-time and last 30 days).
+- **Hospital accounts:** hospitals that also run their management on MediConnect (staff, salaries, patient records), i.e. they have at least one **Hospital** login (an `admin_profile`). Counted on the dashboard (with growth and how many keep staff records), charted against connected hospitals in Reports, and shown per hospital ("Hospital account: Yes/No", staff count) in the connected-hospitals table. The date is when the hospital's first manager login was linked.
 - A hospital counts as **connected** once approved. `Hospital.approved_at` records when; hospitals approved before 2026-11-17 use the date they were added, marked "approx.".
 - Charts are plain SVG (`components/Charts.tsx`), one y-axis each, with colours checked for colour blindness, marker shapes, end labels, tooltips and a hidden data table for screen readers.
 - API (platform admin only): `GET /api/platform/overview/`, `GET /api/platform/reports/?months=12`.

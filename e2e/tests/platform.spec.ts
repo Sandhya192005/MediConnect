@@ -6,7 +6,7 @@ test("platform admin sees platform totals, usage charts and hospital growth", as
   await expect(page.getByText("Platform overview")).toBeVisible();
 
   // Totals for the whole platform, with the growth line under each.
-  for (const label of ["Patients", "Doctors", "Connected hospitals", "Appointments this month"]) {
+  for (const label of ["Patients", "Doctors", "Connected hospitals", "Hospital accounts", "Appointments this month"]) {
     await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
   }
   await expect(page.getByRole("region", { name: "Platform usage" }).getByRole("img", { name: /Active patients and doctors/ })).toBeVisible();
@@ -18,8 +18,11 @@ test("platform admin sees platform totals, usage charts and hospital growth", as
   await expect(page.getByRole("heading", { name: "Platform usage" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Hospital growth" })).toBeVisible();
   await expect(page.getByRole("img", { name: /Connected hospitals at the end of each month, last 12 months/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: /Connected hospitals and hospital accounts/ })).toBeVisible();
   const table = page.getByRole("region", { name: /^Connected hospitals \(/ });
-  await expect(table.getByText("E2E Partner Hospital")).toBeVisible();
+  const partnerRow = table.getByRole("row", { name: /E2E Partner Hospital/ });
+  await expect(partnerRow).toBeVisible();
+  await expect(partnerRow.getByText("Yes")).toBeVisible(); // it has a hospital login (e2e.admin)
 
   // Changing the period reloads the charts for that range.
   await page.getByRole("button", { name: "24 months" }).click();

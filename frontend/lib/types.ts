@@ -292,12 +292,14 @@ export type HospitalPatient = {
 export type Growth = { total: number; new_this_month: number; change_pct: number | null };
 
 export type PlatformOverview = {
+  /** Hospitals that run their management (staff, patient records) on MediConnect: they have a Hospital login. */
+  hospital_accounts: Growth & { with_staff_records: number };
   patients: Growth;
   doctors: Growth;
   hospitals: Growth & { bookable: number; listed_not_connected: number };
   appointments: { this_month: number; change_pct: number | null };
   activity: { months: string[]; active_patients: number[]; active_doctors: number[] };
-  recent: { kind: "patient" | "doctor" | "hospital"; title: string; detail: string; at: string; estimated?: boolean }[];
+  recent: { kind: "patient" | "doctor" | "hospital" | "hospital_account"; title: string; detail: string; at: string; estimated?: boolean }[];
 };
 
 export type PlatformReports = {
@@ -306,10 +308,14 @@ export type PlatformReports = {
     "new_patients" | "new_doctors" | "active_patients" | "active_doctors" | "appointments_booked" | "appointments_completed" | "records_uploaded" | "check_ins",
     number[]
   >;
-  growth: Record<"new_hospitals" | "total_hospitals" | "total_patients" | "total_doctors", number[]>;
+  growth: Record<
+    "new_hospitals" | "total_hospitals" | "new_hospital_accounts" | "total_hospital_accounts" | "total_patients" | "total_doctors",
+    number[]
+  >;
   hospitals: {
     id: number; name: string; city: string; connected_on: string | null; estimated: boolean;
     doctors: number; patients: number; appointments: number; appointments_30d: number;
+    has_account: boolean; staff: number;
   }[];
 };
 

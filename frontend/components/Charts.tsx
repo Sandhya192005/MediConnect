@@ -88,7 +88,9 @@ export function LineChart({ labels, series, ariaLabel }: { labels: string[]; ser
                         strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
               {s.values.map((v, i) => <Marker key={i} {...SERIES_STYLE[k]} x={x(i)} y={y(v)} />)}
               {last >= 0 && (
-                <text x={x(last) + 10} y={y(s.values[last]) + 4 + (shown.length > 1 && k === 1 && s.values[last] === shown[0].values[last] ? 13 : 0)}
+                <text x={x(last) + 10} y={y(s.values[last]) + 4 + (shown.length > 1 && k === 1 && s.values[last] === shown[0].values[last]
+                        ? (s.values[last] < top / 2 ? -13 : 13) // same end point: move the 2nd label away from the axis
+                        : 0)}
                       fontSize={11} fill="#334155">
                   {s.label} {s.values[last]}
                 </text>
