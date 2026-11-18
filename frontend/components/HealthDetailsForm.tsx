@@ -49,7 +49,15 @@ function missingDetails(f: Form): string {
  * group, allergies, long-term conditions, current medicines and an emergency contact. All optional.
  * Doctors and admins see them (read-only) when they open the patient's records with the patient ID.
  */
-export default function HealthDetailsForm() {
+export default function HealthDetailsForm({ personal, beforeSave, onDone, onCancel }: {
+  /** Extra fields shown first in the same form (name and phone on Edit profile). */
+  personal?: React.ReactNode;
+  /** Saves those extra fields; runs before the health details are saved. Throws to stop the save. */
+  beforeSave?: () => Promise<void>;
+  /** After a successful save (e.g. back to the profile view). */
+  onDone?: (d: PatientDetails) => void;
+  onCancel?: () => void;
+} = {}) {
   const [saved, setSaved] = useState<PatientDetails | null>(null);
   const [f, setF] = useState<Form | null>(null);
   const [busy, setBusy] = useState(false);
@@ -57,12 +65,19 @@ export default function HealthDetailsForm() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // React (in development) runs this twice; a late answer must never overwrite what the patient has already
+    // typed. So: ignore answers after cleanup, and only fill the form if it's still empty.
+    let stale = false;
     api<PatientDetails>("/api/auth/me/patient/")
       .then((d) => {
+        if (stale) return;
         setSaved(d);
-        setF(toForm(d));
+        setF((prev) => prev ?? toForm(d));
       })
-      .catch((e) => setError(errorMessage(e)));
+      .catch((e) => !stale && setError(errorMessage(e)));
+    return () => {
+      stale = true;
+    };
   }, []);
 
   if (!f || !saved) {
@@ -93,6 +108,7 @@ export default function HealthDetailsForm() {
     // Only a "Yes" sends the details; "No" sends the "none" flag and clears them.
     const yes = (a: Answer) => a === "yes";
     try {
+      await beforeSave?.();
       const d = await api<PatientDetails>("/api/auth/me/patient/", {
         method: "PATCH",
         body: JSON.stringify({
@@ -116,6 +132,7 @@ export default function HealthDetailsForm() {
       setSaved(d);
       setF(toForm(d));
       setOk("Saved.");
+      onDone?.(d);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -124,35 +141,17 @@ export default function HealthDetailsForm() {
   }
 
   return (
-    <Panel title="Health details">
+    <Panel title={personal ? "Edit profile" : "Health details"}>
       <p className="-mt-2 mb-4 text-xs text-slate-500">
-        All optional. Doctors see these when they open your records with your patient ID, so they can treat you safely.
+        Health details are optional. Doctors see them when they open your records with your patient ID, so they can treat you safely.
       </p>
 
-      <div className="mb-5 rounded-xl bg-slate-50 p-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-          <p className="text-slate-600">
-            Patient ID <span className="font-mono font-[650] text-[#0f2f3a]">{saved.patient_id}</span>
-            {saved.age !== null && ` · Age ${saved.age}`}
-          </p>
-          <p id="completeness-label" className="font-[650] text-[#0f2f3a]">Profile {saved.completeness}% complete</p>
-        </div>
-        <div
-          role="progressbar"
-          aria-labelledby="completeness-label"
-          aria-valuenow={saved.completeness}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200"
-        >
-          <div className="h-full rounded-full bg-teal-600 transition-all" style={{ width: `${saved.completeness}%` }} />
-        </div>
-      </div>
-
       <form onSubmit={submit} className="space-y-6">
+        {personal}
+
         {/* ---- Body ---- */}
         <fieldset>
-          <legend className={legend}>About you</legend>
+          <legend className={legend}>Body</legend>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <label className={label}>
               Date of birth
@@ -256,7 +255,14 @@ export default function HealthDetailsForm() {
 
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         {ok && <p role="status" className="text-sm text-teal-700">{ok}</p>}
-        <button className="btn-solid rounded-xl px-5 py-2.5" disabled={busy}>{busy ? "Saving…" : "Save health details"}</button>
+        <div className="flex flex-wrap gap-3">
+          <button className="btn-solid rounded-xl px-5 py-2.5" disabled={busy}>{busy ? "Saving…" : "Save changes"}</button>
+          {onCancel && (
+            <button type="button" onClick={onCancel} className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
     </Panel>
   );

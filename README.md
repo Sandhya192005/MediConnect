@@ -193,7 +193,12 @@ Owner decisions (2026-11-17): hospital admins open records like doctors (with th
 ### Reference-design features, Part 1 (shared by all three users)
 
 - **Avatar menu** (top bar): Profile & settings, Contact support, Sign out.
-- **Profile & settings** (`/settings`): name and phone; **change password** (current password required, weak passwords refused).
+- **Profile & settings** (`/settings`, owner's reference design 2026-11-18):
+  - Opens as a clean **read-only profile**: a header card with initials, name, account type, patient ID, Phone / Email / Copy ID tiles, "Profile X% complete".
+  - Then sections with UPPERCASE headings and label → value rows: Personal information, Body, Medical, Emergency contact, Security. Empty answers show "Not added".
+  - **Edit** opens one form (name and phone plus health details) with **Save changes** / **Cancel**; both go back to the profile.
+  - **Change password** (under Security; current password required, weak passwords refused).
+  - Doctors and admins see Personal information and Security only.
 - **Health details** (patients, on Profile & settings; owner request 2026-11-18). All optional:
   - date of birth (age is worked out), gender, height, weight (with its "updated on" date), BMI (worked out), blood group;
   - allergies, long-term conditions (tick list + other), current medicines, emergency contact.

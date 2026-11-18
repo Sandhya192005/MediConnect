@@ -19,29 +19,47 @@ async function loginByForm(page: Page, email: string, password: string) {
   await page.getByRole("button", { name: "Log in" }).click();
 }
 
-test("profile, health details and change password", async ({ page, request }) => {
+/** Opens Edit profile from the profile view and returns the edit form. */
+async function openEdit(page: Page) {
+  await page.getByRole("button", { name: "Edit profile" }).click();
+  return page.getByRole("region", { name: "Edit profile" });
+}
+
+test("profile view, edit and change password", async ({ page, request }) => {
   const email = await newPatient(request);
   await loginByForm(page, email, START);
   await expect(page).toHaveURL(/\/patient$/);
 
-  // The avatar menu opens Profile & settings.
+  // The avatar menu opens Profile & settings: a read-only profile first.
   await page.getByRole("button", { name: /^Account menu/ }).click();
   await page.getByRole("menuitem", { name: "Profile & settings" }).click();
   await expect(page.getByRole("heading", { name: "Profile & settings" })).toBeVisible();
+  const personal = page.getByRole("region", { name: "Personal information" });
+  await expect(personal).toContainText(email);
+  await expect(personal).toContainText(/Date of birth\s*Not added/);
 
-  const profile = page.getByRole("region", { name: "Your profile" });
-  await profile.getByLabel("First name").fill("Nilaa");
-  await profile.getByRole("button", { name: "Save profile" }).click();
-  await expect(profile.getByRole("status")).toHaveText("Saved.");
+  // Edit → change name and date of birth → Save → back to the profile with the new values.
+  const edit = await openEdit(page);
+  const who = edit.getByRole("group", { name: "Personal information" });
+  await who.getByLabel("First name").fill("Nilaa");
+  await edit.getByLabel("Date of birth").fill("1996-05-20");
+  await edit.getByLabel("Gender").selectOption("female");
+  await edit.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("status")).toHaveText("Profile saved.");
+  await expect(edit).toHaveCount(0);
+  await expect(personal).toContainText("Nilaa Tester");
+  await expect(personal).toContainText("(30 years)");
+  await expect(personal).toContainText("Female");
   await expect(page.getByRole("button", { name: "Account menu for Nilaa Tester" })).toBeVisible(); // top bar updated
 
-  const health = page.getByRole("region", { name: "Health details" });
-  await health.getByLabel("Date of birth").fill("1996-05-20");
-  await health.getByLabel("Gender").selectOption("female");
-  await health.getByRole("button", { name: "Save health details" }).click();
-  await expect(health.getByRole("status")).toHaveText("Saved.");
-  await expect(health).toContainText("Age ");
+  // Cancel throws away changes.
+  const again = await openEdit(page);
+  await again.getByRole("group", { name: "Personal information" }).getByLabel("First name").fill("Somebody");
+  await again.getByRole("button", { name: "Cancel" }).click();
+  await expect(personal).toContainText("Nilaa Tester");
 
+  // Security → Change password.
+  await page.getByRole("button", { name: "Change password" }).click();
   const pw = page.getByRole("region", { name: "Change password" });
   await pw.getByLabel("Current password").fill("wrong-one");
   await pw.getByLabel("New password", { exact: true }).fill("Brand-new-pass-82");
@@ -63,32 +81,39 @@ test("a patient fills in health details and a doctor sees them, allergies first"
   await loginByForm(page, email, START);
   await expect(page).toHaveURL(/\/patient$/);
   await page.goto("/settings");
+  await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
 
-  const health = page.getByRole("region", { name: "Health details" });
-  await expect(health.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
-  await health.getByLabel("Date of birth").fill("1996-05-20");
-  await health.getByLabel("Height (cm)").fill("160");
-  await health.getByLabel("Weight (kg)").fill("64");
-  await expect(health).toContainText("25 · overweight"); // BMI shows while typing
-  await health.getByLabel("Blood group").selectOption("O+");
-  const allergies = health.getByRole("radiogroup", { name: "Do you have any allergies?" });
+  const edit = await openEdit(page);
+  await edit.getByLabel("Date of birth").fill("1996-05-20");
+  await edit.getByLabel("Height (cm)").fill("160");
+  await edit.getByLabel("Weight (kg)").fill("64");
+  await expect(edit).toContainText("25 · overweight"); // BMI shows while typing
+  await edit.getByLabel("Blood group").selectOption("O+");
+  const allergies = edit.getByRole("radiogroup", { name: "Do you have any allergies?" });
   await allergies.getByLabel("Yes").check();
-  await health.getByRole("button", { name: "Save health details" }).click();
-  await expect(health.getByRole("alert")).toHaveText("Please write what you're allergic to, or choose No."); // "Yes" needs details
-  await health.getByLabel(/allergic to/).fill("Penicillin");
-  await health.getByRole("radiogroup", { name: "Do you have any long-term conditions?" }).getByLabel("Yes").check();
-  await health.getByLabel("Diabetes").check();
-  await health.getByRole("radiogroup", { name: "Do you take any medicines regularly?" }).getByLabel("No").check();
-  await expect(health.getByLabel(/Which medicines/)).toHaveCount(0); // "No" asks nothing more
-  await health.getByLabel("Name").fill("Ravi");
-  await health.getByLabel("Relation").fill("Brother");
-  await health.getByLabel("Phone").fill("98765 43210");
-  await health.getByRole("button", { name: "Save health details" }).click();
-  await expect(health.getByRole("status")).toHaveText("Saved.");
-  await expect(health.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "89"); // 8 of 9 answered (no gender)
-  await expect(health).toContainText("Age 30");
+  await edit.getByRole("button", { name: "Save changes" }).click();
+  await expect(edit.getByRole("alert")).toHaveText("Please write what you're allergic to, or choose No."); // "Yes" needs details
+  await edit.getByLabel(/allergic to/).fill("Penicillin");
+  await edit.getByRole("radiogroup", { name: "Do you have any long-term conditions?" }).getByLabel("Yes").check();
+  await edit.getByLabel("Diabetes").check();
+  await edit.getByRole("radiogroup", { name: "Do you take any medicines regularly?" }).getByLabel("No").check();
+  await expect(edit.getByLabel(/Which medicines/)).toHaveCount(0); // "No" asks nothing more
+  const contact = edit.getByRole("group", { name: "Emergency contact" });
+  await contact.getByLabel("Name", { exact: true }).fill("Ravi");
+  await contact.getByLabel("Relation").fill("Brother");
+  await contact.getByLabel("Phone").fill("98765 43210");
+  await edit.getByRole("button", { name: "Save changes" }).click();
 
-  const patientId = (await health.locator(".font-mono").first().textContent())!.trim();
+  // Back on the clean profile, in order.
+  await expect(page.getByRole("status")).toHaveText("Profile saved.");
+  await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "89"); // 8 of 9 answered (no gender)
+  await expect(page.getByRole("region", { name: "Body" })).toContainText("25 · overweight");
+  const medical = page.getByRole("region", { name: "Medical" });
+  await expect(medical).toContainText(/Allergies\s*Penicillin/);
+  await expect(medical).toContainText(/Current medicines\s*None/);
+  await expect(page.getByRole("region", { name: "Emergency contact" })).toContainText("Brother");
+
+  const patientId = (await page.getByTestId("profile-patient-id").textContent())!.trim();
   const doctorContext = await browser.newContext();
   const doctorPage = await doctorContext.newPage();
   await login(doctorPage, e2e().doctor.email);
@@ -102,10 +127,12 @@ test("a patient fills in health details and a doctor sees them, allergies first"
   await expect(summary).toContainText(/Current medicines\s*None/i);
 
   // The patient changes allergies to "No": the doctor sees "No known allergies".
-  await allergies.getByLabel("No").check();
-  await health.getByRole("button", { name: "Save health details" }).click();
-  await expect(health.getByRole("status")).toHaveText("Saved.");
-  await expect(allergies.getByLabel("No")).toBeChecked(); // still "No" after the saved data comes back
+  const edit2 = await openEdit(page);
+  const allergies2 = edit2.getByRole("radiogroup", { name: "Do you have any allergies?" });
+  await expect(allergies2.getByLabel("Yes")).toBeChecked(); // the form opens with the saved answers
+  await allergies2.getByLabel("No").check();
+  await edit2.getByRole("button", { name: "Save changes" }).click();
+  await expect(medical).toContainText(/Allergies\s*No known allergies/);
   await doctorPage.reload();
   await expect(summary.getByText("Allergies: No known allergies")).toBeVisible();
   await doctorContext.close();
