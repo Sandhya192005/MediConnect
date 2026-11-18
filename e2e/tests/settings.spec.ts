@@ -71,9 +71,15 @@ test("a patient fills in health details and a doctor sees them, allergies first"
   await health.getByLabel("Weight (kg)").fill("64");
   await expect(health).toContainText("25 · overweight"); // BMI shows while typing
   await health.getByLabel("Blood group").selectOption("O+");
+  const allergies = health.getByRole("radiogroup", { name: "Do you have any allergies?" });
+  await allergies.getByLabel("Yes").check();
+  await health.getByRole("button", { name: "Save health details" }).click();
+  await expect(health.getByRole("alert")).toHaveText("Please write what you're allergic to, or choose No."); // "Yes" needs details
   await health.getByLabel(/allergic to/).fill("Penicillin");
+  await health.getByRole("radiogroup", { name: "Do you have any long-term conditions?" }).getByLabel("Yes").check();
   await health.getByLabel("Diabetes").check();
-  await health.getByLabel("I'm not taking any medicines").check();
+  await health.getByRole("radiogroup", { name: "Do you take any medicines regularly?" }).getByLabel("No").check();
+  await expect(health.getByLabel(/Which medicines/)).toHaveCount(0); // "No" asks nothing more
   await health.getByLabel("Name").fill("Ravi");
   await health.getByLabel("Relation").fill("Brother");
   await health.getByLabel("Phone").fill("98765 43210");
@@ -93,6 +99,15 @@ test("a patient fills in health details and a doctor sees them, allergies first"
   await expect(summary).toContainText("O+");
   await expect(summary).toContainText("Diabetes");
   await expect(summary).toContainText("Ravi (Brother) 98765 43210");
+  await expect(summary).toContainText(/Current medicines\s*None/i);
+
+  // The patient changes allergies to "No": the doctor sees "No known allergies".
+  await allergies.getByLabel("No").check();
+  await health.getByRole("button", { name: "Save health details" }).click();
+  await expect(health.getByRole("status")).toHaveText("Saved.");
+  await expect(allergies.getByLabel("No")).toBeChecked(); // still "No" after the saved data comes back
+  await doctorPage.reload();
+  await expect(summary.getByText("Allergies: No known allergies")).toBeVisible();
   await doctorContext.close();
 });
 

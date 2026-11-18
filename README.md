@@ -197,7 +197,7 @@ Owner decisions (2026-11-17): hospital admins open records like doctors (with th
 - **Health details** (patients, on Profile & settings; owner request 2026-11-18). All optional:
   - date of birth (age is worked out), gender, height, weight (with its "updated on" date), BMI (worked out), blood group;
   - allergies, long-term conditions (tick list + other), current medicines, emergency contact.
-  - "No known allergies", "None of these" and "Not taking any" are answers of their own, so a doctor can tell "none" from "not filled in".
+  - Allergies, long-term conditions and medicines are each a **Yes / No question**; Yes opens the details (and needs something written), No is saved as "none", so a doctor can tell "none" from "not filled in".
   - A "Profile X% complete" bar counts the 9 questions.
   - Range checks: height 30–250 cm, weight 1–300 kg, phone 7–15 digits.
   - Doctors and admins see them read-only when they open the patient's records by patient ID, with allergies first in red.

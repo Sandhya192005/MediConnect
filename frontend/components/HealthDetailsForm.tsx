@@ -12,14 +12,37 @@ const label = "block text-sm font-medium text-slate-700";
 const legend = "mb-2 text-sm font-[650] text-[#0f2f3a]";
 const check = "flex items-center gap-2 text-sm text-slate-700";
 
+/** "" = not answered yet, which is different from "no" (the patient said they have none). */
+type Answer = "" | "yes" | "no";
+
 /** The form keeps numbers as text while typing; they're converted when saving. */
-type Form = Omit<PatientDetails, "height_cm" | "weight_kg"> & { height_cm: string; weight_kg: string };
+type Form = Omit<PatientDetails, "height_cm" | "weight_kg"> & {
+  height_cm: string;
+  weight_kg: string;
+  allergies_answer: Answer;
+  conditions_answer: Answer;
+  medicines_answer: Answer;
+};
+
+const answer = (none: boolean, some: boolean): Answer => (none ? "no" : some ? "yes" : "");
 
 const toForm = (d: PatientDetails): Form => ({
   ...d,
   height_cm: d.height_cm?.toString() ?? "",
   weight_kg: d.weight_kg?.toString() ?? "",
+  allergies_answer: answer(d.no_known_allergies, !!d.allergies),
+  conditions_answer: answer(d.no_conditions, d.conditions.length > 0 || !!d.conditions_other),
+  medicines_answer: answer(d.no_current_medicines, !!d.current_medicines),
 });
+
+/** What a "Yes" still needs before it can be saved (a "Yes" with nothing listed tells a doctor nothing). */
+function missingDetails(f: Form): string {
+  if (f.allergies_answer === "yes" && !f.allergies.trim()) return "Please write what you're allergic to, or choose No.";
+  if (f.conditions_answer === "yes" && f.conditions.length === 0 && !f.conditions_other.trim())
+    return "Please tick or write your long-term conditions, or choose No.";
+  if (f.medicines_answer === "yes" && !f.current_medicines.trim()) return "Please write which medicines you take, or choose No.";
+  return "";
+}
 
 /**
  * A patient's health details on Profile & settings: age (from date of birth), gender, height, weight, blood
@@ -63,9 +86,12 @@ export default function HealthDetailsForm() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!f) return;
-    setBusy(true);
     setOk("");
-    setError("");
+    setError(missingDetails(f));
+    if (missingDetails(f)) return;
+    setBusy(true);
+    // Only a "Yes" sends the details; "No" sends the "none" flag and clears them.
+    const yes = (a: Answer) => a === "yes";
     try {
       const d = await api<PatientDetails>("/api/auth/me/patient/", {
         method: "PATCH",
@@ -75,13 +101,13 @@ export default function HealthDetailsForm() {
           height_cm: f.height_cm ? Number(f.height_cm) : null,
           weight_kg: f.weight_kg ? Number(f.weight_kg) : null,
           blood_group: f.blood_group,
-          allergies: f.allergies,
-          no_known_allergies: f.no_known_allergies,
-          conditions: f.conditions,
-          conditions_other: f.conditions_other,
-          no_conditions: f.no_conditions,
-          current_medicines: f.current_medicines,
-          no_current_medicines: f.no_current_medicines,
+          allergies: yes(f.allergies_answer) ? f.allergies : "",
+          no_known_allergies: f.allergies_answer === "no",
+          conditions: yes(f.conditions_answer) ? f.conditions : [],
+          conditions_other: yes(f.conditions_answer) ? f.conditions_other : "",
+          no_conditions: f.conditions_answer === "no",
+          current_medicines: yes(f.medicines_answer) ? f.current_medicines : "",
+          no_current_medicines: f.medicines_answer === "no",
           emergency_contact_name: f.emergency_contact_name,
           emergency_contact_relation: f.emergency_contact_relation,
           emergency_contact_phone: f.emergency_contact_phone,
@@ -170,59 +196,41 @@ export default function HealthDetailsForm() {
           </div>
         </fieldset>
 
-        {/* ---- Allergies ---- */}
-        <fieldset>
-          <legend className={legend}>Allergies</legend>
+        {/* ---- Allergies, conditions, medicines: a clear Yes / No question each; Yes opens the details. ---- */}
+        <YesNo question="Do you have any allergies?" name="allergies" value={f.allergies_answer}
+               onChange={(v) => set("allergies_answer", v)}>
           <label className={label}>
-            Medicines, food or anything else you&apos;re allergic to
-            <textarea className="input mt-1 min-h-[72px]" maxLength={1000} disabled={f.no_known_allergies}
-                      placeholder="e.g. Penicillin (rash), peanuts" value={f.allergies} onChange={(e) => set("allergies", e.target.value)} />
+            What are you allergic to? Medicines, food or anything else
+            <textarea className="input mt-1 min-h-[72px]" maxLength={1000} placeholder="e.g. Penicillin (rash), peanuts"
+                      value={f.allergies} onChange={(e) => set("allergies", e.target.value)} />
           </label>
-          <label className={`${check} mt-2`}>
-            <input type="checkbox" checked={f.no_known_allergies}
-                   onChange={(e) => { const on = e.target.checked; update((p) => ({ no_known_allergies: on, allergies: on ? "" : p.allergies })); }} />
-            I have no known allergies
-          </label>
-        </fieldset>
+        </YesNo>
 
-        {/* ---- Conditions ---- */}
-        <fieldset>
-          <legend className={legend}>Long-term conditions</legend>
+        <YesNo question="Do you have any long-term conditions?" name="conditions" value={f.conditions_answer}
+               onChange={(v) => set("conditions_answer", v)}>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {(Object.keys(CONDITIONS) as ConditionKey[]).map((c) => (
               <label key={c} className={check}>
-                <input type="checkbox" disabled={f.no_conditions} checked={f.conditions.includes(c)} onChange={() => toggleCondition(c)} />
+                <input type="checkbox" checked={f.conditions.includes(c)} onChange={() => toggleCondition(c)} />
                 {CONDITIONS[c]}
               </label>
             ))}
           </div>
           <label className={`${label} mt-3`}>
             Other conditions
-            <input className="input mt-1" maxLength={300} disabled={f.no_conditions} placeholder="e.g. Migraine"
+            <input className="input mt-1" maxLength={300} placeholder="e.g. Migraine"
                    value={f.conditions_other} onChange={(e) => set("conditions_other", e.target.value)} />
           </label>
-          <label className={`${check} mt-2`}>
-            <input type="checkbox" checked={f.no_conditions}
-                   onChange={(e) => { const on = e.target.checked; update(() => ({ no_conditions: on, ...(on ? { conditions: [], conditions_other: "" } : {}) })); }} />
-            None of these
-          </label>
-        </fieldset>
+        </YesNo>
 
-        {/* ---- Medicines ---- */}
-        <fieldset>
-          <legend className={legend}>Current medicines</legend>
+        <YesNo question="Do you take any medicines regularly?" name="medicines" value={f.medicines_answer}
+               onChange={(v) => set("medicines_answer", v)}>
           <label className={label}>
-            Medicines you take regularly, with the dose if you know it
-            <textarea className="input mt-1 min-h-[72px]" maxLength={1000} disabled={f.no_current_medicines}
-                      placeholder="e.g. Metformin 500 mg twice a day" value={f.current_medicines}
-                      onChange={(e) => set("current_medicines", e.target.value)} />
+            Which medicines? With the dose if you know it
+            <textarea className="input mt-1 min-h-[72px]" maxLength={1000} placeholder="e.g. Metformin 500 mg twice a day"
+                      value={f.current_medicines} onChange={(e) => set("current_medicines", e.target.value)} />
           </label>
-          <label className={`${check} mt-2`}>
-            <input type="checkbox" checked={f.no_current_medicines}
-                   onChange={(e) => { const on = e.target.checked; update((p) => ({ no_current_medicines: on, current_medicines: on ? "" : p.current_medicines })); }} />
-            I&apos;m not taking any medicines
-          </label>
-        </fieldset>
+        </YesNo>
 
         {/* ---- Emergency contact ---- */}
         <fieldset>
@@ -251,5 +259,37 @@ export default function HealthDetailsForm() {
         <button className="btn-solid rounded-xl px-5 py-2.5" disabled={busy}>{busy ? "Saving…" : "Save health details"}</button>
       </form>
     </Panel>
+  );
+}
+
+/**
+ * A Yes / No question. The details (children) only appear after "Yes", so "No" is one click and a patient
+ * with nothing to report never has to look for a hidden "none" checkbox.
+ */
+function YesNo({ question, name, value, onChange, children }: {
+  question: string;
+  name: string;
+  value: Answer;
+  onChange: (v: Answer) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <fieldset>
+      <legend className={legend}>{question}</legend>
+      <div role="radiogroup" aria-label={question} className="flex gap-2">
+        {(["yes", "no"] as const).map((v) => (
+          <label
+            key={v}
+            className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-teal-600 ${
+              value === v ? "border-teal-600 bg-teal-50 font-[650] text-teal-800" : "border-slate-200 text-slate-700 hover:border-slate-300"
+            }`}
+          >
+            <input type="radio" name={name} value={v} checked={value === v} onChange={() => onChange(v)} className="accent-teal-600" />
+            {v === "yes" ? "Yes" : "No"}
+          </label>
+        ))}
+      </div>
+      {value === "yes" && <div className="mt-3">{children}</div>}
+    </fieldset>
   );
 }
