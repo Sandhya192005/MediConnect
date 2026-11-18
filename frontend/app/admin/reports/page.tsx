@@ -66,8 +66,8 @@ function Reports({ r, months }: { r: PlatformReports; months: number }) {
       <section aria-labelledby="usage-h" className="space-y-6">
         <h2 id="usage-h" className="text-lg text-[#0f2f3a]">Platform usage</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard icon="users" tone="teal" label="New patients" value={sum(u.new_patients)} detail={period} />
-          <StatCard icon="stethoscope" tone="blue" label="New doctors" value={sum(u.new_doctors)} detail={period} />
+          <StatCard icon="users" tone="teal" label="New patient accounts" value={sum(u.new_patients)} detail={period} />
+          <StatCard icon="stethoscope" tone="blue" label="New doctor accounts" value={sum(u.new_doctors)} detail={period} />
           <StatCard icon="calendar" tone="indigo" label="Appointments booked" value={sum(u.appointments_booked)} detail={`${sum(u.appointments_completed)} completed`} />
           <StatCard icon="folder" tone="orange" label="Records uploaded" value={sum(u.records_uploaded)} detail={`${sum(u.check_ins)} queue check-ins`} />
         </div>

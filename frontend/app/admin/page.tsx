@@ -158,9 +158,9 @@ function PlatformDashboard() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        <StatCard icon="users" tone="teal" label="Patients" value={o ? o.patients.total : "…"}
+        <StatCard icon="users" tone="teal" label="Patient accounts" value={o ? o.patients.total : "…"}
                   trend={o?.patients.change_pct} trendLabel="since the start of the month" detail={o ? newThisMonth(o.patients.new_this_month) : undefined} />
-        <StatCard icon="stethoscope" tone="blue" label="Doctors" value={o ? o.doctors.total : "…"}
+        <StatCard icon="stethoscope" tone="blue" label="Doctor accounts" value={o ? o.doctors.total : "…"}
                   trend={o?.doctors.change_pct} trendLabel="since the start of the month" detail={o ? newThisMonth(o.doctors.new_this_month) : undefined} />
         <StatCard icon="hospital" tone="indigo" label="Connected hospitals" value={o ? o.hospitals.total : "…"}
                   trend={o?.hospitals.change_pct} trendLabel="since the start of the month"

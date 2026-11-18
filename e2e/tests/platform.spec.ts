@@ -6,7 +6,7 @@ test("platform admin sees platform totals, usage charts and hospital growth", as
   await expect(page.getByText("Platform overview")).toBeVisible();
 
   // Totals for the whole platform, with the growth line under each.
-  for (const label of ["Patients", "Doctors", "Connected hospitals", "Hospital accounts", "Appointments this month"]) {
+  for (const label of ["Patient accounts", "Doctor accounts", "Connected hospitals", "Hospital accounts", "Appointments this month"]) {
     await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
   }
   await expect(page.getByRole("region", { name: "Platform usage" }).getByRole("img", { name: /Active patients and doctors/ })).toBeVisible();
