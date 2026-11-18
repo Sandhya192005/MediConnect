@@ -22,15 +22,21 @@ class AppointmentRequestSerializer(serializers.ModelSerializer):
     hospital_phone = serializers.CharField(source="hospital.phone", read_only=True)
     doctor_name = serializers.CharField(source="scraped_doctor.name", read_only=True, default=None)
     patient_email = serializers.EmailField(source="patient.email", read_only=True)
+    hospital_place = serializers.SerializerMethodField()  # directions and a small map
 
     class Meta:
         model = AppointmentRequest
         fields = [
-            "id", "hospital", "hospital_name", "hospital_phone", "scraped_doctor", "doctor_name",
+            "id", "hospital", "hospital_name", "hospital_phone", "hospital_place", "scraped_doctor", "doctor_name",
             "preferred_date", "preferred_time", "reason", "phone", "status", "status_label",
             "admin_note", "patient_email", "created_at",
         ]
         read_only_fields = ["status", "admin_note"]
+
+    def get_hospital_place(self, obj):
+        from .serializers import hospital_place
+
+        return hospital_place(obj.hospital)
 
     def validate_preferred_date(self, value):
         today = timezone.localdate()

@@ -166,3 +166,23 @@ def test_appointments_carry_the_hospitals_place_for_directions(world):
     appt = book(world).json()
     assert appt["hospital"] == {"id": world["hospital"].id, "address": "Lake Road, Anna Nagar", "city": "Chennai",
                                 "phone": "044 1234", "latitude": 13.08, "longitude": 80.21, "location_verified": True}
+
+
+@pytest.mark.django_db
+def test_appointment_requests_carry_the_hospitals_place_too(world):
+    """A request to a non-partner hospital (e.g. MIOT) also gets directions: the patient still has to go there."""
+    from datetime import date
+
+    from django.contrib.gis.geos import Point
+
+    from apps.appointments.models import AppointmentRequest, ExternalAppointment
+
+    miot = Hospital.objects.create(name="MIOT Hospital", city="", source="osm", is_approved=False, phone="+91 44 4200",
+                                   location=Point(80.18, 13.02, srid=4326), location_verified=False)
+    AppointmentRequest.objects.create(patient=world["patient"], hospital=miot, preferred_date=date(2026, 12, 1))
+    ExternalAppointment.objects.create(patient=world["patient"], hospital_name="Typed-in Clinic",
+                                       start=timezone.now() + timedelta(days=3))
+    c = client_for(world["patient"])
+    place = c.get("/api/appointment-requests/").json()[0]["hospital_place"]
+    assert (place["latitude"], place["longitude"], place["location_verified"], place["phone"]) == (13.02, 80.18, False, "+91 44 4200")
+    assert c.get("/api/external-appointments/").json()[0]["hospital_place"] is None  # a hospital typed in by hand

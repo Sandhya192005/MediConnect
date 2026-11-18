@@ -20,14 +20,20 @@ class ExternalAppointmentSerializer(serializers.ModelSerializer):
     hospital = serializers.PrimaryKeyRelatedField(queryset=Hospital.objects.all(), allow_null=True, required=False)
     display_hospital = serializers.CharField(read_only=True)
     label = serializers.SerializerMethodField()
+    hospital_place = serializers.SerializerMethodField()  # directions and a small map (None: typed-in hospital)
 
     class Meta:
         model = ExternalAppointment
         fields = [
-            "id", "hospital", "hospital_name", "display_hospital", "doctor_name", "start",
+            "id", "hospital", "hospital_name", "display_hospital", "hospital_place", "doctor_name", "start",
             "booking_reference", "notes", "status", "label", "created_at",
         ]
         read_only_fields = ["status"]
+
+    def get_hospital_place(self, obj):
+        from .serializers import hospital_place
+
+        return hospital_place(obj.hospital)
 
     def get_label(self, obj):
         return "Booked directly with the hospital – added by you"

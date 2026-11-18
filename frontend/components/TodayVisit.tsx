@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { NOTIFICATION_EVENT } from "@/lib/notifications";
 import { fmtTime, isoDate, type Appointment } from "@/lib/types";
-import { directionsUrl } from "./AppointmentList";
+import { directionsUrl } from "./HospitalPlace";
 import Icon from "./Icons";
 
 const REFRESH_MS = 30_000;

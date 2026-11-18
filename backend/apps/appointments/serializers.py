@@ -5,6 +5,21 @@ from apps.doctors.models import DoctorProfile
 from .models import Appointment
 
 
+def hospital_place(h) -> dict | None:
+    """
+    Where a hospital is, for directions and a small map (owner request 2026-11-18): used by bookings,
+    appointment requests and visits booked directly with a hospital. None if there's no hospital.
+    """
+    if h is None:
+        return None
+    return {
+        "id": h.id, "address": h.address, "city": h.city, "phone": h.phone,
+        "latitude": h.location.y if h.location else None,
+        "longitude": h.location.x if h.location else None,
+        "location_verified": h.location_verified,
+    }
+
+
 class AppointmentSerializer(serializers.ModelSerializer):
     doctor = serializers.PrimaryKeyRelatedField(queryset=DoctorProfile.objects.all())
     doctor_name = serializers.SerializerMethodField()
@@ -34,15 +49,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
     def get_hospital(self, obj):
         """The hospital's place: id, address, city, phone and its map pin (None if it has none yet)."""
-        h = obj.doctor.hospital
-        if h is None:
-            return None
-        return {
-            "id": h.id, "address": h.address, "city": h.city, "phone": h.phone,
-            "latitude": h.location.y if h.location else None,
-            "longitude": h.location.x if h.location else None,
-            "location_verified": h.location_verified,
-        }
+        return hospital_place(obj.doctor.hospital)
 
     def get_doctor_name(self, obj):
         return str(obj.doctor)

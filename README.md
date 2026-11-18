@@ -284,7 +284,8 @@ Owner request (2026-11-18): from their appointments, patients can find their way
   - **Show on map:** a small OpenStreetMap map inside the card ("Approximate location: confirm with the hospital before you travel" when the pin isn't verified).
   - **Call hospital.**
 - **"Your visit today"** has a **Directions** button next to "I've arrived".
-- **API:** appointments include `hospital` (`id`, `address`, `city`, `phone`, `latitude`, `longitude`, `location_verified`).
+- **Also on appointment requests** to hospitals that aren't on MediConnect (e.g. MIOT; pending or confirmed) and on **visits booked directly with a hospital**. A hospital typed in by hand gets directions by its name. All three use `components/HospitalPlace.tsx`.
+- **API:** bookings include `hospital`, and requests and direct bookings include `hospital_place` (`id`, `address`, `city`, `phone`, `latitude`, `longitude`, `location_verified`); one helper, `appointments.serializers.hospital_place`.
 
 ### Reference-design features, Part 2 (login and patient)
 

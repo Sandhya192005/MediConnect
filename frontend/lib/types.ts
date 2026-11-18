@@ -79,11 +79,18 @@ export type HospitalDetail = Hospital & {
   can_search_website: boolean;
 };
 
+/** Where a hospital is, for directions and a small map (latitude null = no pin yet). */
+export type HospitalPlaceData = {
+  id: number; address: string; city: string; phone: string;
+  latitude: number | null; longitude: number | null; location_verified: boolean;
+};
+
 export type AppointmentRequest = {
   id: number;
   hospital: number;
   hospital_name: string;
   hospital_phone: string;
+  hospital_place: HospitalPlaceData | null;
   scraped_doctor: number | null;
   doctor_name: string | null;
   preferred_date: string;
@@ -102,6 +109,8 @@ export type ExternalAppointment = {
   hospital: number | null;
   hospital_name: string;
   display_hospital: string;
+  /** null when the hospital was typed in by hand (directions then search its name). */
+  hospital_place: HospitalPlaceData | null;
   doctor_name: string;
   start: string;
   booking_reference: string;
@@ -158,11 +167,8 @@ export type Appointment = {
   doctor_name: string;
   specialization: string;
   hospital_name: string | null;
-  /** Where to go: the hospital's address and map pin (latitude null = no pin yet). */
-  hospital: {
-    id: number; address: string; city: string; phone: string;
-    latitude: number | null; longitude: number | null; location_verified: boolean;
-  } | null;
+  /** Where to go: the hospital's address and map pin. */
+  hospital: HospitalPlaceData | null;
   patient_name: string;
   patient_email: string;
   start: string;
