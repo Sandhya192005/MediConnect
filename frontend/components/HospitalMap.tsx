@@ -7,8 +7,17 @@ import { useEffect } from "react";
 import { Circle, CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 import type { Hospital, LatLng } from "@/lib/types";
 
+/** What a pin needs: any hospital-like row with coordinates (null = no pin yet). */
+type Pin = Pick<Hospital, "id" | "name" | "address" | "city"> & {
+  latitude: number | null;
+  longitude: number | null;
+  location_verified?: boolean;
+  distance_km?: number | null;
+  is_partner?: boolean;
+};
+
 type Props = {
-  hospitals: (Hospital & { distance_km?: number | null; is_partner?: boolean })[];
+  hospitals: Pin[];
   user?: LatLng | null;
   radiusKm?: number;
   selectedId?: number | null;

@@ -11,7 +11,6 @@ export type NavItem = { label: string; icon: string; href?: string; soon?: strin
 export const NAV: Record<Role, NavItem[]> = {
   patient: [
     { label: "Dashboard", icon: "grid", href: "/patient" },
-    { label: "Find hospitals", icon: "hospital", href: "/hospitals" },
     // Reference design: "Book appointment" (the MediConnect hospitals and their doctors, where booking starts).
     { label: "Book appointment", icon: "stethoscope", href: "/doctors" },
     { label: "My appointments", icon: "calendar", href: "/patient/appointments" },

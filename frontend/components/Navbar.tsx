@@ -9,8 +9,8 @@ import Icon from "./Icons";
 import NotificationBell from "./NotificationBell";
 
 const LINKS = [
-  { href: "/doctors", label: "Find hospitals or doctors", short: "Find", icon: "search" },
-  { href: "/hospitals", label: "Map", short: "Map", icon: "map" },
+  // Find hospitals is part of Book appointment since 2026-11-18 (/hospitals forwards there).
+  { href: "/doctors", label: "Book an appointment", short: "Book", icon: "calendar" },
 ];
 
 export default function Navbar() {

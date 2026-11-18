@@ -102,6 +102,9 @@ def partner_hospitals(q: str = "", department: str | None = None, city: str | No
         results.append({
             "id": h.id, "name": h.name, "address": h.address, "city": h.city,
             "location_verified": h.location_verified,
+            # For the map on Book appointment (None when the hospital has no pin yet).
+            "latitude": h.location.y if h.location else None,
+            "longitude": h.location.x if h.location else None,
             "doctor_count": len(docs),
             "specialties": [{"name": n, "count": c} for n, c in sorted(specialties.items())],
             "matching_doctors": [

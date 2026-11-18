@@ -47,11 +47,20 @@ cd frontend; npm install; npm run dev                          # the frontend, o
 - Input is validated: lat −90..90, lng −180..180, radius 0.5–50 km, limit ≤ 50.
 - `GET /api/hospitals/cities/`: browse by city without sharing your location (`/api/hospitals/?city=`).
 - `location_verified`: set by an admin (Django admin action) after checking the pin. Unverified pins show as "Approximate location". Moving a pin resets it.
-- Frontend `/hospitals` (map + list) and `/hospitals/<id>` (hospital page with its doctors). Map tiles from OpenStreetMap.
+- **Book appointment** (`/doctors`) is the one place where patients find a hospital and book (owner requests 2026-11-18). There is no separate "Find hospitals" page any more: `/hospitals` forwards here, keeping `?q=`. `/hospitals/<id>` is still the hospital page with its doctors and a small OpenStreetMap map of where it is.
+  - **Search bar:** hospital, doctor, specialty or area ("Apollo", "heart", "Anna Nagar"), typos allowed; a fee filter; and specialty and city chips.
+  - **Buttons:** **Instant booking only**, **Near me** and **Show map**.
+  - **Results, in order:**
+    1. **MediConnect hospitals:** book instantly, with matching specialists.
+    2. **Other hospitals:** every other listed hospital, 20 at a time with "Show more". Cards show the area without house numbers or postcodes, specialties, "Request appointment" and **View details**.
+    3. **Doctors listed on hospital websites:** shown when searching.
+  - **Near me** asks for the location only when pressed. It then shows one list, nearest first, with "x km away" ("about" when the pin isn't verified) and a distance filter. The first time in an area, that area's hospitals load from OpenStreetMap in the background. `/doctors?near=1` (the footer's "Hospitals near me", the dashboard's nearby card) starts here.
+  - **Show map** opens a map of the hospitals currently listed, with the patient (blue), MediConnect hospitals (teal) and others (grey). Tapping a pin highlights its card. Hospitals without a pin are counted, never placed.
+  - **Backend:** `GET /api/search/?type=hospitals&q=&city=&partners=0|1&size=20&page=` (`0` = not partners, `1` = partners only) also returns `cities`; `partner-hospitals` results include `latitude`/`longitude`. Every word typed must match.
 
 ### All hospitals on the map (OpenStreetMap directory)
 
-- The map and city search show **every hospital** in the area, not only partners. `GET /api/hospitals/nearby/` and `GET /api/hospitals/city/?name=Chennai` return `is_partner`, `has_website`, and `loading_more`.
+- Near me shows **every hospital** in the area, not only partners. `GET /api/hospitals/nearby/` and `GET /api/hospitals/city/?name=Chennai` return `is_partner`, `has_website`, and `loading_more`.
 - The map is split into ~11 km tiles (`OsmTile`). A tile not refreshed in 24 h is downloaded in the background (Celery `sync_osm_tile_task`, Overpass API, no key), saved as `source=osm` hospitals, and indexed in one bulk Elasticsearch update. Existing hospitals (same name within 300 m) are linked by `osm_id`, never duplicated or overwritten.
 - Search (`/doctors`, "Find hospitals or doctors") shows three groups:
   - **MediConnect hospitals** (`GET /api/search/partner-hospitals/?q=&department=&city=&max_fee=`): partner hospitals, each with its specialties and the specialists that match the search ("heart" → the hospitals with cardiologists, typos allowed). Opening one shows its doctors grouped by specialty (`/hospitals/<id>?specialty=Cardiology`). Works without Elasticsearch too (plain database matching).

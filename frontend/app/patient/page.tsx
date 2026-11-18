@@ -8,7 +8,7 @@ import TodayVisit from "@/components/TodayVisit";
 import { api, downloadFile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import HospitalThumb from "@/components/HospitalThumb";
-import { fmtDate, fmtDateTime, type Appointment, type MedicalRecord, type NearbyHospital, type NearbyResponse } from "@/lib/types";
+import { areaOf, fmtDate, fmtDateTime, type Appointment, type MedicalRecord, type NearbyHospital, type NearbyResponse } from "@/lib/types";
 
 type PartnerHospital = {
   id: number;
@@ -89,9 +89,9 @@ export default function PatientDashboard() {
             <EmptyState
               icon="hospital"
               title={failed.partners ? "Couldn't load hospitals" : "No partner hospitals yet"}
-              text={failed.partners ? "Please try again in a moment." : "Explore every hospital near you on the map."}
+              text={failed.partners ? "Please try again in a moment." : "Search every hospital by name, area or specialty."}
             >
-              <Link href="/hospitals" className="dash-link mt-3">Open the map <Icon name="arrow" className="h-4 w-4" /></Link>
+              <Link href="/doctors" className="dash-link mt-3">Find hospitals <Icon name="arrow" className="h-4 w-4" /></Link>
             </EmptyState>
           ) : (
             <ul className="space-y-3">
@@ -180,16 +180,6 @@ export default function PatientDashboard() {
   );
 }
 
-/**
- * The area to show for a hospital, e.g. "T. Nagar, Chennai": the last part of its address that's a name
- * (no digits, so never a postcode or house number; not the city itself), then the city.
- */
-function areaOf(h: { address: string; city: string }): string {
-  const parts = (h.address || "").split(",").map((p) => p.trim())
-    .filter((p) => p && !/\d/.test(p) && p.toLowerCase() !== h.city.toLowerCase() && !/tamil nadu|india/i.test(p));
-  const area = parts.at(-1);
-  return area && area.length <= 30 ? `${area}, ${h.city}` : h.city;
-}
 
 /** Download a record from the dashboard (files need the login token, so it's a button, not a plain link). */
 function DownloadButton({ id, title, fileName }: { id: number; title: string; fileName: string }) {
@@ -255,8 +245,8 @@ function NearbyCard() {
     idle: "See hospitals around you. Your location is only used when you ask.",
     locating: "Finding your location…",
     done: `${count} found within ${NEARBY_KM} km of you`,
-    denied: "Location not shared. Choose your city or area on the map instead.",
-    error: "Couldn't look up hospitals right now. Try the map.",
+    denied: "Location not shared. Search hospitals by city or area instead.",
+    error: "Couldn't look up hospitals right now. Try Find hospitals.",
   }[state];
 
   return (
@@ -266,7 +256,7 @@ function NearbyCard() {
       label="Nearby hospitals"
       value={state === "done" ? count : undefined}
       detail={detail}
-      link={{ href: "/hospitals", label: state === "done" ? "Explore on the map" : "Open the map" }}
+      link={{ href: "/doctors?near=1", label: "See hospitals near me" }}
     >
       {state === "done" && nearest && (
         <Link

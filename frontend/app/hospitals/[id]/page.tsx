@@ -97,7 +97,7 @@ export default function HospitalDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link href="/hospitals" className="inline-flex items-center gap-1 text-sm font-medium text-teal-700 hover:underline">← Hospitals</Link>
+      <Link href="/doctors" className="inline-flex items-center gap-1 text-sm font-medium text-teal-700 hover:underline">← All hospitals</Link>
 
       {/* Header */}
       <section className="card overflow-hidden">

@@ -42,7 +42,7 @@ function Lookup() {
 
   return (
     <div className="max-w-2xl">
-      <Link href="/hospitals" className="text-sm font-medium text-teal-700 hover:underline">← Hospitals near you</Link>
+      <Link href="/doctors" className="text-sm font-medium text-teal-700 hover:underline">← Book an appointment</Link>
       <h1 className="page-title mt-2">Look up any hospital</h1>
       <p className="mt-1 text-sm text-slate-600">
         We&apos;ll show what&apos;s on the hospital&apos;s <strong>own website</strong> (doctors, departments, timings, contact) so you can check it

@@ -4,7 +4,7 @@ import { e2e } from "./helpers";
 test("search shows MediConnect hospitals with their matching specialists", async ({ page }) => {
   const { doctor, partner_hospital } = e2e();
   await page.goto("/doctors");
-  await expect(page.getByRole("heading", { name: /Find hospitals or doctors/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Book an appointment" })).toBeVisible();
   const partners = page.getByRole("region", { name: "MediConnect hospitals" });
 
   // "Testdoctr" (typo) still finds Dr. Eshwar Testdoctor, shown inside his hospital's card.
@@ -38,7 +38,8 @@ test("a hospital name search lists it with its specialties", async ({ page }) =>
   await page.getByLabel("Search doctors").fill("E2E Partner");
   const partners = page.getByRole("region", { name: "MediConnect hospitals" });
   await expect(partners.getByRole("link", { name: partner_hospital.name })).toBeVisible();
-  await expect(partners.getByRole("link", { name: /^Cardiology/ })).toBeVisible();
+  // Inside its own card: other MediConnect hospitals (e.g. the demo ones) can have Cardiology too.
+  await expect(partners.getByRole("article", { name: partner_hospital.name }).getByRole("link", { name: /^Cardiology/ })).toBeVisible();
   await expect(page.getByText("Instant booking").first()).toBeVisible();
 });
 

@@ -441,3 +441,16 @@ export const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString(undefin
 /** YYYY-MM-DD in the user's local time zone. */
 export const isoDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+/**
+ * The area to show for a hospital, e.g. "T. Nagar, Chennai": the last part of its address that's a name
+ * (no digits, so never a postcode or house number; not the city itself), then the city.
+ */
+export function areaOf(h: { address?: string | null; city?: string | null }): string {
+  const city = h.city ?? "";
+  const parts = (h.address || "").split(",").map((p) => p.trim())
+    .filter((p) => p && !/\d/.test(p) && p.toLowerCase() !== city.toLowerCase() && !/tamil nadu|india/i.test(p));
+  const area = parts.at(-1);
+  if (area && area.length <= 30) return city ? `${area}, ${city}` : area;
+  return city || "Area not listed";
+}

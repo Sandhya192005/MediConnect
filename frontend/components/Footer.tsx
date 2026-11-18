@@ -20,7 +20,7 @@ export default function Footer() {
           <h3 className="text-sm font-semibold text-navy-800">For patients</h3>
           <ul className="mt-3 space-y-2 text-sm text-slate-600">
             <li><Link href="/doctors" className="hover:text-teal-700">Find hospitals or doctors</Link></li>
-            <li><Link href="/hospitals" className="hover:text-teal-700">Hospitals near me</Link></li>
+            <li><Link href="/doctors?near=1" className="hover:text-teal-700">Hospitals near me</Link></li>
             <li><Link href="/patient/appointments" className="hover:text-teal-700">My appointments</Link></li>
           </ul>
         </div>
