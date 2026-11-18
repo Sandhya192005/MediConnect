@@ -122,6 +122,28 @@ class PatientsView(APIView):
         ])
 
 
+class BookingSettingsView(APIView):
+    """
+    GET/PATCH /api/hospital-admin/booking-settings/ {confirm_bookings}: whether new bookings wait for the
+    hospital's Confirm before they reach the doctor (owner request 2026-11-18). Bookings already waiting
+    stay waiting when it's turned off; they still need a Confirm or Decline.
+    """
+
+    permission_classes = [IsHospitalAdmin]
+
+    def get(self, request):
+        return Response({"confirm_bookings": request.admin_hospital.confirm_bookings})
+
+    def patch(self, request):
+        value = request.data.get("confirm_bookings")
+        if not isinstance(value, bool):
+            return Response({"confirm_bookings": "Send true or false."}, status=400)
+        h = request.admin_hospital
+        h.confirm_bookings = value
+        h.save(update_fields=["confirm_bookings"])
+        return Response({"confirm_bookings": h.confirm_bookings})
+
+
 class PayrollView(APIView):
     """
     GET /api/hospital-admin/payroll/?months=12 — the hospital's salary cost per month (owner request 2026-11-18).
@@ -201,13 +223,16 @@ class OverviewView(APIView):
 
         return Response({
             # connected = approved by the platform admin: patients can find and book it.
-            "hospital": {"id": hospital.id, "name": hospital.name, "city": hospital.city, "connected": hospital.is_approved},
+            "hospital": {"id": hospital.id, "name": hospital.name, "city": hospital.city, "connected": hospital.is_approved,
+                         "confirm_bookings": hospital.confirm_bookings},
             "counts": {
                 "doctors": active.filter(kind="doctor").count(),
                 "nurses": active.filter(kind="nurse").count(),
                 "other_staff": active.filter(kind__in=OTHER_STAFF_KINDS).count(),
                 "patients": hospital_patients(hospital).count(),
                 "appointments_today": todays.exclude(status="cancelled").count(),
+                "to_confirm": Appointment.objects.filter(doctor__hospital=hospital, awaiting_hospital=True,
+                                                         status=Appointment.Status.BOOKED).count(),
                 "waiting_now": todays.filter(status__in=ACTIVE_STATUSES, checked_in_at__isnull=False,
                                              consultation_started_at__isnull=True).count(),
                 "doctor_accounts_without_record": DoctorProfile.objects.filter(

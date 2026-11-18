@@ -165,6 +165,12 @@ export type Appointment = {
   status: AppointmentStatus;
   reason: string;
   cancelled_by: string;
+  /** Why the hospital declined (cancelled_by "hospital"). */
+  cancel_reason: string;
+  /** Booked but waiting for the hospital's Confirm: the slot is held, the doctor doesn't see it yet. */
+  awaiting_hospital: boolean;
+  /** When the patient booked. */
+  created_at: string;
   /** The patient's ID (for the doctor, to open their records). */
   patient_id: string | null;
   // Patient queue (Step 3)
@@ -353,13 +359,15 @@ export type StaffChartPoint = { month: string; doctors: number; nurses: number }
 
 export type HospitalOverview = {
   /** connected = approved by MediConnect: patients can find and book it. Signed-up hospitals start unconnected. */
-  hospital: { id: number; name: string; city: string; connected: boolean };
+  hospital: { id: number; name: string; city: string; connected: boolean; confirm_bookings: boolean };
   counts: {
     doctors: number;
     nurses: number;
     other_staff: number;
     patients: number;
     appointments_today: number;
+    /** Bookings waiting for the hospital's Confirm. */
+    to_confirm: number;
     waiting_now: number;
     doctor_accounts_without_record: number;
   };

@@ -185,6 +185,16 @@ Owner decisions (2026-11-16): one admin per hospital; a doctor may open the reco
     - Approving connects the hospital (`is_approved`, `approved_at`): patients can find it, and doctors can choose it in their profile and take bookings. The hospital's admins are notified either way.
     - Model `hospitals.ConnectionRequest` (table `hospital_connection_request`; the database allows one pending request per hospital). API: `GET/POST /api/hospital-admin/connection/`, `GET /api/platform/connection-requests/?status=pending`, `POST …/<id>/approve/` and `…/<id>/decline/` (`{note}`).
     - A connected hospital has no map pin until one is set in Django admin; we never invent coordinates.
+- **Hospital Appointments: the hospital confirms first** (owner request 2026-11-18):
+  - **When it applies:** at a hospital with a Hospital account, as long as its switch "Confirm bookings before they reach doctors" is **on** (the default; `Hospital.confirm_bookings`).
+  - **Booking:** the slot is **held** at once, so nobody else can take it (`Appointment.awaiting_hospital`). The patient sees "Waiting for hospital" and gets an email. The hospital's admins get a notification; the **doctor gets nothing yet**.
+  - **The Appointments page** (`/admin/appointments`, in the hospital sidebar) has tabs To confirm (with a count), Today, Upcoming, Past and Cancelled, plus a doctor filter and the switch.
+    - **Confirm:** the booking becomes confirmed, and the doctor gets it in their list with a notification and email, as does the patient.
+    - **Decline:** needs a reason. The slot is freed, and the patient sees the reason (in-app and email).
+  - **Rules for unconfirmed bookings:** not in the doctor's list or queue, no check-in, no reminders, never auto-completed. If one is cancelled before a Confirm (by the patient or the hospital), the doctor never sees it, and a patient's cancellation notifies the hospital.
+  - **Hospitals without a Hospital account,** or with the switch off, work as before: the booking goes straight to the doctor.
+  - **API:** `POST /api/appointments/<id>/hospital-confirm/`, `…/hospital-decline/` (`{reason}`), `GET /api/appointments/?awaiting=1`, `GET/PATCH /api/hospital-admin/booking-settings/`. The hospital overview has `counts.to_confirm`.
+  - **Tests:** `e2e_setup` turns the switch off for "E2E Partner Hospital"; `hospital-appointments.spec.ts` turns it on for its own test. `demo_setup` adds 2 bookings waiting at MediConnect Demo Hospital.
 - Login: four tabs, **Patient | Doctor | Hospital | Admin**. Hospital is for a hospital's manager (hospital admin), Admin only for the MediConnect platform admin. An account can only log in on its own tab: e.g. a patient on the Doctor tab gets "This is a patient account… Choose the Patient tab", and nothing is saved. Show/hide password, and **Remember me** (unticked = the login is kept in `sessionStorage` and ends when the browser closes).
 - Patient dashboard: next appointment, hospitals near you (asks for the location only when you click "Use my location"), MediConnect hospitals with a Book button, upcoming appointments.
 - Doctor dashboard: today's appointments, visits still to see, next patient, today's schedule with status pills, today's duty hours and hospital. It refreshes when a live notification arrives.

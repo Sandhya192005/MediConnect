@@ -24,6 +24,13 @@ class Appointment(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.BOOKED)
     reason = models.CharField(max_length=300, blank=True)
     cancelled_by = models.CharField(max_length=10, blank=True)
+    # Hospital confirms first (owner request 2026-11-18): at a hospital with a hospital account (and its
+    # "confirm bookings" switch on) a new booking holds the slot but waits for the hospital. The doctor
+    # sees it only after the hospital confirms. Declining cancels it with a reason the patient sees.
+    # It stays True if the booking is cancelled before a Confirm: the doctor was never given it, so it
+    # never appears in their list. Only the hospital's Confirm sets it to False.
+    awaiting_hospital = models.BooleanField(default=False, db_index=True)
+    cancel_reason = models.CharField(max_length=300, blank=True)
     # Set by the reminder task so each reminder is sent only once.
     reminder_24h_sent_at = models.DateTimeField(null=True, blank=True)
     reminder_1h_sent_at = models.DateTimeField(null=True, blank=True)

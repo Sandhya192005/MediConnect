@@ -54,7 +54,10 @@ class Command(BaseCommand):
         partner, _ = Hospital.objects.update_or_create(
             name="E2E Partner Hospital",
             defaults=dict(address="1 Test Street", city="Chennai", state="Tamil Nadu", source="manual",
-                          is_approved=True, location=Point(LNG, LAT, srid=4326), location_verified=True),
+                          is_approved=True, location=Point(LNG, LAT, srid=4326), location_verified=True,
+                          # Bookings go straight to the doctor here; hospital-appointments.spec turns
+                          # "confirm first" on for its own test and off again.
+                          confirm_bookings=False),
         )
         partner.departments.add(cardiology)
         # A hospital admin for the partner hospital (Step 4), with no staff records at the start of each run.

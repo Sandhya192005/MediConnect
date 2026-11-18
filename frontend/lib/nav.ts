@@ -34,6 +34,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Nurse management", icon: "nurse", href: "/admin/nurses" },
     { label: "Staff management", icon: "user", href: "/admin/staff" },
     { label: "Patient management", icon: "users", href: "/admin/patients" },
+    { label: "Appointments", icon: "calendar", href: "/admin/appointments" },
     { label: "Staff & salary", icon: "rupee", href: "/admin/salary" },
     { label: "Reports", icon: "chart", soon: "Later" },
     { label: "Settings", icon: "settings", href: "/settings" },

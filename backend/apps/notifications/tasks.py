@@ -52,7 +52,7 @@ def send_appointment_email_task(self, appointment_id: int, event: str):
 def send_due_reminders():
     """Runs every 5 minutes (Celery Beat). Sends 24-hour and 1-hour reminders exactly once."""
     now = timezone.now()
-    active = Appointment.objects.active().filter(start__gt=now)
+    active = Appointment.objects.active().filter(start__gt=now, awaiting_hospital=False)  # unconfirmed: no reminders
     queued = 0
 
     windows = [
@@ -121,7 +121,7 @@ def complete_past_appointments():
     still_in_queue = Q(checked_in_at__isnull=False, start__gte=start_of_today)
     return (
         Appointment.objects.active()
-        .filter(end__lt=cutoff)
+        .filter(end__lt=cutoff, awaiting_hospital=False)  # never confirmed: never "completed"
         .exclude(still_in_queue)
         .update(status=Appointment.Status.COMPLETED)
     )

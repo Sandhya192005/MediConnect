@@ -22,10 +22,10 @@ class AppointmentSerializer(serializers.ModelSerializer):
         fields = [
             "id", "doctor", "doctor_name", "specialization", "hospital_name",
             "patient_name", "patient_email", "patient_id", "start", "end", "status", "reason",
-            "cancelled_by", "created_at",
+            "cancelled_by", "cancel_reason", "awaiting_hospital", "created_at",
             "queue_status", "token", "checked_in_at", "consultation_started_at", "people_ahead",
         ]
-        read_only_fields = ["end", "status", "cancelled_by", "created_at", "token", "checked_in_at", "consultation_started_at"]
+        read_only_fields = ["end", "status", "cancelled_by", "cancel_reason", "awaiting_hospital", "created_at", "token", "checked_in_at", "consultation_started_at"]
         # The view checks slot availability itself and returns a friendly message,
         # so skip DRF's auto-generated "unique set" validator.
         validators = []

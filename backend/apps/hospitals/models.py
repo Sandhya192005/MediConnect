@@ -52,6 +52,9 @@ class Hospital(models.Model):
     # OpenStreetMap id, e.g. "way/123456". Lets us update the same hospital on the next map refresh.
     osm_id = models.CharField(max_length=40, unique=True, null=True, blank=True)
     is_approved = models.BooleanField(default=True)
+    # Only used when the hospital has a hospital account: new bookings wait for the hospital's Confirm
+    # before they reach the doctor (owner request 2026-11-18). The hospital can turn it off.
+    confirm_bookings = models.BooleanField(default=True)
 
     # Filled by the scraper (Phase 7.5). Always shown with where/when it was collected.
     source_url = models.URLField(blank=True, help_text="Page the scraped information came from")

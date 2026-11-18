@@ -211,7 +211,7 @@ export function SkeletonRows({ rows = 3 }: { rows?: number }) {
 }
 
 /** Coloured status pill used in dashboard lists (reference: Completed / In progress / Waiting / Confirmed). */
-export type PillStatus = AppointmentStatus | "waiting" | "in_consultation";
+export type PillStatus = AppointmentStatus | "waiting" | "in_consultation" | "awaiting_hospital";
 const PILL: Record<PillStatus, { label: string; cls: string }> = {
   booked: { label: "Booked", cls: "bg-indigo-50 text-indigo-700 ring-indigo-200" },
   confirmed: { label: "Confirmed", cls: "bg-teal-50 text-teal-700 ring-teal-200" },
@@ -219,11 +219,13 @@ const PILL: Record<PillStatus, { label: string; cls: string }> = {
   in_consultation: { label: "In progress", cls: "bg-sky-50 text-sky-700 ring-sky-200" },
   completed: { label: "Completed", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
   cancelled: { label: "Cancelled", cls: "bg-slate-100 text-slate-500 ring-slate-200" },
+  awaiting_hospital: { label: "Waiting for hospital", cls: "bg-orange-50 text-orange-800 ring-orange-200" },
 };
 
 /** The pill for an appointment: its place in today's queue if it has one, otherwise its booking status. */
 export function pillFor(a: Appointment): PillStatus {
   if (a.queue_status === "waiting" || a.queue_status === "in_consultation") return a.queue_status;
+  if (a.awaiting_hospital && a.status === "booked") return "awaiting_hospital";
   return a.status;
 }
 

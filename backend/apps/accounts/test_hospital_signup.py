@@ -42,7 +42,8 @@ def test_a_hospital_signs_up_and_gets_a_private_workspace():
     me = c.get("/api/auth/me/").json()
     assert me["admin_hospital"]["id"] == hospital.id and not me["is_platform_admin"]
     overview = c.get("/api/hospital-admin/overview/").json()
-    assert overview["hospital"] == {"id": hospital.id, "name": "Sunrise Clinic", "city": "Chennai", "connected": False}
+    assert overview["hospital"] == {"id": hospital.id, "name": "Sunrise Clinic", "city": "Chennai", "connected": False,
+                                    "confirm_bookings": True}
 
     # The workspace works straight away: add a nurse.
     r = c.post("/api/hospital-admin/staff/", {"kind": "nurse", "full_name": "Meena", "join_date": "2026-01-05",

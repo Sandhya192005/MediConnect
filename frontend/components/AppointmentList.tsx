@@ -80,13 +80,19 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
                   <Avatar name={who} />
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2 font-semibold text-navy-800">
-                      {who} <StatusBadge status={a.status} />
+                      {who} <StatusBadge status={a.status} awaiting={a.awaiting_hospital} />
                     </p>
                     <p className="text-sm text-slate-600">
                       {fmtDateTime(a.start)}
                       {viewer === "patient" ? ` · ${a.specialization} · ${a.hospital_name}` : ` · ${a.patient_email}`}
                     </p>
                     {a.reason && <p className="text-sm text-slate-500">Reason: {a.reason}</p>}
+                    {a.awaiting_hospital && a.status === "booked" && (
+                      <p className="text-sm text-orange-800">Your slot is held. The hospital will confirm it soon.</p>
+                    )}
+                    {a.cancelled_by === "hospital" && a.cancel_reason && (
+                      <p className="text-sm text-slate-600">Declined by the hospital: {a.cancel_reason}</p>
+                    )}
                   </div>
                 </div>
                 {active && when === "upcoming" && (

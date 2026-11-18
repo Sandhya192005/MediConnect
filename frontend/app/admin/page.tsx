@@ -79,7 +79,8 @@ function HospitalDashboard() {
           tone="indigo"
           label="Today's appointments"
           value={n(o?.counts.appointments_today)}
-          detail={o ? `${o.counts.waiting_now} waiting right now` : undefined}
+          detail={o ? `${o.counts.waiting_now} waiting right now${o.counts.to_confirm ? ` · ${o.counts.to_confirm} booking${o.counts.to_confirm === 1 ? "" : "s"} to confirm` : ""}` : undefined}
+          link={{ href: "/admin/appointments", label: o?.counts.to_confirm ? "Confirm bookings" : "View appointments" }}
         />
       </div>
 

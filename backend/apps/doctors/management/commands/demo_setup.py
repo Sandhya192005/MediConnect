@@ -228,9 +228,9 @@ class Command(BaseCommand):
         tz = timezone.get_current_timezone()
         made = 0
 
-        def book(doc, patient, start: datetime, status="booked", reason="", created_days_before=2):
+        def book(doc, patient, start: datetime, status="booked", reason="", created_days_before=2, awaiting=False):
             nonlocal made
-            a = Appointment.objects.create(doctor=doc, patient=patient, start=start,
+            a = Appointment.objects.create(doctor=doc, patient=patient, start=start, awaiting_hospital=awaiting,
                                            end=start + timedelta(minutes=doc.slot_minutes), status=status, reason=reason)
             # Booked a couple of days before the visit, like a real booking (created_at is set automatically).
             Appointment.objects.filter(pk=a.pk).update(created_at=min(start, timezone.now()) - timedelta(days=created_days_before))
@@ -257,6 +257,11 @@ class Command(BaseCommand):
             doc = doctors[(i * 3) % len(doctors)]
             day = working_day(doc, today + timedelta(days=days_ahead), 1)
             book(doc, patients[(i + 1) % 3], at(day, 10 + i % 6), reason=REASONS[(i + 3) % len(REASONS)])
+
+        # Two new bookings waiting for the main hospital's Confirm (its "confirm bookings first" switch is on),
+        # to show the hospital Appointments page during the review.
+        for hour, patient, reason in [(15, patients[2], "Sugar test review"), (16, patients[1], "Fever and cough")]:
+            book(doctors[1], patient, at(today + timedelta(days=2), hour), reason=reason, created_days_before=0, awaiting=True)
 
         # Today's queue with the main hospital's cardiologist (08:00–20:00): the next half-hour slots still ahead.
         cardio = doctors[0]
