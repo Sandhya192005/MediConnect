@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import AuthLayout from "@/components/AuthLayout";
+import Icon from "@/components/Icons";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { errorMessage } from "@/lib/api";
@@ -20,6 +21,7 @@ export default function RegisterPage() {
   });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm({ ...form, [key]: e.target.value });
@@ -59,10 +61,32 @@ export default function RegisterPage() {
           Phone
           <input className="input mt-1" value={form.phone} onChange={set("phone")} />
         </label>
-        <label className="block text-sm font-medium text-slate-700">
-          Password
-          <input className="input mt-1" type="password" required minLength={8} value={form.password} onChange={set("password")} />
-        </label>
+        <div>
+          <label htmlFor="register-password" className="block text-sm font-medium text-slate-700">Password</label>
+          <div className="relative mt-1">
+            <input
+              id="register-password"
+              className="input pr-11"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              required
+              minLength={8}
+              value={form.password}
+              onChange={set("password")}
+            />
+            {/* Outside the <label>, so the button doesn't become part of the input's name. */}
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            >
+              <Icon name={showPassword ? "eyeOff" : "eye"} className="h-[18px] w-[18px]" />
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-slate-400">At least 8 characters, not a common password.</p>
+        </div>
         <label className="block text-sm font-medium text-slate-700">
           I am a
           <select className="input mt-1" value={form.role} onChange={set("role")}>

@@ -7,7 +7,10 @@ test("a new patient can sign up and lands on their dashboard", async ({ page }) 
   await page.getByLabel("First name").fill("Nila");
   await page.getByLabel("Last name").fill("Tester");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill("Strong@pass1");
+  await page.getByLabel("Password", { exact: true }).fill("Strong@pass1");
+  // The eye button shows what was typed.
+  await page.getByRole("button", { name: "Show password" }).click();
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute("type", "text");
   await page.getByLabel("I am a").selectOption("patient");
   await page.getByRole("button", { name: "Sign up" }).click();
 
