@@ -179,7 +179,12 @@ Owner decisions (2026-11-16): one admin per hospital; a doctor may open the reco
   - A hospital uses MediConnect as its management software (doctors, nurses, staff, salaries, patient records), connected or not.
   - Signing up creates the manager's login plus a **private** hospital (`source=account`). Patients can't see or book it until the platform admin connects it, and the dashboard says "Not connected to MediConnect yet".
   - Owner decision: like self-registered doctors, a new hospital account can open patients' records by patient ID straight away (no verification); every view is logged and shown to the patient.
-  - Phase 2 (next): a "Connect with MediConnect" request that the platform admin approves.
+  - **Phase 2, Connect with MediConnect** (done 2026-11-18):
+    - The hospital dashboard shows "Request connection": address and phone (required, saved on the hospital because patients will see them) plus an optional message.
+    - The platform admin gets a notification, a **Connection requests** page (`/admin/connections`, also in "Waiting for you") and **Approve / Decline**. A decline needs a reason, which the hospital sees, and it can "Ask again".
+    - Approving connects the hospital (`is_approved`, `approved_at`): patients can find it, and doctors can choose it in their profile and take bookings. The hospital's admins are notified either way.
+    - Model `hospitals.ConnectionRequest` (table `hospital_connection_request`; the database allows one pending request per hospital). API: `GET/POST /api/hospital-admin/connection/`, `GET /api/platform/connection-requests/?status=pending`, `POST …/<id>/approve/` and `…/<id>/decline/` (`{note}`).
+    - A connected hospital has no map pin until one is set in Django admin; we never invent coordinates.
 - Login: four tabs, **Patient | Doctor | Hospital | Admin**. Hospital is for a hospital's manager (hospital admin), Admin only for the MediConnect platform admin. An account can only log in on its own tab: e.g. a patient on the Doctor tab gets "This is a patient account… Choose the Patient tab", and nothing is saved. Show/hide password, and **Remember me** (unticked = the login is kept in `sessionStorage` and ends when the browser closes).
 - Patient dashboard: next appointment, hospitals near you (asks for the location only when you click "Use my location"), MediConnect hospitals with a Book button, upcoming appointments.
 - Doctor dashboard: today's appointments, visits still to see, next patient, today's schedule with status pills, today's duty hours and hospital. It refreshes when a live notification arrives.

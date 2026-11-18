@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { e2e, login } from "./helpers";
+import { API, e2e, login } from "./helpers";
 
 test("platform admin sees platform totals, usage charts and hospital growth", async ({ page }) => {
   await login(page, e2e().platform.email);
@@ -35,4 +35,60 @@ test("hospital admins don't get the platform reports", async ({ page }) => {
   await expect(menu.getByRole("link", { name: "Reports & analytics" })).toHaveCount(0);
   await page.goto("/admin/reports");
   await expect(page.getByText("Platform reports are for the MediConnect platform admin")).toBeVisible();
+});
+
+test("a signed-up hospital asks to connect; the platform admin declines, then approves", async ({ page, browser, request }) => {
+  const stamp = Date.now();
+  const name = `E2E Signup Hospital ${stamp}`; // removed by e2e_setup / e2e_cleanup
+  const email = `e2e.new.hospital.${stamp}@mediconnect.dev`;
+  const password = "Strong@pass1";
+  expect((await request.post(`${API}/api/auth/register-hospital/`, {
+    data: { first_name: "Lalitha", email, password, hospital_name: name, hospital_city: "Chennai" },
+  })).status()).toBe(201);
+
+  // The hospital asks to connect from its dashboard.
+  const hospitalCtx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  const hospital = await hospitalCtx.newPage();
+  await hospital.goto("/login");
+  await hospital.getByRole("tab", { name: "Hospital" }).click();
+  await hospital.getByLabel("Email").fill(email);
+  await hospital.getByLabel("Password", { exact: true }).fill(password);
+  await hospital.getByRole("button", { name: "Log in" }).click();
+  const box = hospital.getByRole("region", { name: "Connection" });
+  await box.getByRole("button", { name: "Request connection" }).click();
+  await box.getByLabel("Hospital address").fill("Lake Road, Anna Nagar");
+  await box.getByLabel("Hospital phone").fill("044 1234 5678");
+  await box.getByLabel(/Message to MediConnect/).fill("We have 3 doctors");
+  await box.getByRole("button", { name: "Send request" }).click();
+  await expect(box).toContainText("Waiting for MediConnect to connect your hospital");
+
+  // The platform admin declines with a reason...
+  await login(page, e2e().platform.email);
+  await page.getByRole("navigation", { name: "Main menu" }).getByRole("link", { name: "Connection requests" }).click();
+  const card = page.getByRole("listitem", { name });
+  await expect(card).toContainText("We have 3 doctors");
+  await card.getByRole("button", { name: "Decline" }).click();
+  await expect(page.getByText(/Tell the hospital why/)).toBeVisible(); // (not getByRole("alert"): Next.js has an empty one too)
+  await card.getByLabel(`Note to ${name}`).fill("Please add the full street address.");
+  await card.getByRole("button", { name: "Decline" }).click();
+  await expect(card).toHaveCount(0); // gone from "Waiting"
+
+  // ...the hospital sees why and asks again...
+  await hospital.reload();
+  await expect(box).toContainText("Please add the full street address.");
+  await box.getByRole("button", { name: "Ask again" }).click();
+  await box.getByLabel("Hospital address").fill("Lake Road, Anna Nagar, Chennai");
+  await box.getByRole("button", { name: "Send request" }).click();
+  await expect(box).toContainText("Waiting for MediConnect");
+
+  // ...and is approved: patients can now see it, and the banner is gone.
+  await page.reload();
+  await page.getByRole("listitem", { name }).getByRole("button", { name: "Approve" }).click();
+  await expect(page.getByRole("listitem", { name })).toHaveCount(0);
+  const listed = await (await request.get(`${API}/api/hospitals/`)).json();
+  expect(listed.map((h: { name: string }) => h.name)).toContain(name);
+  await hospital.reload();
+  await expect(hospital.getByText("Hospital overview")).toBeVisible();
+  await expect(box).toHaveCount(0);
+  await hospitalCtx.close();
 });

@@ -43,6 +43,7 @@ export const NAV: Record<Role, NavItem[]> = {
 /** Platform admin (Django superuser): approves hospitals and answers requests to non-partner hospitals. */
 const PLATFORM: NavItem[] = [
   { label: "Reports & analytics", icon: "chart", href: "/admin/reports" },
+  { label: "Connection requests", icon: "hospital", href: "/admin/connections" },
   { label: "Hospital approvals", icon: "hospital", href: "/admin/hospitals" },
   { label: "Appointment requests", icon: "calendar", href: "/admin/requests" },
   { label: "Django admin", icon: "external", href: `${API_URL}/admin/`, external: true },

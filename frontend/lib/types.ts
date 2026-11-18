@@ -319,6 +319,31 @@ export type StaffMember = {
   created_at: string;
 };
 
+/** A hospital's request to connect with MediConnect (GET /api/hospital-admin/connection/, /api/platform/connection-requests/). */
+export type ConnectionRequest = {
+  id: number;
+  hospital: number;
+  hospital_name: string;
+  hospital_city: string;
+  hospital_address: string;
+  hospital_phone: string;
+  hospital_source: string;
+  requested_by_email: string | null;
+  message: string;
+  status: "pending" | "approved" | "declined";
+  status_label: string;
+  admin_note: string;
+  decided_at: string | null;
+  created_at: string;
+  staff_count: number;
+  doctor_count: number;
+};
+
+export type HospitalConnection = {
+  connected: boolean;
+  hospital: { name: string; city: string; address: string; phone: string };
+  request: ConnectionRequest | null;
+};
 /** One month of the hospital's payroll (GET /api/hospital-admin/payroll/). Money values are rupees. */
 export type PayrollMonth = { month: string; people: number; doctors: number | string; nurses: number | string; other_staff: number | string; total: number | string };
 

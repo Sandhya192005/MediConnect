@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import DashboardShell, { EmptyState, IconTile, Panel, SkeletonRows, SoonBadge, StatCard } from "@/components/DashboardShell";
+import ConnectHospital from "@/components/ConnectHospital";
+import DashboardShell, { EmptyState, IconTile, Panel, SkeletonRows, StatCard } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
 import RoleGuard from "@/components/RoleGuard";
 import { LineChart } from "@/components/Charts";
 import StaffChart from "@/components/StaffChart";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { fmtRupees, timeAgo, type AppointmentRequest, type Hospital, type HospitalOverview, type PlatformOverview } from "@/lib/types";
+import { fmtRupees, timeAgo, type AppointmentRequest, type ConnectionRequest, type Hospital, type HospitalOverview, type PlatformOverview } from "@/lib/types";
 
-type Counts = { awaiting: Hospital[] };
+type Counts = { awaiting: Hospital[]; connections: ConnectionRequest[] };
 
 /** Hospital admins see their hospital; the platform admin (Django superuser) sees approvals and requests. */
 export default function AdminDashboard() {
@@ -58,19 +59,7 @@ function HospitalDashboard() {
     >
       {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
 
-      {o && !o.hospital.connected && (
-        <section aria-label="Connection" className="dash-card flex flex-wrap items-center gap-4 p-5">
-          <IconTile icon="hospital" tone="indigo" />
-          <div className="min-w-0 flex-1">
-            <p className="font-[650] text-[#0f2f3a]">Not connected to MediConnect yet</p>
-            <p className="text-sm text-slate-500">
-              You can manage your doctors, nurses, salaries and patient records now. Patients can&apos;t find or book your
-              hospital until it&apos;s connected with MediConnect.
-            </p>
-          </div>
-          <span className="flex items-center gap-2 text-sm text-slate-500">Connect request <SoonBadge phase="hospital sign-up, phase 2" /></span>
-        </section>
-      )}
+      {o && !o.hospital.connected && <ConnectHospital />}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
@@ -156,6 +145,9 @@ function PlatformDashboard() {
         setCounts((c) => ({ ...c, awaiting: hs.filter((h) => !h.is_approved && !["osm", "account"].includes(h.source as string)) })),
       )
       .catch(fail);
+    api<ConnectionRequest[]>("/api/platform/connection-requests/?status=pending")
+      .then((rs) => setCounts((c) => ({ ...c, connections: rs })))
+      .catch(fail);
     api<AppointmentRequest[]>("/api/appointment-requests/?status=pending")
       .then(setRequests)
       .catch(() => {
@@ -231,10 +223,20 @@ function PlatformDashboard() {
         <Panel title="Waiting for you" action={{ href: "/admin/requests", label: "View all" }}>
           {requests === null ? (
             <SkeletonRows rows={3} />
-          ) : requests.length === 0 && (counts.awaiting?.length ?? 0) === 0 ? (
-            <EmptyState icon="check" title="All caught up" text="No appointment requests or hospitals waiting for approval." />
+          ) : requests.length === 0 && (counts.awaiting?.length ?? 0) === 0 && (counts.connections?.length ?? 0) === 0 ? (
+            <EmptyState icon="check" title="All caught up" text="No connection requests, appointment requests or hospitals waiting for approval." />
           ) : (
             <ul className="divide-y divide-slate-100">
+              {(counts.connections ?? []).slice(0, 3).map((r) => (
+                <li key={`c${r.id}`} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  <IconTile icon="hospital" tone="indigo" size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-[650] text-[#0f2f3a]">Hospital wants to connect</p>
+                    <p className="truncate text-xs text-slate-500">{r.hospital_name} · {r.hospital_city} · {timeAgo(r.created_at)}</p>
+                  </div>
+                  <Link href="/admin/connections" className="dash-link text-xs">Review</Link>
+                </li>
+              ))}
               {(counts.awaiting ?? []).slice(0, 3).map((h) => (
                 <li key={`h${h.id}`} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <IconTile icon="hospital" tone="teal" size="sm" />

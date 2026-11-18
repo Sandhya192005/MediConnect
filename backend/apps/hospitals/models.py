@@ -92,3 +92,36 @@ class Hospital(models.Model):
     def is_listed(self) -> bool:
         """Shown to patients at all: partners, plus hospitals from OpenStreetMap / their own websites."""
         return self.is_approved or self.source in (self.Source.OSM, self.Source.SCRAPED)
+
+
+class ConnectionRequest(models.Model):
+    """
+    A signed-up hospital asks to be connected with MediConnect (owner request 2026-11-18, hospital sign-up
+    phase 2). The platform admin approves (the hospital becomes visible and bookable for patients) or
+    declines with a reason. A hospital has at most one pending request at a time.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Waiting for MediConnect"
+        APPROVED = "approved", "Connected"
+        DECLINED = "declined", "Declined"
+
+    hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name="connection_requests")
+    requested_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, related_name="+")
+    message = models.CharField(max_length=500, blank=True, help_text="From the hospital to MediConnect")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    admin_note = models.CharField(max_length=500, blank=True, help_text="MediConnect's answer (e.g. why declined)")
+    decided_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    decided_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "hospital_connection_request"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["hospital"], condition=models.Q(status="pending"),
+                                    name="one_pending_connection_request_per_hospital"),
+        ]
+
+    def __str__(self):
+        return f"{self.hospital} ({self.get_status_display()})"
