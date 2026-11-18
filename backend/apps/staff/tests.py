@@ -289,3 +289,28 @@ def test_hospital_admins_cannot_approve_hospitals_or_answer_platform_requests(wo
     boss = client_for(User.objects.create_superuser("boss@example.com", "pw"))
     assert boss.patch(f"/api/hospitals/{pending.id}/", {"is_approved": True}, format="json").status_code == 200
     assert [r["id"] for r in boss.get("/api/appointment-requests/").json()] == [req.id]
+
+
+@pytest.mark.django_db
+def test_payroll_per_month_counts_who_worked_each_month(world):
+    from datetime import date
+    from unittest import mock
+
+    c = client_for(world["admin"])
+    add_staff(c, full_name="Old nurse", join_date="2026-01-10", monthly_salary="30000")             # all along
+    add_staff(c, kind="pharmacist", full_name="New", join_date="2026-10-20", monthly_salary="20000")  # from October
+    left = add_staff(c, full_name="Leaver", join_date="2026-02-01", monthly_salary="10000").json()
+    c.patch(f"/api/hospital-admin/staff/{left['id']}/", {"left_on": "2026-09-15"}, format="json")      # worked part of Sept
+    add_staff(c, full_name="Not yet", join_date="2026-12-01", monthly_salary="99000")                # starts next month
+
+    with mock.patch("apps.staff.views.timezone.localdate", return_value=date(2026, 11, 18)):
+        r = c.get("/api/hospital-admin/payroll/?months=4").json()
+    assert r["based_on_current_salaries"] is True
+    rows = {m["month"]: m for m in r["months"]}
+    assert list(rows) == ["Aug 2026", "Sep 2026", "Oct 2026", "Nov 2026"]
+    assert [float(rows[m]["total"]) for m in rows] == [40000, 40000, 50000, 50000]
+    assert (float(rows["Oct 2026"]["nurses"]), float(rows["Oct 2026"]["other_staff"]), rows["Oct 2026"]["people"]) == (30000, 20000, 2)
+    assert rows["Sep 2026"]["people"] == 2  # the leaver still worked in September
+
+    assert client_for(world["other_admin"]).get("/api/hospital-admin/payroll/").json()["months"][-1]["total"] == 0
+    assert client_for(world["patient"]).get("/api/hospital-admin/payroll/").status_code == 403

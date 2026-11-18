@@ -112,17 +112,24 @@ export function LineChart({ labels, series, ariaLabel }: { labels: string[]; ser
   );
 }
 
-/** Bar chart for one count per month (e.g. new hospitals connected each month). */
-export function BarChart({ labels, series, ariaLabel }: { labels: string[]; series: Series; ariaLabel: string }) {
+/**
+ * Bar chart for one value per month (e.g. new hospitals connected each month).
+ * `tick` formats the axis labels and `value` the tooltip (e.g. money: "₹4.5L" on the axis, "₹4,56,000" on hover).
+ */
+export function BarChart({ labels, series, ariaLabel, tick = String, value = String }: {
+  labels: string[]; series: Series; ariaLabel: string; tick?: (v: number) => string; value?: (v: number) => string;
+}) {
   const [hover, setHover] = useState<number | null>(null);
   const { box, W } = useWidth();
   const top = scaleTop(series.values);
   const right = 16;
-  const plotW = W - PAD.left - right;
+  // Room on the left for the longest axis label (about 6.5 px per character at 11 px).
+  const left = Math.max(PAD.left, 12 + Math.max(...[0, 1, 2, 3, 4].map((t) => tick((top / 4) * t).length)) * 6.5);
+  const plotW = W - left - right;
   const n = labels.length;
   const slot = plotW / Math.max(1, n);
   const barW = Math.max(6, Math.min(36, slot * 0.6));
-  const x = (i: number) => PAD.left + slot * i + slot / 2;
+  const x = (i: number) => left + slot * i + slot / 2;
   const y = (v: number) => PAD.top + (1 - v / top) * (H - PAD.top - PAD.bottom);
   const base = y(0);
   const every = Math.max(1, Math.ceil((n * 38) / plotW));
@@ -133,8 +140,8 @@ export function BarChart({ labels, series, ariaLabel }: { labels: string[]; seri
         <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="block max-w-full" role="img" aria-label={ariaLabel}>
           {[0, 1, 2, 3, 4].map((t) => (
             <g key={t}>
-              <line x1={PAD.left} x2={W - right} y1={y((top / 4) * t)} y2={y((top / 4) * t)} stroke="#e2e8f0" />
-              <text x={PAD.left - 8} y={y((top / 4) * t) + 4} textAnchor="end" fontSize={11} fill="#64748b">{(top / 4) * t}</text>
+              <line x1={left} x2={W - right} y1={y((top / 4) * t)} y2={y((top / 4) * t)} stroke="#e2e8f0" />
+              <text x={left - 8} y={y((top / 4) * t) + 4} textAnchor="end" fontSize={11} fill="#64748b">{tick((top / 4) * t)}</text>
             </g>
           ))}
           {series.values.map((v, i) => {
@@ -159,7 +166,7 @@ export function BarChart({ labels, series, ariaLabel }: { labels: string[]; seri
         </svg>
         {hover !== null && (
           <Tooltip left={(x(hover) / W) * 100} flip={hover > (n - 1) / 2} title={labels[hover]}
-                   rows={[{ label: series.label, value: series.values[hover], style: SERIES_STYLE[0] }]} />
+                   rows={[{ label: series.label, value: value(series.values[hover]), style: SERIES_STYLE[0] }]} />
         )}
       </div>
       <DataTable caption={ariaLabel} labels={labels} series={[series]} />
@@ -169,7 +176,7 @@ export function BarChart({ labels, series, ariaLabel }: { labels: string[]; seri
 
 function Tooltip({ left, flip, title, rows }: {
   left: number; flip: boolean; title: string;
-  rows: { label: string; value: number; style: (typeof SERIES_STYLE)[number] }[];
+  rows: { label: string; value: number | string; style: (typeof SERIES_STYLE)[number] }[];
 }) {
   return (
     <div className="pointer-events-none absolute top-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-md"

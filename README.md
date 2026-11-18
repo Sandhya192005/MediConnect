@@ -245,6 +245,11 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
 - **API:** `GET /api/hospital-admin/staff/?kind=other_staff` (every kind except doctors and nurses) or `?kind=pharmacist,receptionist`.
 - **Dashboard:** an "Other staff" card; the payroll and recent activity include them ("New ambulance driver added"). **Staff & salary** has an Other staff card and column.
 - The staff chart still compares doctors and nurses.
+- **Sidebar** (owner request 2026-11-18): Doctor management · Nurse management · Staff management (other staff) · Patient management · Staff & salary. Page headings match.
+- **Payroll per month** (Staff & salary, `GET /api/hospital-admin/payroll/?months=6|12`, max 24):
+  - the salary cost of each month, as a bar chart (axis in lakhs, full amount on hover) and a table (staff, doctors, nurses, other staff, total);
+  - a person counts in every month they worked at least one day, with their full monthly salary.
+  - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
 ### Reference-design features, Part 2 (login and patient)

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BarChart } from "@/components/Charts";
 import { EmptyState, Panel, SkeletonRows, StatCard } from "@/components/DashboardShell";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
-import { fmtRupees, type StaffMember } from "@/lib/types";
+import { fmtRupees, fmtRupeesShort, type PayrollMonth, type StaffMember } from "@/lib/types";
 
 type Row = { department: string; doctors: number; nurses: number; other: number; payroll: number };
 const group = (kind: string) => (kind === "doctor" ? "doctors" : kind === "nurse" ? "nurses" : "other");
@@ -50,6 +51,8 @@ export default function AdminSalaryPage() {
                   detail={staff ? `${inGroup("other").length} staff` : undefined} link={{ href: "/admin/staff", label: "Manage staff" }} />
       </div>
 
+      <PayrollHistory />
+
       <Panel title="By department">
         {staff === null ? (
           <SkeletonRows rows={3} />
@@ -92,5 +95,85 @@ export default function AdminSalaryPage() {
         )}
       </Panel>
     </RoleGuard>
+  );
+}
+
+const RANGES = [6, 12];
+
+/**
+ * Payroll per month (owner request 2026-11-18): what the hospital's staff cost each month, from the staff
+ * records. Past months use today's salaries (salary changes aren't stored), which the panel says.
+ */
+function PayrollHistory() {
+  const [months, setMonths] = useState(6);
+  const [rows, setRows] = useState<PayrollMonth[] | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setRows(null);
+    api<{ months: PayrollMonth[] }>(`/api/hospital-admin/payroll/?months=${months}`)
+      .then((r) => setRows(r.months))
+      .catch((e) => setError(errorMessage(e)));
+  }, [months]);
+
+  const range = (
+    <div role="group" aria-label="Period" className="inline-flex rounded-xl bg-slate-50 p-1 ring-1 ring-slate-200">
+      {RANGES.map((m) => (
+        <button key={m} onClick={() => setMonths(m)} aria-pressed={months === m}
+                className={`rounded-lg px-3 py-1 text-xs ${months === m ? "bg-teal-600 font-[650] text-white" : "text-slate-600 hover:bg-white"}`}>
+          {m} months
+        </button>
+      ))}
+    </div>
+  );
+
+  return (
+    <section aria-label="Payroll per month" className="dash-card mb-6 p-5">
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-base font-[650] text-[#0f2f3a]">Payroll per month</h2>
+        {range}
+      </div>
+      <p className="mb-4 text-xs text-slate-500">
+        Everyone who worked here at least one day of the month, with their monthly salary. Past months use today&apos;s
+        salaries, because earlier salaries aren&apos;t stored.
+      </p>
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      {rows === null ? (
+        !error && <SkeletonRows rows={4} />
+      ) : rows.every((r) => Number(r.total) === 0) ? (
+        <EmptyState icon="rupee" title="No payroll yet" text="Add staff with their join dates and salaries to see the cost per month." />
+      ) : (
+        <>
+          <BarChart ariaLabel={`Total payroll per month, last ${months} months`} labels={rows.map((r) => r.month.split(" ")[0])}
+                    series={{ label: "Payroll", values: rows.map((r) => Number(r.total)) }} tick={fmtRupeesShort} value={fmtRupees} />
+          <div className="mt-5 overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <thead className="text-xs uppercase tracking-wider text-slate-400">
+                <tr>
+                  <th className="pb-2 font-medium">Month</th>
+                  <th className="pb-2 text-right font-medium">Staff</th>
+                  <th className="pb-2 text-right font-medium">Doctors</th>
+                  <th className="pb-2 text-right font-medium">Nurses</th>
+                  <th className="pb-2 text-right font-medium">Other staff</th>
+                  <th className="pb-2 text-right font-medium">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {[...rows].reverse().map((r) => (
+                  <tr key={r.month}>
+                    <td className="py-2.5 text-[#0f2f3a]">{r.month}</td>
+                    <td className="py-2.5 text-right tabular-nums text-slate-600">{r.people}</td>
+                    <td className="py-2.5 text-right tabular-nums text-slate-600">{fmtRupees(r.doctors)}</td>
+                    <td className="py-2.5 text-right tabular-nums text-slate-600">{fmtRupees(r.nurses)}</td>
+                    <td className="py-2.5 text-right tabular-nums text-slate-600">{fmtRupees(r.other_staff)}</td>
+                    <td className="py-2.5 text-right font-[650] tabular-nums text-[#0f2f3a]">{fmtRupees(r.total)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </section>
   );
 }

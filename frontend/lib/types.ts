@@ -319,6 +319,9 @@ export type StaffMember = {
   created_at: string;
 };
 
+/** One month of the hospital's payroll (GET /api/hospital-admin/payroll/). Money values are rupees. */
+export type PayrollMonth = { month: string; people: number; doctors: number | string; nurses: number | string; other_staff: number | string; total: number | string };
+
 export type DoctorAccount = { id: number; name: string; email: string; specialization: string; department: number | null };
 
 export type StaffChartPoint = { month: string; doctors: number; nurses: number };
@@ -385,6 +388,15 @@ export type PlatformReports = {
 
 /** ₹ in Indian grouping, no paise: 1250000 → "₹12,50,000". */
 export const fmtRupees = (v: string | number) => `₹${Math.round(Number(v)).toLocaleString("en-IN")}`;
+
+/** Short rupee amounts for chart axes, in the Indian system: ₹25k, ₹4.5L (lakh), ₹1.2Cr (crore). */
+export function fmtRupeesShort(v: number): string {
+  const short = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, ""));
+  if (v >= 1e7) return `₹${short(v / 1e7)}Cr`;
+  if (v >= 1e5) return `₹${short(v / 1e5)}L`;
+  if (v >= 1e3) return `₹${short(v / 1e3)}k`;
+  return `₹${Math.round(v)}`;
+}
 
 export const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 

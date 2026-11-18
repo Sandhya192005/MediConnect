@@ -53,6 +53,11 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   await menu.getByRole("link", { name: "Staff & salary" }).click();
   await expect(page.getByText("₹2,07,000").first()).toBeVisible();
   await expect(page.getByText("₹25,000").first()).toBeVisible();
+  // Payroll per month: this month's row has everyone (the newest month is listed first).
+  const perMonth = page.getByRole("region", { name: "Payroll per month" });
+  await expect(perMonth.getByRole("img", { name: /Total payroll per month, last 6 months/ })).toBeVisible();
+  // .last(): the chart also has a hidden data table for screen readers, before the visible one.
+  await expect(perMonth.locator("table").last().getByRole("row").nth(1)).toContainText("₹2,07,000");
 
   // Dashboard: real counts and the staff chart.
   await menu.getByRole("link", { name: "Dashboard" }).click();

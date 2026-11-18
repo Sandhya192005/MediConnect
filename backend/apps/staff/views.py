@@ -4,6 +4,7 @@ Hospital admin API (Step 4), under /api/hospital-admin/. Everything is limited t
 """
 
 from datetime import date, timedelta
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Max, Min, OuterRef, Q, Subquery, Sum
@@ -119,6 +120,43 @@ class PatientsView(APIView):
             }
             for p in rows
         ])
+
+
+class PayrollView(APIView):
+    """
+    GET /api/hospital-admin/payroll/?months=12 — the hospital's salary cost per month (owner request 2026-11-18).
+
+    A person counts in a month if they worked there on at least one day of it (joined by the month's end,
+    not left before it started), with their full monthly salary. MediConnect stores only each person's
+    CURRENT salary, so past months use today's salaries: the page says so.
+    """
+
+    permission_classes = [IsHospitalAdmin]
+
+    def get(self, request):
+        try:
+            months = min(max(int(request.query_params.get("months", 12)), 1), 24)
+        except ValueError:
+            months = 12
+        today = timezone.localdate()
+        staff = list(StaffMember.objects.filter(hospital=request.admin_hospital).only("kind", "join_date", "left_on", "monthly_salary"))
+
+        rows = []
+        for end in _month_ends(today, months):  # this month ends today: future joiners don't count yet
+            start = end.replace(day=1)
+            working = [s for s in staff
+                       if s.join_date <= end and (s.left_on is None or (s.left_on > start and s.left_on > s.join_date))]
+            def pay(kinds):
+                return sum((s.monthly_salary for s in working if s.kind in kinds), Decimal(0))
+            rows.append({
+                "month": start.strftime("%b %Y"),
+                "people": len(working),
+                "doctors": pay([StaffMember.Kind.DOCTOR]),
+                "nurses": pay([StaffMember.Kind.NURSE]),
+                "other_staff": pay(OTHER_STAFF_KINDS),
+                "total": pay(StaffMember.Kind.values),
+            })
+        return Response({"months": rows, "based_on_current_salaries": True})
 
 
 def _role_words(s: StaffMember) -> str:
