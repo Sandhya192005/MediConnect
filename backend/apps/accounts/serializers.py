@@ -56,6 +56,62 @@ class RegisterSerializer(serializers.ModelSerializer):
         return User.objects.create_user(**validated_data)
 
 
+class HospitalRegisterSerializer(serializers.Serializer):
+    """
+    A hospital signs up to use MediConnect for managing its staff and records (owner request 2026-11-18).
+    Creates the manager's login (role admin) and a private hospital linked to it. The hospital is NOT
+    connected: patients can't see or book it until the platform admin approves a connection.
+    """
+
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    email = serializers.EmailField()
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True)
+    hospital_name = serializers.CharField(max_length=200)
+    hospital_city = serializers.CharField(max_length=100)
+    hospital_phone = serializers.CharField(max_length=30, required=False, allow_blank=True)
+
+    def validate_email(self, value):
+        value = User.objects.normalize_email(value).lower()
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("An account with this email already exists.")
+        return value
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
+
+    def validate_hospital_name(self, value):
+        value = " ".join(value.split())
+        if len(value) < 3:
+            raise serializers.ValidationError("Please enter the hospital's full name.")
+        return value
+
+    def create(self, data):
+        from django.db import transaction
+
+        from apps.hospitals.models import Hospital
+        from apps.staff.models import HospitalAdmin
+
+        with transaction.atomic():
+            user = User.objects.create_user(
+                email=data["email"], password=data["password"], role=User.Role.ADMIN,
+                first_name=data["first_name"], last_name=data.get("last_name", ""), phone=data.get("phone", ""),
+            )
+            hospital = Hospital.objects.create(
+                name=data["hospital_name"], city=" ".join(data["hospital_city"].split()).title(),
+                phone=data.get("hospital_phone", ""), source=Hospital.Source.ACCOUNT,
+                is_approved=False,  # private until the platform admin connects it (the model's default is True)
+                location=None, location_verified=False,  # no pin: we never invent coordinates
+            )
+            HospitalAdmin.objects.create(user=user, hospital=hospital)
+        return user
+
+    def to_representation(self, user):
+        return {"id": user.id, "email": user.email, "role": user.role}
+
+
 HEALTH_FIELDS = [
     "height_cm", "weight_kg", "blood_group", "allergies", "no_known_allergies", "conditions", "conditions_other",
     "no_conditions", "current_medicines", "no_current_medicines", "emergency_contact_name",

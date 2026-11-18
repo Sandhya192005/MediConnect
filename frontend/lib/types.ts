@@ -312,7 +312,8 @@ export type DoctorAccount = { id: number; name: string; email: string; specializ
 export type StaffChartPoint = { month: string; doctors: number; nurses: number };
 
 export type HospitalOverview = {
-  hospital: { id: number; name: string; city: string };
+  /** connected = approved by MediConnect: patients can find and book it. Signed-up hospitals start unconnected. */
+  hospital: { id: number; name: string; city: string; connected: boolean };
   counts: {
     doctors: number;
     nurses: number;

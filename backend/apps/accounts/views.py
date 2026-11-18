@@ -19,6 +19,7 @@ from .serializers import (
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     PatientDetailsSerializer,
+    HospitalRegisterSerializer,
     RegisterSerializer,
     TokenWithRoleSerializer,
     UserSerializer,
@@ -29,6 +30,14 @@ User = get_user_model()
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+
+class HospitalRegisterView(generics.CreateAPIView):
+    """POST /api/auth/register-hospital/ — a hospital's manager signs up (login + private hospital workspace)."""
+
+    serializer_class = HospitalRegisterSerializer
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
 

@@ -12,12 +12,25 @@ type RegisterInput = {
   role: Exclude<Role, "admin">;
 };
 
+/** A hospital's manager signing up: their own login plus the hospital (a private workspace until connected). */
+export type HospitalRegisterInput = {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  hospital_name: string;
+  hospital_city: string;
+  hospital_phone?: string;
+};
+
 type AuthState = {
   user: User | null;
   loading: boolean;
   /** With `tab` (the login page's tab), an account of another kind is refused and nothing is saved. */
   login: (email: string, password: string, remember?: boolean, tab?: LoginTab) => Promise<User>;
   register: (input: RegisterInput) => Promise<User>;
+  registerHospital: (input: HospitalRegisterInput) => Promise<User>;
   logout: () => void;
   /** Reload the logged-in user (e.g. after editing your name on Profile & settings). */
   refresh: () => Promise<void>;
@@ -90,6 +103,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [login],
   );
 
+  const registerHospital = useCallback(
+    async (input: HospitalRegisterInput) => {
+      await api("/api/auth/register-hospital/", { method: "POST", body: JSON.stringify(input) });
+      return login(input.email, input.password);
+    },
+    [login],
+  );
+
   const refresh = useCallback(async () => {
     setUser(await api<User>("/api/auth/me/"));
   }, []);
@@ -100,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, login, register, registerHospital, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

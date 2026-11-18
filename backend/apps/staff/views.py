@@ -149,7 +149,8 @@ class OverviewView(APIView):
         ]
 
         return Response({
-            "hospital": {"id": hospital.id, "name": hospital.name, "city": hospital.city},
+            # connected = approved by the platform admin: patients can find and book it.
+            "hospital": {"id": hospital.id, "name": hospital.name, "city": hospital.city, "connected": hospital.is_approved},
             "counts": {
                 "doctors": active.filter(kind="doctor").count(),
                 "nurses": active.filter(kind="nurse").count(),

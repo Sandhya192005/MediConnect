@@ -17,6 +17,9 @@ class Hospital(models.Model):
         MANUAL = "manual", "Added manually"
         SCRAPED = "scraped", "Scraped from web"
         OSM = "osm", "OpenStreetMap"
+        # Created by a hospital's own sign-up (2026-11-18): a private workspace for managing staff and
+        # records, never listed for patients until the platform admin connects (approves) it.
+        ACCOUNT = "account", "Hospital sign-up"
 
     name = models.CharField(max_length=200)
     address = models.CharField(max_length=300, blank=True)

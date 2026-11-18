@@ -44,6 +44,7 @@ class Command(BaseCommand):
             raise CommandError("e2e_setup only runs with DEBUG=1 (it resets test accounts).")
 
         User.objects.filter(email__startswith=NEW_USER_PREFIX, email__endswith="@mediconnect.dev").delete()
+        Hospital.objects.filter(name__startswith="E2E Signup Hospital").delete()  # from the hospital sign-up test
 
         patient = self._user(PATIENT_EMAIL, "patient", "Esha", "Patient")
         doctor_user = self._user(DOCTOR_EMAIL, "doctor", "Eshwar", "Testdoctor")

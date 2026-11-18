@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { e2e, login } from "./helpers";
+import { API, e2e, login } from "./helpers";
 
 test("a new patient can sign up and lands on their dashboard", async ({ page }) => {
   const email = `e2e.new.${Date.now()}@mediconnect.dev`; // deleted by the next e2e_setup
@@ -21,6 +21,46 @@ test("a new patient can sign up and lands on their dashboard", async ({ page }) 
 
   await page.getByRole("button", { name: "Log out" }).click();
   await expect(page).toHaveURL(/\/login$/);
+});
+
+test("a hospital signs up, gets its own dashboard and stays hidden from patients", async ({ page, request }) => {
+  const stamp = Date.now();
+  const email = `e2e.new.hospital.${stamp}@mediconnect.dev`; // deleted by the next e2e_setup
+  const name = `E2E Signup Hospital ${stamp}`; // its hospital too (and by e2e_cleanup)
+
+  // From the login page's Hospital tab.
+  await page.goto("/login");
+  await page.getByRole("tab", { name: "Hospital" }).click();
+  await page.getByRole("link", { name: "Create a hospital account" }).click();
+  await expect(page).toHaveURL(/\/register\?as=hospital$/);
+  await expect(page.getByLabel("I am a")).toHaveValue("hospital");
+
+  await page.getByLabel("Hospital name").fill(name);
+  await page.getByLabel("City").fill("Chennai");
+  await page.getByLabel("First name").fill("Lalitha");
+  await page.getByLabel("Last name").fill("Manager");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill("Strong@pass1");
+  await page.getByRole("button", { name: "Create hospital account" }).click();
+
+  // Straight into the hospital dashboard: a private workspace, not connected yet.
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.getByText("Hospital overview")).toBeVisible();
+  await expect(page.getByText(name).first()).toBeVisible();
+  await expect(page.getByRole("region", { name: "Connection" })).toContainText("Not connected to MediConnect yet");
+
+  // Patients can't see it.
+  const listed = await (await request.get(`${API}/api/hospitals/`)).json();
+  expect(listed.map((h: { name: string }) => h.name)).not.toContain(name);
+
+  // Next time, it logs in on the Hospital tab.
+  await page.getByRole("button", { name: "Log out" }).click();
+  await page.goto("/login");
+  await page.getByRole("tab", { name: "Hospital" }).click();
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill("Strong@pass1");
+  await page.getByRole("button", { name: "Log in" }).click();
+  await expect(page).toHaveURL(/\/admin$/);
 });
 
 test("a wrong password shows an error and stays logged out", async ({ page }) => {

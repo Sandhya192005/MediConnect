@@ -13,12 +13,12 @@ import { dashboardFor, useAuth, WrongRoleError, type LoginTab } from "@/lib/auth
  * manager) and Admin (the MediConnect platform owner). A mismatch says which tab to use and stores nothing.
  * The server still checks the account on every request; the tabs are about clarity.
  */
-const TABS: { tab: LoginTab; label: string; hint: string; note?: string }[] = [
-  { tab: "patient", label: "Patient", hint: "See your appointments, records and hospitals near you." },
-  { tab: "doctor", label: "Doctor", hint: "See today's schedule, your queue and your patients." },
+const TABS: { tab: LoginTab; label: string; hint: string; note?: string; signup?: { href: string; label: string } }[] = [
+  { tab: "patient", label: "Patient", hint: "See your appointments, records and hospitals near you.", signup: { href: "/register?as=patient", label: "Create a patient account" } },
+  { tab: "doctor", label: "Doctor", hint: "See today's schedule, your queue and your patients.", signup: { href: "/register?as=doctor", label: "Create a doctor account" } },
   {
     tab: "hospital", label: "Hospital", hint: "Manage your hospital's doctors, staff and patients.",
-    note: "Hospital accounts are created by MediConnect when your hospital joins. Contact us to connect your hospital.",
+    signup: { href: "/register?as=hospital", label: "Create a hospital account" },
   },
   {
     tab: "admin", label: "Admin", hint: "MediConnect platform administration.",
@@ -138,8 +138,8 @@ export default function LoginPage() {
           <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
             <span className="h-px flex-1 bg-slate-200" /> or <span className="h-px flex-1 bg-slate-200" />
           </div>
-          <Link href="/register" className="btn-outline w-full rounded-xl py-3">
-            Create an account
+          <Link href={current.signup?.href ?? "/register"} className="btn-outline w-full rounded-xl py-3">
+            {current.signup?.label ?? "Create an account"}
           </Link>
         </>
       )}
