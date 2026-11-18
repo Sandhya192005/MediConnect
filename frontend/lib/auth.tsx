@@ -15,8 +15,8 @@ type RegisterInput = {
 type AuthState = {
   user: User | null;
   loading: boolean;
-  /** With `expectedRole` (the login page's tab), an account of another role is refused and nothing is saved. */
-  login: (email: string, password: string, remember?: boolean, expectedRole?: Role) => Promise<User>;
+  /** With `tab` (the login page's tab), an account of another kind is refused and nothing is saved. */
+  login: (email: string, password: string, remember?: boolean, tab?: LoginTab) => Promise<User>;
   register: (input: RegisterInput) => Promise<User>;
   logout: () => void;
   /** Reload the logged-in user (e.g. after editing your name on Profile & settings). */
@@ -27,9 +27,29 @@ const AuthContext = createContext<AuthState | null>(null);
 
 export const dashboardFor = (role: Role) => `/${role}`;
 
-/** The login page's tab didn't match the account's role (e.g. a patient account on the Doctor tab). */
+/**
+ * The four login tabs (owner request 2026-11-18): Patient, Doctor, Hospital (a hospital admin) and
+ * Admin (the MediConnect platform admin). Hospital and Admin accounts both have role "admin";
+ * the tab is told apart by `is_platform_admin`.
+ */
+export type LoginTab = "patient" | "doctor" | "hospital" | "admin";
+
+/** Which tab an account belongs on. */
+export function tabFor(user: User): LoginTab {
+  if (user.role !== "admin") return user.role;
+  return user.is_platform_admin && !user.admin_hospital ? "admin" : "hospital";
+}
+
+/** May this account log in on this tab? (A platform admin who also runs a hospital may use either.) */
+export function fitsTab(user: User, tab: LoginTab): boolean {
+  if (tab === "admin") return user.is_platform_admin;
+  if (tab === "hospital") return user.role === "admin" && (!!user.admin_hospital || !user.is_platform_admin);
+  return user.role === tab;
+}
+
+/** The login page's tab didn't match the account (e.g. a patient account on the Doctor tab). */
 export class WrongRoleError extends Error {
-  constructor(public actual: Role) {
+  constructor(public actual: LoginTab) {
     super(`This is a ${actual} account.`);
   }
 }
@@ -50,13 +70,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = useCallback(async (email: string, password: string, remember = true, expectedRole?: Role) => {
+  const login = useCallback(async (email: string, password: string, remember = true, tab?: LoginTab) => {
     const data = await api<{ access: string; refresh: string; user: User }>("/api/auth/login/", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
     // Checked before the tokens are stored, so a refused login leaves the browser logged out.
-    if (expectedRole && data.user.role !== expectedRole) throw new WrongRoleError(data.user.role);
+    if (tab && !fitsTab(data.user, tab)) throw new WrongRoleError(tabFor(data.user));
     tokens.set(data.access, data.refresh, remember);
     setUser(data.user);
     return data.user;

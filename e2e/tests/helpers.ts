@@ -28,7 +28,7 @@ export function e2e(): E2EData {
 /** Log in through the real login form (on the tab that matches the account) and wait for the dashboard. */
 export async function login(page: Page, email: string, password = e2e().password) {
   const d = e2e();
-  const tab = email === d.doctor.email ? "Doctor" : email === d.admin.email || email === d.platform.email ? "Admin" : "Patient";
+  const tab = email === d.doctor.email ? "Doctor" : email === d.admin.email ? "Hospital" : email === d.platform.email ? "Admin" : "Patient";
   await page.goto("/login");
   await page.getByRole("tab", { name: tab }).click();
   await page.getByLabel("Email").fill(email);

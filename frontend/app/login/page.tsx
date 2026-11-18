@@ -5,31 +5,38 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import AuthLayout, { IconInput } from "@/components/AuthLayout";
 import Icon from "@/components/Icons";
-import { errorMessage, type Role } from "@/lib/api";
-import { dashboardFor, useAuth, WrongRoleError } from "@/lib/auth";
+import { errorMessage } from "@/lib/api";
+import { dashboardFor, useAuth, WrongRoleError, type LoginTab } from "@/lib/auth";
 
 /**
- * The tab must match the account: a patient account can only log in on the Patient tab, and so on
- * (owner request 2026-11-17). A mismatch shows which tab to use and stores nothing.
- * The server still checks the role on every request; the tabs are about clarity.
+ * The tab must match the account (owner requests 2026-11-17/18): Patient, Doctor, Hospital (a hospital's
+ * manager) and Admin (the MediConnect platform owner). A mismatch says which tab to use and stores nothing.
+ * The server still checks the account on every request; the tabs are about clarity.
  */
-const TABS: { role: Role; label: string; hint: string }[] = [
-  { role: "patient", label: "Patient", hint: "See your appointments and hospitals near you." },
-  { role: "doctor", label: "Doctor", hint: "See today's schedule and your patients." },
-  { role: "admin", label: "Admin", hint: "Manage your hospital, staff and requests." },
+const TABS: { tab: LoginTab; label: string; hint: string; note?: string }[] = [
+  { tab: "patient", label: "Patient", hint: "See your appointments, records and hospitals near you." },
+  { tab: "doctor", label: "Doctor", hint: "See today's schedule, your queue and your patients." },
+  {
+    tab: "hospital", label: "Hospital", hint: "Manage your hospital's doctors, staff and patients.",
+    note: "Hospital accounts are created by MediConnect when your hospital joins. Contact us to connect your hospital.",
+  },
+  {
+    tab: "admin", label: "Admin", hint: "MediConnect platform administration.",
+    note: "For the MediConnect platform team only.",
+  },
 ];
 
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
-  const [tab, setTab] = useState<Role>("patient");
+  const [tab, setTab] = useState<LoginTab>("patient");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const current = TABS.find((t) => t.role === tab)!;
+  const current = TABS.find((t) => t.tab === tab)!;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,8 +47,9 @@ export default function LoginPage() {
       router.push(dashboardFor(user.role));
     } catch (err) {
       if (err instanceof WrongRoleError) {
-        const right = TABS.find((t) => t.role === err.actual)!.label;
-        setError(`This is a ${right.toLowerCase()} account, not a ${current.label.toLowerCase()} account. Choose the ${right} tab to log in.`);
+        const right = TABS.find((t) => t.tab === err.actual)!.label;
+        const a = (w: string) => `${/^[aeiou]/i.test(w) ? "an" : "a"} ${w.toLowerCase()}`;
+        setError(`This is ${a(right)} account, not ${a(current.label)} account. Choose the ${right} tab to log in.`);
       } else {
         setError(errorMessage(err));
       }
@@ -52,16 +60,19 @@ export default function LoginPage() {
 
   return (
     <AuthLayout title="Welcome back!" subtitle="Sign in to continue to MediConnect.">
-      <div role="tablist" aria-label="I am signing in as" className="grid grid-cols-3 border-b border-slate-200">
+      <div role="tablist" aria-label="I am signing in as" className="grid grid-cols-4 border-b border-slate-200">
         {TABS.map((t) => (
           <button
-            key={t.role}
+            key={t.tab}
             type="button"
             role="tab"
-            aria-selected={tab === t.role}
-            onClick={() => setTab(t.role)}
+            aria-selected={tab === t.tab}
+            onClick={() => {
+              setTab(t.tab);
+              setError("");
+            }}
             className={`-mb-px border-b-2 pb-2.5 text-sm transition ${
-              tab === t.role ? "border-teal-600 font-[650] text-teal-700" : "border-transparent text-slate-500 hover:text-slate-800"
+              tab === t.tab ? "border-teal-600 font-[650] text-teal-700" : "border-transparent text-slate-500 hover:text-slate-800"
             }`}
           >
             {t.label}
@@ -120,8 +131,8 @@ export default function LoginPage() {
         </button>
       </form>
 
-      {tab === "admin" ? (
-        <p className="mt-6 text-center text-xs text-slate-500">Admin accounts are created by MediConnect. Ask your platform administrator for access.</p>
+      {current.note ? (
+        <p className="mt-6 text-center text-xs text-slate-500">{current.note}</p>
       ) : (
         <>
           <div className="my-5 flex items-center gap-3 text-xs text-slate-400">

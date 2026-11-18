@@ -31,7 +31,7 @@ test("a wrong password shows an error and stays logged out", async ({ page }) =>
 
 test("an account can only log in on its own tab", async ({ page }) => {
   await page.goto("/login");
-  for (const tab of ["Doctor", "Admin"]) {
+  for (const tab of ["Doctor", "Hospital", "Admin"]) {
     await page.getByRole("tab", { name: tab }).click();
     await page.getByLabel("Email").fill(e2e().patient.email);
     await page.getByLabel("Password", { exact: true }).fill(e2e().password);
@@ -46,6 +46,23 @@ test("an account can only log in on its own tab", async ({ page }) => {
   await page.getByRole("tab", { name: "Patient" }).click();
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/patient$/);
+});
+
+test("hospital and platform admins each log in on their own tab", async ({ page }) => {
+  const tryLogin = async (tab: string, email: string) => {
+    await page.goto("/login");
+    await page.getByRole("tab", { name: tab }).click();
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password", { exact: true }).fill(e2e().password);
+    await page.getByRole("button", { name: "Log in" }).click();
+  };
+  await tryLogin("Admin", e2e().admin.email);
+  await expect(page.getByText("This is a hospital account, not an admin account. Choose the Hospital tab")).toBeVisible();
+  await tryLogin("Hospital", e2e().platform.email);
+  await expect(page.getByText("This is an admin account, not a hospital account. Choose the Admin tab")).toBeVisible();
+
+  await tryLogin("Hospital", e2e().admin.email);
+  await expect(page.getByText("Hospital overview")).toBeVisible();
 });
 
 test("role pages are protected", async ({ page }) => {
