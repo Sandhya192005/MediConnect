@@ -25,7 +25,7 @@ export default function AuthLayout({ title, subtitle, children }: { title: strin
           <Image src="/logo-mark-clear.png" alt="" width={56} height={56} priority />
           <span>
             <span className="block text-3xl font-bold tracking-tight text-[#0b4f55]">MediConnect</span>
-            <span className="block text-sm text-slate-600">Your health. Our priority.</span>
+            <span className="block text-sm text-slate-600">Connect · Consult · Care</span>
           </span>
         </Link>
 
