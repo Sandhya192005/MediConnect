@@ -18,7 +18,7 @@ from .serializers import MedicalRecordSerializer, RecordAccessSerializer
 from .services import RECORD_VIEWER_ROLES, log_access, may_open_records, staff_hospital
 
 NOT_FOUND = "No patient with this ID."
-IsRecordViewer = role_required(*RECORD_VIEWER_ROLES)  # doctors and admins
+IsRecordViewer = role_required(*RECORD_VIEWER_ROLES)  # doctors, hospital accounts and platform admins
 
 
 class MyRecordViewSet(

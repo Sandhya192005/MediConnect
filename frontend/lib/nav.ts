@@ -26,8 +26,8 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Patient records", icon: "file", href: "/doctor/records" },
     { label: "Profile & settings", icon: "settings", href: "/settings" },
   ],
-  // Hospital admin: one hospital's staff and patients (Step 4).
-  admin: [
+  // Hospital account (role "hospital"): one hospital's staff and patients (Step 4).
+  hospital: [
     { label: "Dashboard", icon: "grid", href: "/admin" },
     { label: "Doctor management", icon: "stethoscope", href: "/admin/doctors" },
     { label: "Nurse management", icon: "nurse", href: "/admin/nurses" },
@@ -38,6 +38,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Reports", icon: "chart", soon: "Later" },
     { label: "Settings", icon: "settings", href: "/settings" },
   ],
+  admin: [], // the platform admin's menu is built by navFor
 };
 
 /** Platform admin (Django superuser): approves hospitals and answers requests to non-partner hospitals. */
@@ -49,10 +50,9 @@ const PLATFORM: NavItem[] = [
   { label: "Django admin", icon: "external", href: `${API_URL}/admin/`, external: true },
 ];
 
-/** The menu for this user: hospital admins get their hospital's menu, platform admins the platform pages. */
+/** The menu for this user: hospital accounts get their hospital's menu, platform admins the platform pages. */
 export function navFor(role: Role, user: User | null): NavItem[] {
   if (role !== "admin") return NAV[role];
-  if (user?.admin_hospital) return user.is_platform_admin ? [...NAV.admin, ...PLATFORM] : NAV.admin;
   const dashboard: NavItem = { label: "Dashboard", icon: "grid", href: "/admin" };
   const settings: NavItem = { label: "Settings", icon: "settings", href: "/settings" };
   return user?.is_platform_admin ? [dashboard, ...PLATFORM, settings] : [dashboard, settings];

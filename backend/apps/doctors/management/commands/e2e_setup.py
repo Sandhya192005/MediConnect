@@ -61,8 +61,10 @@ class Command(BaseCommand):
         )
         partner.departments.add(cardiology)
         # A hospital admin for the partner hospital (Step 4), with no staff records at the start of each run.
-        admin_user = self._user(ADMIN_EMAIL, "admin", "Asha", "Admin")
+        # The hospital account (role "hospital", 2026-11-19) logs in with the hospital's email.
+        admin_user = self._user(ADMIN_EMAIL, "hospital", partner.name, "")
         HospitalAdmin.objects.update_or_create(user=admin_user, defaults={"hospital": partner})
+        Hospital.objects.filter(pk=partner.pk).update(email=ADMIN_EMAIL)
         StaffMember.objects.filter(hospital=partner).delete()
         # A platform admin (superuser) for the platform analytics tests. e2e_setup only runs with DEBUG on.
         platform_user = self._user(PLATFORM_EMAIL, "admin", "Priya", "Platform")

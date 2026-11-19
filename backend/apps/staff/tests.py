@@ -33,7 +33,7 @@ def client_for(user=None):
 
 
 def make_admin(email, hospital):
-    user = User.objects.create_user(email, "pw", role="admin", first_name="Asha", last_name="Admin")
+    user = User.objects.create_user(email, "pw", role="hospital", first_name="Asha", last_name="Admin")
     HospitalAdmin.objects.create(user=user, hospital=hospital)
     return user
 
@@ -86,7 +86,7 @@ def test_me_tells_the_frontend_which_hospital_an_admin_manages(world):
 
 @pytest.mark.django_db
 def test_only_hospital_admins_use_the_hospital_admin_api(world):
-    lonely_admin = User.objects.create_user("lonely@example.com", "pw", role="admin")  # no hospital linked
+    lonely_admin = User.objects.create_user("lonely@example.com", "pw", role="hospital")  # no hospital linked
     for user in (world["patient"], world["doc"].user, lonely_admin):
         assert client_for(user).get("/api/hospital-admin/staff/").status_code == 403
         assert client_for(user).get("/api/hospital-admin/overview/").status_code == 403
@@ -252,7 +252,7 @@ def test_hospital_admins_open_records_by_patient_id_and_it_is_logged(world):
     assert r.status_code == 200 and [x["title"] for x in r.json()["records"]] == ["ECG"]
     assert admin.get(f"/api/records/{upload.json()['id']}/file/").status_code == 200
     log = client_for(world["patient"]).get("/api/records/access-log/").json()
-    assert {(e["viewer_role"], e["action"]) for e in log} == {("admin", "view_list"), ("admin", "download")}
+    assert {(e["viewer_role"], e["action"]) for e in log} == {("hospital", "view_list"), ("hospital", "download")}
 
     # General patient ID (owner decision 2026-11-17): another hospital's admin can open them too, and it's logged.
     other = client_for(world["other_admin"])
@@ -265,7 +265,7 @@ def test_hospital_admin_sees_only_their_hospitals_appointments(world):
     book(world["patient"], make_doctor("doc4@example.com", world["other"]))
     mine = client_for(world["admin"]).get("/api/appointments/").json()
     assert {a["hospital_name"] for a in mine} == {"City Hospital"} and len(mine) == 2
-    lonely = User.objects.create_user("lonely@example.com", "pw", role="admin")
+    lonely = User.objects.create_user("lonely@example.com", "pw", role="hospital")
     assert client_for(lonely).get("/api/appointments/").json() == []
     boss = User.objects.create_superuser("boss@example.com", "pw")
     assert len(client_for(boss).get("/api/appointments/").json()) == 3  # platform admin sees all

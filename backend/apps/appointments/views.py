@@ -128,7 +128,7 @@ class AppointmentViewSet(
         return Response(self.get_serializer(appointment).data)
 
     def _awaiting_for_hospital_admin(self) -> Appointment:
-        if self.request.user.role != "admin" or admin_hospital(self.request.user) is None:
+        if self.request.user.role != "hospital" or admin_hospital(self.request.user) is None:
             raise PermissionDenied("Only the hospital's admins confirm its bookings.")
         appointment = self.get_object()  # get_queryset already limits this to the admin's own hospital
         if appointment.doctor.hospital_id != admin_hospital(self.request.user).id:
@@ -180,7 +180,7 @@ class AppointmentViewSet(
         return Response({"date": timezone.localdate().isoformat(), **data})
 
     def _doctor_set_status(self, new_status, allowed_from):
-        if self.request.user.role not in ("doctor", "admin"):
+        if self.request.user.role not in ("doctor", "hospital", "admin"):
             raise PermissionDenied("Only the doctor can do this.")
         appointment = self.get_object()
         if appointment.status not in allowed_from:

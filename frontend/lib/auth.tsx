@@ -9,16 +9,13 @@ type RegisterInput = {
   first_name: string;
   last_name: string;
   phone?: string;
-  role: Exclude<Role, "admin">;
+  role: "patient" | "doctor";
 };
 
-/** A hospital's manager signing up: their own login plus the hospital (a private workspace until connected). */
+/** A hospital signing up: the hospital is the account (its own email and password); a private workspace until connected. */
 export type HospitalRegisterInput = {
   email: string;
   password: string;
-  first_name: string;
-  last_name: string;
-  phone?: string;
   hospital_name: string;
   hospital_city: string;
   hospital_phone?: string;
@@ -38,25 +35,22 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-export const dashboardFor = (role: Role) => `/${role}`;
+/** Each role's home. Hospital accounts use the /admin pages (their hospital's management). */
+export const dashboardFor = (role: Role) => (role === "hospital" ? "/admin" : `/${role}`);
 
 /**
- * The four login tabs (owner request 2026-11-18): Patient, Doctor, Hospital (a hospital admin) and
- * Admin (the MediConnect platform admin). Hospital and Admin accounts both have role "admin";
- * the tab is told apart by `is_platform_admin`.
+ * The four login tabs (owner requests 2026-11-18/19): Patient, Doctor, Hospital (role "hospital": the
+ * hospital's own account) and Admin (role "admin": the MediConnect platform admin).
  */
 export type LoginTab = "patient" | "doctor" | "hospital" | "admin";
 
 /** Which tab an account belongs on. */
 export function tabFor(user: User): LoginTab {
-  if (user.role !== "admin") return user.role;
-  return user.is_platform_admin && !user.admin_hospital ? "admin" : "hospital";
+  return user.role;
 }
 
-/** May this account log in on this tab? (A platform admin who also runs a hospital may use either.) */
+/** May this account log in on this tab? */
 export function fitsTab(user: User, tab: LoginTab): boolean {
-  if (tab === "admin") return user.is_platform_admin;
-  if (tab === "hospital") return user.role === "admin" && (!!user.admin_hospital || !user.is_platform_admin);
   return user.role === tab;
 }
 

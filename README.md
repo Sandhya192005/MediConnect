@@ -233,8 +233,8 @@ On the day of a visit: **not arrived → waiting (token) → in consultation →
 
 Owner decisions (2026-11-17): hospital admins open records like doctors (with the general patient ID, logged); nurses are staff records without a login.
 
-- **Two kinds of admin.** A **hospital admin** is a user with role `admin` linked to one hospital (`staff.HospitalAdmin`). They see only that hospital's staff, patients and appointments. The **platform admin** is a Django superuser: hospital approvals, departments, requests to non-partner hospitals and other users' website lookups are platform-only. Before Step 4 any `admin` account could approve any hospital.
-- **Making someone a hospital admin:** in Django admin, create the user with role "admin", then add a **Hospital admin** entry linking them to the hospital. There is no public sign-up for admins.
+- **Two kinds of admin.** A **hospital admin** (since 2026-11-19: a hospital account, role `hospital`) is linked to one hospital (`staff.HospitalAdmin`). They see only that hospital's staff, patients and appointments. The **platform admin** is a Django superuser: hospital approvals, departments, requests to non-partner hospitals and other users' website lookups are platform-only. Before Step 4 any `admin` account could approve any hospital.
+- **Hospital accounts (since 2026-11-19):** a hospital is an account of its own, role `hospital`, logging in with the **hospital's email** (not a person's). It is made by the hospital sign-up (hospital name, hospital email, password, city, phone), or by a platform admin in Django admin (a user with role Hospital + a **Hospital profile** entry). Before 2026-11-19 these logins had role `admin`; migration `accounts 0008` converted them, named them after their hospital and copied their email into `hospital.email`.
 - **Doctors / Nurses** (`/admin/doctors`, `/admin/nurses`): staff records (`staff.StaffMember`) with department, designation, phone, email, join date, leaving date and monthly salary. A doctor's record can be linked to their MediConnect doctor account (only accounts at the same hospital, one record per doctor). The database refuses negative salaries, links on nurse records, and leaving before joining. Salaries are visible only to that hospital's admins (and superusers).
 - **Patients** (`/admin/patients`): everyone with a booked, confirmed or completed visit at the hospital, with visits, last and next visit, and how many records they have. **Records** opens them, and **Open by patient ID** opens any patient's history; the patient sees "(hospital admin)" in their log.
 - **Staff & salary** (`/admin/salary`): monthly payroll in total, for doctors and nurses, and by department.
@@ -275,6 +275,16 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - a person counts in every month they worked at least one day, with their full monthly salary.
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
+
+### Hospital accounts get their own role (2026-11-19)
+
+Owner request: a hospital logs in as the hospital, not as a person.
+- New role **`hospital`** in `users.role`; `admin` now means only the platform admin (superuser).
+- New column **`hospital.email`**: for a hospital account it is also its login email.
+- **Sign-up:** choosing Hospital asks only for the hospital's name, city, phone, **hospital email** and password (no person's name). The account is named after the hospital, so the dashboard says "Good evening, ABC Hospital!".
+- **Login:** Hospital tab = role `hospital`, Admin tab = the platform admin.
+- **Existing accounts:** the demo hospital logins were converted by a migration. The test hospital "ABC Hospital" and its person login (madhu@gmail.com) were deleted at the owner's request (database backed up first).
+- Hospital pages keep their `/admin/...` addresses; their dashboard heading is now "Hospital dashboard". "Who opened your records" shows hospitals as "(hospital)".
 
 ### New logo and blue theme (2026-11-19)
 
@@ -341,16 +351,16 @@ Every login is one row in `users`; its `role` says which profile table holds the
 
 | Table | One row per | Holds |
 |---|---|---|
-| `users` | login (patient, doctor or admin) | email, hashed password, name, phone, `role`, `is_superuser` |
+| `users` | login (patient, doctor, hospital or platform admin) | email, hashed password, name, phone, `role`, `is_superuser` |
 | `patient_profile` | patient | the general patient ID (e.g. `P319973`), date of birth, gender, health details (height, weight, blood group, allergies, conditions, medicines, emergency contact) |
 | `doctor_profile` | doctor | hospital, department, specialization, qualification, experience, fee |
-| `hospital_profile` | hospital account (role admin) | the one hospital it manages (renamed from `admin_profile` on 2026-11-19) |
+| `hospital_profile` | hospital account (role `hospital`) | the one hospital it manages (renamed from `admin_profile` on 2026-11-19) |
 | `hospital` | hospital | name, address, phone, website, map pin, connected (`is_approved`), "Hospital confirms first"; signed-up and map-imported hospitals alike (renamed from `hospitals_hospital` on 2026-11-19; its departments link table is now `hospital_departments`) |
 | `staff_member` | doctor or nurse on a hospital's staff | join/leave date, monthly salary, department (nurses have no login) |
 
 - **Patients and doctors** sign up on the website.
 - **The platform admin** (the owner) is a user with `is_superuser` on, created once with `docker compose exec backend python manage.py createsuperuser`. It approves hospitals and creates hospital admins.
-- **Hospital admins:** in Django admin (http://localhost:8000/admin/), add a user with role Admin, then a **Hospital profile** linking them to their hospital (hospitals can also sign up themselves).
+- **Hospital accounts** (role `hospital`) sign up themselves with the hospital's email, or a platform admin adds one in Django admin (user with role Hospital, then a **Hospital profile** linking it to the hospital).
 
 ## Main API endpoints
 

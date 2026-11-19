@@ -34,7 +34,7 @@ export default function AdminSalaryPage() {
   ).sort((a, b) => b.payroll - a.payroll);
 
   return (
-    <RoleGuard role="admin">
+    <RoleGuard role="hospital">
       <div className="mb-6">
         <h1 className="page-title">Staff &amp; salary</h1>
         <p className="page-subtitle text-sm">Monthly payroll of the doctors, nurses and other staff working at your hospital now. Edit salaries under Doctor, Nurse and Staff management.</p>

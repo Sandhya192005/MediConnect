@@ -19,7 +19,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const role: Role = user?.role ?? (pathname.startsWith("/doctor/") || pathname === "/doctor" ? "doctor" : pathname.startsWith("/admin") ? "admin" : "patient");
+  const role: Role = user?.role ?? (pathname.startsWith("/doctor/") || pathname === "/doctor" ? "doctor" : pathname.startsWith("/admin") ? "hospital" : "patient");
   const dark = role === "patient";
 
   useEffect(() => setMenuOpen(false), [pathname]); // close the phone menu after navigating
@@ -235,7 +235,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
 
   // Doctors and hospital admins look patients up by their patient ID (reference design, Part 3);
   // everyone else searches hospitals and doctors.
-  const recordsPage = user?.role === "doctor" ? "/doctor/records" : user?.role === "admin" && user.admin_hospital ? "/admin/patients/records" : null;
+  const recordsPage = user?.role === "doctor" ? "/doctor/records" : user?.role === "hospital" && user.admin_hospital ? "/admin/patients/records" : null;
 
   function search(e: React.FormEvent) {
     e.preventDefault();

@@ -2,7 +2,7 @@
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export type Role = "patient" | "doctor" | "admin";
+export type Role = "patient" | "doctor" | "hospital" | "admin"; // admin = platform admin
 
 export type User = {
   id: number;

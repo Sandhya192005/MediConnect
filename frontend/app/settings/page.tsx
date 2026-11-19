@@ -145,9 +145,9 @@ function ProfileView({ details: d, flash, onEdit }: { details: PatientDetails | 
       </section>
 
       {/* ---- Sections ---- */}
-      <Section title="Personal information">
-        <Row k="Full name" v={`${user.first_name} ${user.last_name}`.trim()} />
-        <Row k="Email" v={user.email} />
+      <Section title={user.role === "hospital" ? "Account information" : "Personal information"}>
+        <Row k={user.role === "hospital" ? "Account name" : "Full name"} v={`${user.first_name} ${user.last_name}`.trim()} />
+        <Row k={user.role === "hospital" ? "Hospital email (login)" : "Email"} v={user.email} />
         <Row k="Phone" v={user.phone} />
         {isPatient && d && (
           <>
@@ -243,12 +243,14 @@ function Row({ k, v, warn = false }: { k: string; v: string; warn?: boolean }) {
 function usePersonalFields() {
   const { user } = useAuth();
   const [p, setP] = useState({ first_name: user?.first_name ?? "", last_name: user?.last_name ?? "", phone: user?.phone ?? "" });
+  // A hospital account has one name (the hospital's), not a person's first and last name.
+  const isHospital = user?.role === "hospital";
   const fields = (
     <fieldset>
-      <legend className="mb-2 text-sm font-[650] text-[#00295c]">Personal information</legend>
+      <legend className="mb-2 text-sm font-[650] text-[#00295c]">{isHospital ? "Account information" : "Personal information"}</legend>
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className={label}>First name<input className="input mt-1" required maxLength={150} value={p.first_name} onChange={(e) => setP((x) => ({ ...x, first_name: e.target.value }))} /></label>
-        <label className={label}>Last name<input className="input mt-1" maxLength={150} value={p.last_name} onChange={(e) => setP((x) => ({ ...x, last_name: e.target.value }))} /></label>
+        <label className={`${label} ${isHospital ? "sm:col-span-2" : ""}`}>{isHospital ? "Account name" : "First name"}<input className="input mt-1" required maxLength={150} value={p.first_name} onChange={(e) => setP((x) => ({ ...x, first_name: e.target.value }))} /></label>
+        {!isHospital && <label className={label}>Last name<input className="input mt-1" maxLength={150} value={p.last_name} onChange={(e) => setP((x) => ({ ...x, last_name: e.target.value }))} /></label>}
         <label className={label}>Phone<input className="input mt-1" type="tel" maxLength={20} value={p.phone} onChange={(e) => setP((x) => ({ ...x, phone: e.target.value }))} /></label>
       </div>
       <p className="mt-2 text-xs text-slate-500">Email: {user?.email} (can&apos;t be changed here)</p>

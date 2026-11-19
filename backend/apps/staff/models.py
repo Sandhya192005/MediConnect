@@ -6,8 +6,8 @@ from django.utils import timezone
 
 class HospitalAdmin(models.Model):
     """
-    Makes a user with role "admin" the administrator of ONE hospital. Created by a platform admin
-    (Django superuser) in Django admin; there is no public sign-up for admins.
+    Links a hospital account (a user with role "hospital", logging in with the hospital's email) to its ONE
+    hospital. Created by the hospital sign-up, or by a platform admin in Django admin.
     """
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="hospital_admin")
@@ -24,8 +24,8 @@ class HospitalAdmin(models.Model):
     def clean(self):
         from django.core.exceptions import ValidationError
 
-        if self.user_id and self.user.role != "admin":
-            raise ValidationError({"user": "Only accounts with the admin role can be hospital admins."})
+        if self.user_id and self.user.role != "hospital":
+            raise ValidationError({"user": "Only accounts with the hospital role can be linked to a hospital."})
 
 
 class StaffQuerySet(models.QuerySet):

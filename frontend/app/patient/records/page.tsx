@@ -70,8 +70,8 @@ export default function PatientRecordsPage() {
                   <li key={e.id} className="flex items-start gap-3 py-2.5 text-sm first:pt-0 last:pb-0">
                     <Icon name={e.action === "download" ? "file" : "eye"} className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
                     <span className="min-w-0 flex-1">
-                      <span className="font-[650] text-[#00295c]">{e.viewer_role === "admin" ? e.viewer_name : `Dr. ${e.viewer_name}`}</span>
-                      {e.viewer_role === "admin" && <span className="text-slate-500"> (hospital admin)</span>}
+                      <span className="font-[650] text-[#00295c]">{e.viewer_role === "doctor" ? `Dr. ${e.viewer_name}` : e.viewer_name}</span>
+                      {e.viewer_role !== "doctor" && <span className="text-slate-500"> ({e.viewer_role === "hospital" ? "hospital" : "MediConnect admin"})</span>}
                       {e.hospital_name && <span className="text-slate-500"> · {e.hospital_name}</span>}
                       <span className="block text-xs text-slate-500">
                         {e.action_label}

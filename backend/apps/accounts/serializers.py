@@ -13,7 +13,7 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     # Patients only (null for doctors and admins): the ID they share with a doctor to open their records.
     patient_id = serializers.SerializerMethodField()
-    # Admins: the hospital a hospital admin manages ({id, name} or null), and whether they're a platform admin.
+    # Hospital accounts: the hospital they manage ({id, name} or null), and whether they're a platform admin.
     admin_hospital = serializers.SerializerMethodField()
     is_platform_admin = serializers.BooleanField(source="is_superuser", read_only=True)
 
@@ -59,14 +59,13 @@ class RegisterSerializer(serializers.ModelSerializer):
 class HospitalRegisterSerializer(serializers.Serializer):
     """
     A hospital signs up to use MediConnect for managing its staff and records (owner request 2026-11-18).
-    Creates the manager's login (role admin) and a private hospital linked to it. The hospital is NOT
-    connected: patients can't see or book it until the platform admin approves a connection.
+    The hospital itself is the account (owner request 2026-11-19): it logs in with the HOSPITAL's email and
+    password (role "hospital"), not a person's. Creates that login and a private hospital linked to it, with
+    the same email. The hospital is NOT connected: patients can't see or book it until the platform admin
+    approves a connection.
     """
 
-    first_name = serializers.CharField(max_length=150)
-    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
-    email = serializers.EmailField()
-    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    email = serializers.EmailField()  # the hospital's email: also its login
     password = serializers.CharField(write_only=True)
     hospital_name = serializers.CharField(max_length=200)
     hospital_city = serializers.CharField(max_length=100)
@@ -95,13 +94,14 @@ class HospitalRegisterSerializer(serializers.Serializer):
         from apps.staff.models import HospitalAdmin
 
         with transaction.atomic():
+            # The login's name is the hospital's name, so greetings and menus show "ABC Hospital".
             user = User.objects.create_user(
-                email=data["email"], password=data["password"], role=User.Role.ADMIN,
-                first_name=data["first_name"], last_name=data.get("last_name", ""), phone=data.get("phone", ""),
+                email=data["email"], password=data["password"], role=User.Role.HOSPITAL,
+                first_name=data["hospital_name"][:150], last_name="", phone=data.get("hospital_phone", "")[:20],
             )
             hospital = Hospital.objects.create(
                 name=data["hospital_name"], city=" ".join(data["hospital_city"].split()).title(),
-                phone=data.get("hospital_phone", ""), source=Hospital.Source.ACCOUNT,
+                phone=data.get("hospital_phone", ""), email=data["email"], source=Hospital.Source.ACCOUNT,
                 is_approved=False,  # private until the platform admin connects it (the model's default is True)
                 location=None, location_verified=False,  # no pin: we never invent coordinates
             )

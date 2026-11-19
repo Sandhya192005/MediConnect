@@ -232,8 +232,8 @@ export type MedicalRecord = {
 export type RecordAccess = {
   id: number;
   viewer_name: string;
-  /** "doctor" or "admin" (a hospital admin). */
-  viewer_role: "doctor" | "admin";
+  /** "doctor", "hospital" (a hospital account) or "admin" (the platform admin). Older entries by hospitals say "admin". */
+  viewer_role: "doctor" | "hospital" | "admin";
   hospital_name: string;
   record_title: string;
   action: "view_list" | "download";

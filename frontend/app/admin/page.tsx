@@ -18,7 +18,7 @@ type Counts = { awaiting: Hospital[]; connections: ConnectionRequest[] };
 /** Hospital admins see their hospital; the platform admin (Django superuser) sees approvals and requests. */
 export default function AdminDashboard() {
   return (
-    <RoleGuard role="admin">
+    <RoleGuard role={["hospital", "admin"]}>
       <Pick />
     </RoleGuard>
   );
@@ -53,8 +53,8 @@ function HospitalDashboard() {
 
   return (
     <DashboardShell
-      role="admin"
-      heading="Admin dashboard"
+      role="hospital"
+      heading="Hospital dashboard"
       greeting={greetingFor(user)}
       subtitle={`Hospital overview${o ? ` · ${o.hospital.name}${o.hospital.city ? `, ${o.hospital.city}` : ""}` : ""} · Manage your hospital operations efficiently.`}
     >

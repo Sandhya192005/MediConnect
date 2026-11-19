@@ -33,7 +33,10 @@ class User(AbstractUser):
     class Role(models.TextChoices):
         PATIENT = "patient", "Patient"
         DOCTOR = "doctor", "Doctor"
-        ADMIN = "admin", "Admin"
+        # A hospital's own account (owner request 2026-11-19): it logs in with the hospital's email, and
+        # staff.HospitalAdmin (table hospital_profile) links it to its one hospital.
+        HOSPITAL = "hospital", "Hospital"
+        ADMIN = "admin", "Platform admin"  # with is_superuser: the platform owner
 
     username = None
     email = models.EmailField(unique=True)

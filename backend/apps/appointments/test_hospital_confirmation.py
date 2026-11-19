@@ -32,7 +32,7 @@ def world():
     doctor.save()
     WeeklyAvailability.objects.bulk_create(
         [WeeklyAvailability(doctor=doctor, weekday=d, start_time=time(9), end_time=time(17)) for d in range(7)])
-    manager = User.objects.create_user("manager@city.example", "pw", role="admin")
+    manager = User.objects.create_user("manager@city.example", "pw", role="hospital")
     HospitalAdmin.objects.create(user=manager, hospital=hospital)
     patient = User.objects.create_user("asha@example.com", "pw", first_name="Asha")
     return {"hospital": hospital, "doctor": doctor, "doc_user": doc_user, "manager": manager, "patient": patient}
@@ -132,7 +132,7 @@ def test_hospitals_without_an_account_or_with_the_switch_off_go_straight_to_the_
 @pytest.mark.django_db
 def test_only_the_hospitals_own_admins_confirm_and_unconfirmed_visits_have_no_queue_or_reminders(world):
     appt = book(world).json()
-    other_admin = User.objects.create_user("other@example.com", "pw", role="admin")
+    other_admin = User.objects.create_user("other@example.com", "pw", role="hospital")
     HospitalAdmin.objects.create(user=other_admin, hospital=Hospital.objects.create(name="Other", city="Chennai"))
     for user in (other_admin, world["doc_user"], world["patient"]):
         assert client_for(user).post(f"/api/appointments/{appt['id']}/hospital-confirm/").status_code in (403, 404)

@@ -69,7 +69,7 @@ def test_month_starts_and_percent_change():
 
 @pytest.mark.django_db
 def test_only_the_platform_admin_sees_platform_analytics(world):
-    hospital_admin = User.objects.create_user("ha@example.com", "pw", role="admin")
+    hospital_admin = User.objects.create_user("ha@example.com", "pw", role="hospital")
     for user in (world["p1"], world["doc"].user, hospital_admin):
         assert client_for(user).get("/api/platform/overview/").status_code == 403
         assert client_for(user).get("/api/platform/reports/").status_code == 403
@@ -135,7 +135,7 @@ def test_hospital_accounts_count_hospitals_that_manage_on_mediconnect(world, bos
 
     from apps.staff.models import HospitalAdmin, StaffMember
 
-    manager = User.objects.create_user("manager@old.example", "pw", role="admin")
+    manager = User.objects.create_user("manager@old.example", "pw", role="hospital")
     link = HospitalAdmin.objects.create(user=manager, hospital=world["old"])
     HospitalAdmin.objects.filter(pk=link.pk).update(created_at=NOW - timedelta(days=25))  # opened in October
     StaffMember.objects.create(hospital=world["old"], kind="nurse", full_name="Meena", join_date=date(2026, 1, 1),

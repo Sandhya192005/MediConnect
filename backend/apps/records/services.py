@@ -59,14 +59,14 @@ def staff_hospital(user) -> Hospital | None:
     if user.role == "doctor":
         profile = DoctorProfile.objects.select_related("hospital").filter(user=user).first()
         return profile.hospital if profile else None
-    if user.role == "admin":
+    if user.role == "hospital":
         from apps.accounts.permissions import admin_hospital
 
         return admin_hospital(user)
     return None
 
 
-RECORD_VIEWER_ROLES = ("doctor", "admin")
+RECORD_VIEWER_ROLES = ("doctor", "hospital", "admin")  # admin = platform admin
 
 
 def may_open_records(user) -> bool:

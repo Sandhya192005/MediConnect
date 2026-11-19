@@ -17,7 +17,10 @@ const KIND_HINT: Record<Kind, string> = {
     "Manage your hospital on MediConnect: doctors, nurses, staff, salaries and patient records. Patients won't see your hospital until you connect it with MediConnect.",
 };
 
-/** Sign-up for patients, doctors and hospitals (a hospital = its manager's login + a private hospital workspace). */
+/**
+ * Sign-up for patients, doctors and hospitals. A hospital is an account of its own (2026-11-19): it logs in with
+ * the hospital's email and password, so no person's name is asked; it starts as a private workspace.
+ */
 export default function RegisterPage() {
   const { register, registerHospital } = useAuth();
   const router = useRouter();
@@ -49,12 +52,13 @@ export default function RegisterPage() {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const person = { first_name: form.first_name, last_name: form.last_name, email: form.email, phone: form.phone, password: form.password };
     try {
       const user =
         kind === "hospital"
-          ? await registerHospital({ ...person, hospital_name: form.hospital_name, hospital_city: form.hospital_city, hospital_phone: form.hospital_phone })
-          : await register({ ...person, role: kind });
+          ? await registerHospital({ email: form.email, password: form.password, hospital_name: form.hospital_name,
+                                     hospital_city: form.hospital_city, hospital_phone: form.hospital_phone })
+          : await register({ first_name: form.first_name, last_name: form.last_name, email: form.email, phone: form.phone,
+                             password: form.password, role: kind });
       router.push(dashboardFor(user.role));
     } catch (err) {
       setError(errorMessage(err));
@@ -98,28 +102,34 @@ export default function RegisterPage() {
                 <input className="input mt-1" type="tel" maxLength={30} value={form.hospital_phone} onChange={set("hospital_phone")} />
               </label>
             </div>
-            <p className="pt-1 text-sm font-[650] text-[#00295c]">You, the hospital&apos;s manager</p>
           </fieldset>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
+        {kind !== "hospital" && (
+          <div className="grid grid-cols-2 gap-3">
+            <label className={label}>
+              First name
+              <input className="input mt-1" required value={form.first_name} onChange={set("first_name")} />
+            </label>
+            <label className={label}>
+              Last name
+              <input className="input mt-1" value={form.last_name} onChange={set("last_name")} />
+            </label>
+          </div>
+        )}
+        <div>
           <label className={label}>
-            First name
-            <input className="input mt-1" required value={form.first_name} onChange={set("first_name")} />
+            {kind === "hospital" ? "Hospital email" : "Email"}
+            <input className="input mt-1" type="email" required autoComplete="email" value={form.email} onChange={set("email")} />
           </label>
-          <label className={label}>
-            Last name
-            <input className="input mt-1" value={form.last_name} onChange={set("last_name")} />
-          </label>
+          {kind === "hospital" && <p className="mt-1 text-xs text-slate-500">The hospital logs in with this email (Hospital tab), not a person&apos;s.</p>}
         </div>
-        <label className={label}>
-          Email
-          <input className="input mt-1" type="email" required autoComplete="email" value={form.email} onChange={set("email")} />
-        </label>
-        <label className={label}>
-          Phone
-          <input className="input mt-1" type="tel" value={form.phone} onChange={set("phone")} />
-        </label>
+        {kind !== "hospital" && (
+          <label className={label}>
+            Phone
+            <input className="input mt-1" type="tel" value={form.phone} onChange={set("phone")} />
+          </label>
+        )}
         <div>
           <label htmlFor="register-password" className={label}>Password</label>
           <div className="relative mt-1">

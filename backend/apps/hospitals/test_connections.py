@@ -23,7 +23,7 @@ def client_for(user=None):
 @pytest.fixture
 def world():
     hospital = Hospital.objects.create(name="Sunrise Clinic", city="Chennai", source="account", is_approved=False)
-    manager = User.objects.create_user("manager@sunrise.example", "pw", role="admin")
+    manager = User.objects.create_user("manager@sunrise.example", "pw", role="hospital")
     HospitalAdmin.objects.create(user=manager, hospital=hospital)
     boss = User.objects.create_superuser("owner@example.com", "pw")
     return {"hospital": hospital, "manager": manager, "boss": boss}
@@ -96,7 +96,7 @@ def test_a_request_needs_an_address_and_phone(world, overrides, field):
 
 @pytest.mark.django_db
 def test_only_the_right_people_use_each_side(world):
-    other_admin = User.objects.create_user("other@example.com", "pw", role="admin")
+    other_admin = User.objects.create_user("other@example.com", "pw", role="hospital")
     HospitalAdmin.objects.create(user=other_admin, hospital=Hospital.objects.create(name="Other", city="Chennai"))
     req_id = ask(client_for(world["manager"])).json()["id"]
     patient = User.objects.create_user("asha@example.com", "pw")

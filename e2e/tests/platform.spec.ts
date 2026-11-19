@@ -35,7 +35,9 @@ test("hospital admins don't get the platform reports", async ({ page }) => {
   const menu = page.getByRole("navigation", { name: "Main menu" });
   await expect(menu.getByRole("link", { name: "Reports & analytics" })).toHaveCount(0);
   await page.goto("/admin/reports");
-  await expect(page.getByText("Platform reports are for the MediConnect platform admin")).toBeVisible();
+  // A hospital account (role "hospital" since 2026-11-19) is sent back to its own dashboard.
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.getByRole("heading", { name: "Hospital dashboard" })).toBeVisible();
 });
 
 test("a signed-up hospital asks to connect; the platform admin declines, then approves", async ({ page, browser, request }) => {

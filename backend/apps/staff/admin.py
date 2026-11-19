@@ -5,7 +5,7 @@ from .models import HospitalAdmin, StaffMember
 
 @admin.register(HospitalAdmin)
 class HospitalAdminAdmin(admin.ModelAdmin):
-    """How a platform admin makes someone a hospital admin: pick a user with role "admin" and their hospital."""
+    """How a platform admin makes someone a hospital admin: pick a user with role "hospital" and its hospital."""
 
     list_display = ["user", "hospital", "created_at"]
     search_fields = ["user__email", "hospital__name"]

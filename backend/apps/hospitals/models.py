@@ -27,6 +27,9 @@ class Hospital(models.Model):
     state = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, default="India")
     phone = models.CharField(max_length=30, blank=True)
+    # The hospital's email (2026-11-19). For a hospital account it is also the login email (kept the same as
+    # users.email by the sign-up); for map-imported hospitals it is usually empty.
+    email = models.EmailField(blank=True)
     website = models.URLField(blank=True)
 
     class WebsiteSource(models.TextChoices):

@@ -178,9 +178,12 @@ class Command(BaseCommand):
             # Hospital login ("Hospital" tab) with staff records, for the hospitals that run their management here.
             StaffMember.objects.filter(hospital=hospital).delete()
             if "admin" in spec:
-                local, first, last = spec["admin"]
-                admin = self._user(local, "admin", first, last, password)
+                # The hospital itself is the account (2026-11-19): role "hospital", named after the hospital,
+                # and its login email is the hospital's email.
+                local = spec["admin"][0]
+                admin = self._user(local, "hospital", hospital.name[:150], "", password)
                 HospitalAdmin.objects.update_or_create(user=admin, defaults={"hospital": hospital})
+                Hospital.objects.filter(pk=hospital.pk).update(email=admin.email)
                 admins.append(admin.email)
                 for i, doc in enumerate(here):
                     StaffMember.objects.create(

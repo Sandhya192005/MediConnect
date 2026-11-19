@@ -1,4 +1,7 @@
-"""Hospital sign-up (owner request 2026-11-18): a hospital manages its staff and records on MediConnect."""
+"""
+Hospital sign-up (owner request 2026-11-18): a hospital manages its staff and records on MediConnect.
+Since 2026-11-19 the hospital itself is the account: role "hospital", logging in with the hospital's email.
+"""
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -13,8 +16,7 @@ URL = "/api/auth/register-hospital/"
 
 
 def signup(**overrides):
-    body = {"first_name": "Lalitha", "last_name": "Manager", "email": "manager@sunrise.example", "phone": "9000000000",
-            "password": STRONG, "hospital_name": "  Sunrise   Clinic ", "hospital_city": "chennai", "hospital_phone": "044 1234"}
+    body = {"email": "manager@sunrise.example", "password": STRONG, "hospital_name": "  Sunrise   Clinic ", "hospital_city": "chennai", "hospital_phone": "044 1234"}
     return APIClient().post(URL, {**body, **overrides}, format="json")
 
 
@@ -29,12 +31,14 @@ def login(email, password=STRONG):
 def test_a_hospital_signs_up_and_gets_a_private_workspace():
     r = signup()
     assert r.status_code == 201, r.json()
-    assert r.json() == {"id": r.json()["id"], "email": "manager@sunrise.example", "role": "admin"}
+    assert r.json() == {"id": r.json()["id"], "email": "manager@sunrise.example", "role": "hospital"}
 
     user = User.objects.get(email="manager@sunrise.example")
     hospital = HospitalAdmin.objects.get(user=user).hospital
-    assert (user.role, user.is_superuser, user.is_staff) == ("admin", False, False)  # never a platform admin
-    assert (hospital.name, hospital.city, hospital.phone) == ("Sunrise Clinic", "Chennai", "044 1234")
+    assert (user.role, user.is_superuser, user.is_staff) == ("hospital", False, False)  # never a platform admin
+    assert (user.first_name, user.last_name, user.phone) == ("Sunrise Clinic", "", "044 1234")  # named after the hospital
+    assert (hospital.name, hospital.city, hospital.phone, hospital.email) == ("Sunrise Clinic", "Chennai", "044 1234",
+                                                                              "manager@sunrise.example")
     assert (hospital.source, hospital.is_approved, hospital.approved_at) == ("account", False, None)
     assert hospital.location is None and not hospital.location_verified  # no invented pin
 
@@ -93,7 +97,7 @@ def test_signed_up_hospitals_can_open_records_by_patient_id():
     ({"hospital_name": "AB"}, "hospital_name"),
     ({"hospital_name": ""}, "hospital_name"),
     ({"hospital_city": ""}, "hospital_city"),
-    ({"first_name": ""}, "first_name"),
+    ({"email": ""}, "email"),
 ])
 def test_bad_hospital_sign_ups_are_refused(overrides, field):
     r = signup(**overrides)
@@ -108,5 +112,5 @@ def test_an_email_can_only_sign_up_once_and_extra_fields_are_ignored():
     r = signup(email="other@sunrise.example", role="patient", is_superuser=True, is_approved=True)
     assert r.status_code == 201
     user = User.objects.get(email="other@sunrise.example")
-    assert user.role == "admin" and not user.is_superuser
+    assert user.role == "hospital" and not user.is_superuser
     assert not HospitalAdmin.objects.get(user=user).hospital.is_approved

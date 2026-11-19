@@ -1,11 +1,13 @@
 """
 Who may do what.
 
-Two kinds of admin (Step 4, owner decision 2026-11-16):
-- platform admin = a Django superuser: approves hospitals, answers appointment requests for non-partner
-  hospitals, sees everything;
-- hospital admin = a user with role "admin" linked to ONE hospital (staff.HospitalAdmin): manages that
-  hospital's staff and sees its patients and appointments only.
+Two kinds of administrator (Step 4, owner decision 2026-11-16; roles split 2026-11-19):
+- platform admin = a Django superuser (role "admin"): approves hospitals, answers appointment requests for
+  non-partner hospitals, sees everything;
+- hospital account = a user with role "hospital" linked to ONE hospital (staff.HospitalAdmin, table
+  hospital_profile). It logs in with the hospital's email, manages that hospital's staff and sees its
+  patients and appointments only. (Code names such as `admin_hospital` and `IsHospitalAdmin` predate the
+  split and mean this hospital account.)
 """
 
 from rest_framework.permissions import SAFE_METHODS, BasePermission
@@ -28,6 +30,7 @@ def role_required(*roles):
 IsPatient = role_required("patient")
 IsDoctor = role_required("doctor")
 IsAdminRole = role_required("admin")
+IsHospitalRole = role_required("hospital")
 
 
 def is_platform_admin(user) -> bool:
@@ -35,8 +38,8 @@ def is_platform_admin(user) -> bool:
 
 
 def admin_hospital(user):
-    """The hospital a hospital admin manages, or None (also None for everyone who isn't a hospital admin)."""
-    if not (user and user.is_authenticated and user.role == "admin"):
+    """The hospital a hospital account manages, or None (also None for every other account)."""
+    if not (user and user.is_authenticated and user.role == "hospital"):
         return None
     from apps.staff.models import HospitalAdmin
 

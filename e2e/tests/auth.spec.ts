@@ -37,9 +37,9 @@ test("a hospital signs up, gets its own dashboard and stays hidden from patients
 
   await page.getByLabel("Hospital name").fill(name);
   await page.getByLabel("City").fill("Chennai");
-  await page.getByLabel("First name").fill("Lalitha");
-  await page.getByLabel("Last name").fill("Manager");
-  await page.getByLabel("Email").fill(email);
+  // The hospital is the account (2026-11-19): no person's name, it logs in with the hospital's email.
+  await expect(page.getByLabel("First name")).toHaveCount(0);
+  await page.getByLabel("Hospital email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill("Strong@pass1");
   await page.getByRole("button", { name: "Create hospital account" }).click();
 
@@ -47,6 +47,7 @@ test("a hospital signs up, gets its own dashboard and stays hidden from patients
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByText("Hospital overview")).toBeVisible();
   await expect(page.getByText(name).first()).toBeVisible();
+  await expect(page.getByText(new RegExp(`^Good (morning|afternoon|evening), ${name}!`))).toBeVisible(); // named after the hospital
   await expect(page.getByRole("region", { name: "Connection" })).toContainText("Not connected to MediConnect yet");
 
   // Patients can't see it.

@@ -90,7 +90,7 @@ export default function HospitalAppointmentsPage() {
   }
 
   return (
-    <RoleGuard role="admin">
+    <RoleGuard role="hospital">
       {!user?.admin_hospital ? (
         <EmptyState icon="calendar" title="Appointments are for a hospital's admins" />
       ) : (

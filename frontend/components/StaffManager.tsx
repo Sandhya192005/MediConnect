@@ -51,7 +51,7 @@ export default function StaffManager({ kind }: { kind: StaffPage }) {
   }
 
   return (
-    <RoleGuard role="admin">
+    <RoleGuard role="hospital">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="page-title">{w.page}</h1>

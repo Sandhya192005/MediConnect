@@ -17,7 +17,7 @@ const TABS: { tab: LoginTab; label: string; hint: string; note?: string; signup?
   { tab: "patient", label: "Patient", hint: "See your appointments, records and hospitals near you.", signup: { href: "/register?as=patient", label: "Create a patient account" } },
   { tab: "doctor", label: "Doctor", hint: "See today's schedule, your queue and your patients.", signup: { href: "/register?as=doctor", label: "Create a doctor account" } },
   {
-    tab: "hospital", label: "Hospital", hint: "Manage your hospital's doctors, staff and patients.",
+    tab: "hospital", label: "Hospital", hint: "Log in with your hospital's email to manage its doctors, staff and patients.",
     signup: { href: "/register?as=hospital", label: "Create a hospital account" },
   },
   {
