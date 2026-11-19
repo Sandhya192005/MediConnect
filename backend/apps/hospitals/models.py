@@ -72,7 +72,9 @@ class Hospital(models.Model):
     )
 
     class Meta:
-        db_table = "hospital"  # renamed from hospitals_hospital (owner request 2026-11-19)
+        # every hospital: from the map, signed up, or added by hand (renamed from hospitals_hospital, then
+        # hospital, owner requests 2026-11-19)
+        db_table = "all_hospitals"
         ordering = ["name"]
 
     def __str__(self):

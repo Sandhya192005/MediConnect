@@ -234,7 +234,7 @@ On the day of a visit: **not arrived → waiting (token) → in consultation →
 Owner decisions (2026-11-17): hospital admins open records like doctors (with the general patient ID, logged); nurses are staff records without a login.
 
 - **Two kinds of admin.** A **hospital admin** (since 2026-11-19: a hospital account, role `hospital`) is linked to one hospital (`staff.HospitalAdmin`). They see only that hospital's staff, patients and appointments. The **platform admin** is a Django superuser: hospital approvals, departments, requests to non-partner hospitals and other users' website lookups are platform-only. Before Step 4 any `admin` account could approve any hospital.
-- **Hospital accounts (since 2026-11-19):** a hospital is an account of its own, role `hospital`, logging in with the **hospital's email** (not a person's). It is made by the hospital sign-up (hospital name, hospital email, password, city, phone), or by a platform admin in Django admin (a user with role Hospital + a **Hospital profile** entry). Before 2026-11-19 these logins had role `admin`; migration `accounts 0008` converted them, named them after their hospital and copied their email into `hospital.email`.
+- **Hospital accounts (since 2026-11-19):** a hospital is an account of its own, role `hospital`, logging in with the **hospital's email** (not a person's). It is made by the hospital sign-up (hospital name, hospital email, password, city, phone), or by a platform admin in Django admin (a user with role Hospital + a **Hospital profile** entry). Before 2026-11-19 these logins had role `admin`; migration `accounts 0008` converted them, named them after their hospital and copied their email into `all_hospitals.email`.
 - **Doctors / Nurses** (`/admin/doctors`, `/admin/nurses`): staff records (`staff.StaffMember`) with department, designation, phone, email, join date, leaving date and monthly salary. A doctor's record can be linked to their MediConnect doctor account (only accounts at the same hospital, one record per doctor). The database refuses negative salaries, links on nurse records, and leaving before joining. Salaries are visible only to that hospital's admins (and superusers).
 - **Patients** (`/admin/patients`): everyone with a booked, confirmed or completed visit at the hospital, with visits, last and next visit, and how many records they have. **Records** opens them, and **Open by patient ID** opens any patient's history; the patient sees "(hospital admin)" in their log.
 - **Staff & salary** (`/admin/salary`): monthly payroll in total, for doctors and nurses, and by department.
@@ -280,7 +280,7 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
 
 Owner request: a hospital logs in as the hospital, not as a person.
 - New role **`hospital`** in `users.role`; `admin` now means only the platform admin (superuser).
-- New column **`hospital.email`**: for a hospital account it is also its login email.
+- New column **`all_hospitals.email`**: for a hospital account it is also its login email.
 - **Sign-up:** choosing Hospital asks only for the hospital's name, city, phone, **hospital email** and password (no person's name). The account is named after the hospital, so the dashboard says "Good evening, ABC Hospital!".
 - **Login:** Hospital tab = role `hospital`, Admin tab = the platform admin.
 - **Existing accounts:** the demo hospital logins were converted by a migration. The test hospital "ABC Hospital" and its person login (madhu@gmail.com) were deleted at the owner's request (database backed up first).
@@ -355,7 +355,7 @@ Every login is one row in `users`; its `role` says which profile table holds the
 | `patient_profile` | patient | the general patient ID (e.g. `P319973`), date of birth, gender, health details (height, weight, blood group, allergies, conditions, medicines, emergency contact) |
 | `doctor_profile` | doctor | hospital, department, specialization, qualification, experience, fee |
 | `hospital_profile` | hospital account (role `hospital`) | the one hospital it manages (renamed from `admin_profile` on 2026-11-19) |
-| `hospital` | hospital | name, address, phone, website, map pin, connected (`is_approved`), "Hospital confirms first"; signed-up and map-imported hospitals alike (renamed from `hospitals_hospital` on 2026-11-19; its departments link table is now `hospital_departments`) |
+| `all_hospitals` | hospital (from the map, signed up, or added by hand) | name, address, phone, website, map pin, connected (`is_approved`), "Hospital confirms first"; signed-up and map-imported hospitals alike (renamed from `hospitals_hospital` on 2026-11-19, then to `all_hospitals` the same day; its departments link table is `all_hospitals_departments`) |
 | `staff_member` | doctor or nurse on a hospital's staff | join/leave date, monthly salary, department (nurses have no login) |
 
 - **Patients and doctors** sign up on the website.
