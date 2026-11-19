@@ -61,13 +61,14 @@ export default function DoctorDashboard() {
   const waiting = visits.filter((a) => a.queue_status === "waiting").sort((a, b) => (a.token ?? 0) - (b.token ?? 0));
   const current = visits.find((a) => a.queue_status === "in_consultation");
   const hours = me?.availability.filter((a) => a.weekday === todayWeekday()) ?? [];
-  const surname = user?.last_name || user?.first_name || "";
+  // The first name: in Tamil Nadu the last name is often just an initial ("Jeevitha D" -> "Dr. Jeevitha").
+  const callName = user?.first_name || user?.last_name || "";
 
   return (
     <DashboardShell
       role="doctor"
       heading="Doctor dashboard"
-      greeting={`${new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening"}, Dr. ${surname}!`}
+      greeting={`${new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 17 ? "Good afternoon" : "Good evening"}, Dr. ${callName}!`}
       subtitle="Here's your schedule for today."
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
