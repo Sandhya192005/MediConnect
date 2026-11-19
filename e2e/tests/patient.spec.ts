@@ -25,6 +25,7 @@ test("patient dashboard: Book appointment menu, report download and the nearest 
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/patient$/);
 
+  await expect(page.getByText(/^Good (morning|afternoon|evening), Dash!/)).toBeVisible(); // same greeting for every role
   const menu = page.getByRole("navigation", { name: "Main menu" });
   await expect(menu.getByRole("link", { name: "Book appointment" })).toHaveAttribute("href", "/doctors");
 

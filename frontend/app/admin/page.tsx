@@ -10,6 +10,7 @@ import { LineChart } from "@/components/Charts";
 import StaffChart from "@/components/StaffChart";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { greetingFor } from "@/lib/greeting";
 import { fmtRupees, timeAgo, type AppointmentRequest, type ConnectionRequest, type Hospital, type HospitalOverview, type PlatformOverview } from "@/lib/types";
 
 type Counts = { awaiting: Hospital[]; connections: ConnectionRequest[] };
@@ -40,6 +41,7 @@ function Pick() {
 }
 
 function HospitalDashboard() {
+  const { user } = useAuth();
   const [o, setO] = useState<HospitalOverview | null>(null);
   const [error, setError] = useState("");
 
@@ -53,9 +55,8 @@ function HospitalDashboard() {
     <DashboardShell
       role="admin"
       heading="Admin dashboard"
-      greeting="Hospital overview"
-      subtitle={o ? `${o.hospital.name}${o.hospital.city ? `, ${o.hospital.city}` : ""} · Manage your hospital operations efficiently.` : "Manage your hospital operations efficiently."}
-      wave={false}
+      greeting={greetingFor(user)}
+      subtitle={`Hospital overview${o ? ` · ${o.hospital.name}${o.hospital.city ? `, ${o.hospital.city}` : ""}` : ""} · Manage your hospital operations efficiently.`}
     >
       {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
 
@@ -131,6 +132,7 @@ function HospitalDashboard() {
  * platform, how that grows, and what's waiting for approval. Numbers from /api/platform/overview/.
  */
 function PlatformDashboard() {
+  const { user } = useAuth();
   const [o, setO] = useState<PlatformOverview | null>(null);
   const [counts, setCounts] = useState<Partial<Counts>>({});
   const [requests, setRequests] = useState<AppointmentRequest[] | null>(null);
@@ -160,7 +162,7 @@ function PlatformDashboard() {
   const newThisMonth = (n: number | undefined) => (n ? `+${n} this month` : "None new this month");
 
   return (
-    <DashboardShell role="admin" heading="Admin dashboard" greeting="Platform overview" subtitle="How many people use MediConnect, and how it grows." wave={false}>
+    <DashboardShell role="admin" heading="Admin dashboard" greeting={greetingFor(user)} subtitle="Platform overview · How many people use MediConnect, and how it grows.">
       {failed && (
         <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
           Some numbers couldn&apos;t be loaded. Refresh the page to try again.

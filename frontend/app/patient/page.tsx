@@ -7,6 +7,7 @@ import Icon from "@/components/Icons";
 import TodayVisit from "@/components/TodayVisit";
 import { api, downloadFile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { greetingFor } from "@/lib/greeting";
 import HospitalThumb from "@/components/HospitalThumb";
 import { areaOf, fmtDate, fmtDateTime, type Appointment, type MedicalRecord, type NearbyHospital, type NearbyResponse } from "@/lib/types";
 
@@ -50,7 +51,7 @@ export default function PatientDashboard() {
     <DashboardShell
       role="patient"
       heading="Patient dashboard"
-      greeting={`Hello ${user?.first_name || "there"}!`}
+      greeting={greetingFor(user)}
       subtitle="Take care of your health, always."
       badge
     >

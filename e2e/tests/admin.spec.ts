@@ -7,6 +7,7 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   await login(page, e2e().admin.email);
   await expect(page.getByRole("heading", { name: "Admin dashboard" })).toBeVisible();
   await expect(page.getByText("Hospital overview")).toBeVisible();
+  await expect(page.getByText(/^Good (morning|afternoon|evening), Asha!/)).toBeVisible(); // same greeting for every role
   const menu = page.getByRole("navigation", { name: "Main menu" });
   // Hospital admins don't get the platform pages (hospital approvals, requests to other hospitals).
   await expect(menu.getByRole("link", { name: "Hospital approvals" })).toHaveCount(0);

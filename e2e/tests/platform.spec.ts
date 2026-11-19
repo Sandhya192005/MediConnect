@@ -4,6 +4,7 @@ import { API, e2e, login } from "./helpers";
 test("platform admin sees platform totals, usage charts and hospital growth", async ({ page }) => {
   await login(page, e2e().platform.email);
   await expect(page.getByText("Platform overview")).toBeVisible();
+  await expect(page.getByText(/^Good (morning|afternoon|evening), Priya!/)).toBeVisible(); // same greeting for every role
 
   // Totals for the whole platform, with the growth line under each.
   for (const label of ["Patient accounts", "Doctor accounts", "Connected hospitals", "Hospital accounts", "Appointments this month"]) {
