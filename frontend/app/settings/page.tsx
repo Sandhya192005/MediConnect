@@ -114,13 +114,13 @@ function ProfileView({ details: d, flash, onEdit }: { details: PatientDetails | 
           <Icon name="pencil" className="h-4 w-4" /> Edit
         </button>
         <div className="-mt-12 flex flex-col items-center px-5 pb-6 text-center">
-          <span aria-hidden="true" className="flex h-24 w-24 items-center justify-center rounded-full bg-[#0f2f4f] text-3xl font-[650] text-white ring-4 ring-white">
+          <span aria-hidden="true" className="flex h-24 w-24 items-center justify-center rounded-full bg-[#00295c] text-3xl font-[650] text-white ring-4 ring-white">
             {initials || "?"}
           </span>
-          <h2 className="mt-3 text-xl font-bold text-[#0f2f3a]">{name}</h2>
+          <h2 className="mt-3 text-xl font-bold text-[#00295c]">{name}</h2>
           <p className="mt-1 text-sm text-slate-500">
             {ROLE_LABEL[user.role] ?? user.role}
-            {isPatient && d && <> · Patient ID <span className="font-mono text-[#0f2f3a]" data-testid="profile-patient-id">{d.patient_id}</span></>}
+            {isPatient && d && <> · Patient ID <span className="font-mono text-[#00295c]" data-testid="profile-patient-id">{d.patient_id}</span></>}
           </p>
 
           <div className="mt-5 flex justify-center gap-6">
@@ -132,7 +132,7 @@ function ProfileView({ details: d, flash, onEdit }: { details: PatientDetails | 
           {isPatient && d && (
             <div className="mt-6 w-full max-w-sm text-left">
               <div className="flex items-baseline justify-between text-sm">
-                <p id="completeness-label" className="font-[650] text-[#0f2f3a]">Profile {d.completeness}% complete</p>
+                <p id="completeness-label" className="font-[650] text-[#00295c]">Profile {d.completeness}% complete</p>
                 {d.completeness < 100 && <button type="button" onClick={onEdit} className="dash-link text-xs">Complete it</button>}
               </div>
               <div role="progressbar" aria-labelledby="completeness-label" aria-valuenow={d.completeness} aria-valuemin={0} aria-valuemax={100}
@@ -184,7 +184,7 @@ function ProfileView({ details: d, flash, onEdit }: { details: PatientDetails | 
         <div className="flex items-center justify-between gap-4 py-2.5">
           <div className="grid flex-1 grid-cols-[8.5rem_1fr] gap-4 text-sm sm:grid-cols-[12rem_1fr]">
             <dt className="text-slate-500">Password</dt>
-            <dd className="tracking-widest text-[#0f2f3a]">••••••••</dd>
+            <dd className="tracking-widest text-[#00295c]">••••••••</dd>
           </div>
           {!changingPassword && (
             <button type="button" onClick={() => setChangingPassword(true)} className="dash-link shrink-0 text-sm">
@@ -231,7 +231,7 @@ function Row({ k, v, warn = false }: { k: string; v: string; warn?: boolean }) {
   return (
     <div className="grid grid-cols-[8.5rem_1fr] gap-4 py-2.5 text-sm sm:grid-cols-[12rem_1fr]">
       <dt className="text-slate-500">{k}</dt>
-      <dd className={`min-w-0 whitespace-pre-line break-words ${warn ? "font-[650] text-red-700" : "text-[#0f2f3a]"}`}>
+      <dd className={`min-w-0 whitespace-pre-line break-words ${warn ? "font-[650] text-red-700" : "text-[#00295c]"}`}>
         {v || <span className="text-slate-400">Not added</span>}
       </dd>
     </div>
@@ -245,7 +245,7 @@ function usePersonalFields() {
   const [p, setP] = useState({ first_name: user?.first_name ?? "", last_name: user?.last_name ?? "", phone: user?.phone ?? "" });
   const fields = (
     <fieldset>
-      <legend className="mb-2 text-sm font-[650] text-[#0f2f3a]">Personal information</legend>
+      <legend className="mb-2 text-sm font-[650] text-[#00295c]">Personal information</legend>
       <div className="grid gap-3 sm:grid-cols-3">
         <label className={label}>First name<input className="input mt-1" required maxLength={150} value={p.first_name} onChange={(e) => setP((x) => ({ ...x, first_name: e.target.value }))} /></label>
         <label className={label}>Last name<input className="input mt-1" maxLength={150} value={p.last_name} onChange={(e) => setP((x) => ({ ...x, last_name: e.target.value }))} /></label>

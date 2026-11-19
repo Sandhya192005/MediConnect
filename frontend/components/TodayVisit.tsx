@@ -85,7 +85,7 @@ function VisitCard({ a, onChange }: { a: Appointment; onChange: () => void }) {
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-[650] uppercase tracking-wider text-amber-700">You&apos;re checked in</p>
-          <p className="text-lg font-bold text-[#0f2f3a]" data-testid="people-ahead">
+          <p className="text-lg font-bold text-[#00295c]" data-testid="people-ahead">
             {ahead === 0 ? "You're next" : `${ahead} ${ahead === 1 ? "person" : "people"} ahead of you`}
           </p>
           <p className="truncate text-sm text-slate-500">{where} · booked {fmtTime(a.start)}</p>
@@ -102,7 +102,7 @@ function VisitCard({ a, onChange }: { a: Appointment; onChange: () => void }) {
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-xs font-[650] uppercase tracking-wider text-teal-700">Your visit today</p>
-        <p className="text-lg font-bold text-[#0f2f3a]">{fmtTime(a.start)} · {a.doctor_name}</p>
+        <p className="text-lg font-bold text-[#00295c]">{fmtTime(a.start)} · {a.doctor_name}</p>
         <p className="truncate text-sm text-slate-500">
           {a.hospital_name ?? ""} · Check in when you reach the hospital (from 2 hours before).
         </p>

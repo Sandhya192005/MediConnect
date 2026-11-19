@@ -103,7 +103,7 @@ export default function HospitalAppointmentsPage() {
 
           <section aria-label="Booking settings" className="dash-card mb-6 flex flex-wrap items-center gap-4 p-5">
             <div className="min-w-0 flex-1">
-              <p className="font-[650] text-[#0f2f3a]">Confirm bookings before they reach doctors</p>
+              <p className="font-[650] text-[#00295c]">Confirm bookings before they reach doctors</p>
               <p className="text-sm text-slate-500">
                 {confirmFirst === false
                   ? "Off: new bookings go straight to the doctor, as confirmed slots."
@@ -153,7 +153,7 @@ export default function HospitalAppointmentsPage() {
                   <li key={a.id} aria-label={`${a.patient_name} with ${a.doctor_name}`} className="py-4 first:pt-0 last:pb-0">
                     <div className="flex flex-wrap items-start gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="flex flex-wrap items-center gap-2 text-sm font-[650] text-[#0f2f3a]">
+                        <p className="flex flex-wrap items-center gap-2 text-sm font-[650] text-[#00295c]">
                           {a.patient_name}
                           {a.patient_id && <span className="font-mono text-xs font-normal text-slate-500">{a.patient_id}</span>}
                           <StatusPill status={pillFor(a)} />

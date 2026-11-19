@@ -86,7 +86,7 @@ export default function ConnectionRequestsPage() {
                     <div className="flex flex-wrap items-start gap-3">
                       <IconTile icon="hospital" tone={r.status === "approved" ? "teal" : r.status === "declined" ? "rose" : "indigo"} size="sm" />
                       <div className="min-w-0 flex-1">
-                        <p className="font-[650] text-[#0f2f3a]">{r.hospital_name} <span className="font-normal text-slate-500">· {r.hospital_city}</span></p>
+                        <p className="font-[650] text-[#00295c]">{r.hospital_name} <span className="font-normal text-slate-500">· {r.hospital_city}</span></p>
                         <p className="text-sm text-slate-600">{r.hospital_address} · {r.hospital_phone}</p>
                         <p className="mt-1 text-xs text-slate-500">
                           Asked {timeAgo(r.created_at)} by {r.requested_by_email ?? "a deleted account"} · {r.doctor_count} doctor

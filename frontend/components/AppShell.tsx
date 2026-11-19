@@ -29,7 +29,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Desktop sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-30 hidden w-64 flex-col lg:flex ${
-          dark ? "bg-gradient-to-b from-[#0d5a5f] to-[#0a4248] text-white" : "border-r border-slate-200/80 bg-white"
+          dark ? "bg-gradient-to-b from-[#0b3a78] to-[#00295c] text-white" : "border-r border-slate-200/80 bg-white"
         }`}
       >
         <Sidebar role={role} dark={dark} />
@@ -42,7 +42,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <div className="absolute inset-0 bg-slate-900/40" aria-hidden="true" onClick={() => setMenuOpen(false)} />
           <aside
             className={`relative flex h-full w-72 max-w-[85vw] flex-col shadow-xl ${
-              dark ? "bg-gradient-to-b from-[#0d5a5f] to-[#0a4248] text-white" : "bg-white"
+              dark ? "bg-gradient-to-b from-[#0b3a78] to-[#00295c] text-white" : "bg-white"
             }`}
           >
             <button
@@ -84,7 +84,7 @@ function Sidebar({ role, dark }: { role: Role; dark: boolean }) {
         <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${dark ? "bg-white" : ""}`}>
           <Image src="/logo-mark-clear.png" alt="" width={34} height={34} priority />
         </span>
-        <span className={`text-xl font-[650] tracking-tight ${dark ? "text-white" : "text-[#0b4f55]"}`}>MediConnect</span>
+        <span className={`text-xl font-[650] tracking-tight ${dark ? "text-white" : "text-[#00295c]"}`}>MediConnect</span>
       </Link>
 
       <nav className="mt-8 flex-1 space-y-1 overflow-y-auto" aria-label="Main menu">
@@ -97,7 +97,7 @@ function Sidebar({ role, dark }: { role: Role; dark: boolean }) {
       <Link href="/support" className={`mt-4 flex items-center gap-3 rounded-2xl p-4 transition ${dark ? "bg-white/10 hover:bg-white/15" : "bg-teal-50 hover:bg-teal-100"}`}>
         <Icon name="chat" className={`h-5 w-5 ${dark ? "text-white" : "text-teal-700"}`} />
         <span>
-          <span className={`block text-sm font-[650] ${dark ? "text-white" : "text-[#0f2f3a]"}`}>Need help?</span>
+          <span className={`block text-sm font-[650] ${dark ? "text-white" : "text-[#00295c]"}`}>Need help?</span>
           <span className={`block text-xs ${dark ? "text-white/75" : "text-slate-500"}`}>Contact support</span>
         </span>
       </Link>
@@ -145,7 +145,7 @@ function SidebarItem({ item, active, dark }: { item: NavItem; active: boolean; d
 
   const tone = active
     ? dark
-      ? "bg-[#d8f1ee] font-[650] text-[#0b4f55] shadow-sm"
+      ? "bg-[#dbe6f6] font-[650] text-[#00295c] shadow-sm"
       : "bg-teal-50 font-[650] text-teal-800"
     : dark
       ? "text-white/85 hover:bg-white/10 hover:text-white"

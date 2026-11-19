@@ -78,7 +78,7 @@ export default function DoctorDashboard() {
           value={today === null ? "…" : visits.length}
           detail={today === null ? undefined : (
             <>
-              {yesterdayCount !== null && <span className="block font-[650] text-[#0f2f3a]">{vsYesterday(visits.length, yesterdayCount)}</span>}
+              {yesterdayCount !== null && <span className="block font-[650] text-[#00295c]">{vsYesterday(visits.length, yesterdayCount)}</span>}
               {visits.filter((a) => a.status === "completed").length} completed
             </>
           )}
@@ -117,7 +117,7 @@ export default function DoctorDashboard() {
                 <li key={a.id} className={`flex items-center gap-4 py-3 first:pt-0 last:pb-0 ${a.status === "cancelled" ? "opacity-60" : ""}`}>
                   <span className="w-20 shrink-0 text-sm tabular-nums text-slate-500">{fmtTime(a.start)}</span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-[650] text-[#0f2f3a]">{a.patient_name}</span>
+                    <span className="block truncate text-sm font-[650] text-[#00295c]">{a.patient_name}</span>
                     {a.reason && <span className="block truncate text-xs text-slate-500">{a.reason}</span>}
                   </span>
                   {a.token && <span className="text-xs tabular-nums text-slate-400">#{a.token}</span>}
@@ -137,7 +137,7 @@ export default function DoctorDashboard() {
                 <div className="flex items-center gap-3">
                   <IconTile icon="hospital" tone="teal" size="sm" />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-[650] text-[#0f2f3a]">{me.hospital_name ?? "No hospital set"}</p>
+                    <p className="truncate text-sm font-[650] text-[#00295c]">{me.hospital_name ?? "No hospital set"}</p>
                     <p className="truncate text-xs text-slate-500">
                       {[me.specialization || me.department_name, me.hospital_city].filter(Boolean).join(" · ") || "Add your specialization in your profile"}
                     </p>
@@ -145,7 +145,7 @@ export default function DoctorDashboard() {
                 </div>
                 <div className="flex items-center gap-3">
                   <IconTile icon="clock" tone="blue" size="sm" />
-                  <p className="text-sm text-[#0f2f3a]">
+                  <p className="text-sm text-[#00295c]">
                     {hours.length > 0 ? hours.map((h) => `${hhmm(h.start_time)}–${hhmm(h.end_time)}`).join(", ") : "Not on duty today"}
                   </p>
                 </div>
@@ -171,7 +171,7 @@ function RecordsQuickAccess() {
     <section className="dash-card p-5" aria-label="Patient records quick access">
       <div className="flex items-center gap-3">
         <IconTile icon="file" tone="orange" size="sm" />
-        <p className="text-sm font-[650] text-[#0f2f3a]">Quick access to patient records</p>
+        <p className="text-sm font-[650] text-[#00295c]">Quick access to patient records</p>
       </div>
       <p className="mt-2 text-xs text-slate-500">Any patient&apos;s medical history, with their patient ID. Each view is logged for the patient.</p>
       <form

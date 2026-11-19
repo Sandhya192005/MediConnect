@@ -32,7 +32,7 @@ export default function HospitalRow({ h, selected = false }: { h: HospitalRowDat
         <HospitalThumb className="h-14 w-14" />
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <Link href={`/hospitals/${h.id}`} className="font-[650] text-[#0f2f3a] hover:text-teal-700">{h.name}</Link>
+            <Link href={`/hospitals/${h.id}`} className="font-[650] text-[#00295c] hover:text-teal-700">{h.name}</Link>
             {h.is_partner ? (
               <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-[650] text-teal-700 ring-1 ring-teal-200">Instant booking</span>
             ) : (

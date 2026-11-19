@@ -83,7 +83,7 @@ export default function RegisterPage() {
         {kind === "hospital" && (
           <fieldset className="space-y-3 rounded-2xl bg-slate-50 p-4">
             <legend className="sr-only">Your hospital</legend>
-            <p className="text-sm font-[650] text-[#0f2f3a]">Your hospital</p>
+            <p className="text-sm font-[650] text-[#00295c]">Your hospital</p>
             <label className={label}>
               Hospital name
               <input className="input mt-1" required minLength={3} maxLength={200} value={form.hospital_name} onChange={set("hospital_name")} />
@@ -98,7 +98,7 @@ export default function RegisterPage() {
                 <input className="input mt-1" type="tel" maxLength={30} value={form.hospital_phone} onChange={set("hospital_phone")} />
               </label>
             </div>
-            <p className="pt-1 text-sm font-[650] text-[#0f2f3a]">You, the hospital&apos;s manager</p>
+            <p className="pt-1 text-sm font-[650] text-[#00295c]">You, the hospital&apos;s manager</p>
           </fieldset>
         )}
 

@@ -6,14 +6,14 @@
 
 const C = {
   wall: "#ffffff",
-  edge: "#cfe7e4",
-  glass: "#d4efeb",
-  glassDark: "#9ed5cd",
-  teal: "#0e8073",
-  navy: "#0f2f4f",
-  ground: "#cdebe7",
-  leaf: "#7cc7bc",
-  leafDark: "#4fae9f",
+  edge: "#d3deef",
+  glass: "#dbe6f6",
+  glassDark: "#a9c2e6",
+  teal: "#1f4f9e",
+  navy: "#00295c",
+  ground: "#d6e2f3",
+  leaf: "#8cc49b",
+  leafDark: "#5f9f70",
 };
 
 /** A small square hospital for cards (e.g. "Nearest to you"). */

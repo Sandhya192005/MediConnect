@@ -101,7 +101,7 @@ export default function PatientDashboard() {
                   <div className="flex min-w-0 flex-1 items-center gap-4">
                     <IconTile icon="hospital" tone="teal" />
                     <div className="min-w-0">
-                      <p className="truncate font-[650] text-[#0f2f3a]">{h.name}</p>
+                      <p className="truncate font-[650] text-[#00295c]">{h.name}</p>
                       <p className="truncate text-sm text-slate-500">
                         {[h.address, h.city].filter(Boolean).join(", ") || "Address not listed"}
                       </p>
@@ -138,7 +138,7 @@ export default function PatientDashboard() {
                 <li key={a.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <IconTile icon="stethoscope" tone="indigo" size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-[650] text-[#0f2f3a]">{a.doctor_name}</p>
+                    <p className="truncate text-sm font-[650] text-[#00295c]">{a.doctor_name}</p>
                     <p className="truncate text-xs text-slate-500">
                       {fmtDateTime(a.start)}
                       {a.hospital_name && ` · ${a.hospital_name}`}
@@ -164,7 +164,7 @@ export default function PatientDashboard() {
                 <li key={r.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <IconTile icon="file" tone="rose" size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-[650] text-[#0f2f3a]">{r.title}</p>
+                    <p className="truncate text-sm font-[650] text-[#00295c]">{r.title}</p>
                     <p className="truncate text-xs text-slate-500">
                       {r.record_type_label} · {fmtDate(r.record_date ?? r.created_at)}
                     </p>
@@ -267,7 +267,7 @@ function NearbyCard() {
           <HospitalThumb />
           <span className="min-w-0 flex-1">
             <span className="block text-xs text-slate-500">Nearest to you</span>
-            <span className="block truncate text-sm font-[650] text-[#0f2f3a]">{nearest.name}</span>
+            <span className="block truncate text-sm font-[650] text-[#00295c]">{nearest.name}</span>
             <span className="block truncate text-xs text-slate-500">
               {/* An unverified map pin gives an approximate distance, so say "about". */}
               {nearest.location_verified ? "" : "about "}

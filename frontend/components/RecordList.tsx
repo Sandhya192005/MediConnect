@@ -45,7 +45,7 @@ export default function RecordList({
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <IconTile icon={RECORD_TYPES.find((t) => t.value === r.record_type)?.icon ?? "file"} tone={TONE[r.record_type]} size="sm" />
               <div className="min-w-0">
-                <p className="truncate text-sm font-[650] text-[#0f2f3a]">{r.title}</p>
+                <p className="truncate text-sm font-[650] text-[#00295c]">{r.title}</p>
                 <p className="truncate text-xs text-slate-500">
                   {r.record_type_label}
                   {r.record_date && ` · ${fmtDate(r.record_date)}`} · {fmtSize(r.size)} · {r.original_name}

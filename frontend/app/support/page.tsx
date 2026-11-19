@@ -117,7 +117,7 @@ export default function SupportPage() {
                 <li key={r.id} className="py-3 first:pt-0 last:pb-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-[650] text-[#0f2f3a]">{r.subject}</p>
+                      <p className="truncate text-sm font-[650] text-[#00295c]">{r.subject}</p>
                       <p className="text-xs text-slate-500">{r.topic_label} · {timeAgo(r.created_at)}</p>
                     </div>
                     <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-[650] ${STATUS_STYLE[r.status]}`}>{r.status_label}</span>

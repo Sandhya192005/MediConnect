@@ -86,7 +86,7 @@ export default function PatientRecordsLookup({ basePath }: { basePath: string })
           <section className="dash-card flex flex-wrap items-center gap-4 p-5" aria-label="Patient">
             <IconTile icon="user" tone="teal" />
             <div className="min-w-0 flex-1">
-              <p className="text-lg font-bold text-[#0f2f3a]">{result.patient.name}</p>
+              <p className="text-lg font-bold text-[#00295c]">{result.patient.name}</p>
               <p className="text-sm text-slate-500">
                 Patient ID <span className="font-mono">{result.patient.patient_id}</span>
                 {result.details.age !== null && ` · ${result.details.age} years`}
@@ -156,7 +156,7 @@ export function HealthSummary({ d }: { d: PatientDetails }) {
         {rows.map(([k, v]) => (
           <div key={k}>
             <dt className="text-xs uppercase tracking-wider text-slate-400">{k}</dt>
-            <dd className="mt-0.5 text-[#0f2f3a]">{v}</dd>
+            <dd className="mt-0.5 text-[#00295c]">{v}</dd>
           </div>
         ))}
       </dl>

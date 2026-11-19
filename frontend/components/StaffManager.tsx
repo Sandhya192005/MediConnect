@@ -108,7 +108,7 @@ export default function StaffManager({ kind }: { kind: StaffPage }) {
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <IconTile icon={w.icon} tone={kind === "doctor" ? "blue" : kind === "nurse" ? "rose" : "indigo"} size="sm" />
                   <div className="min-w-0">
-                    <p className="flex flex-wrap items-center gap-2 text-sm font-[650] text-[#0f2f3a]">
+                    <p className="flex flex-wrap items-center gap-2 text-sm font-[650] text-[#00295c]">
                       {s.full_name}
                       {s.doctor && <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-medium text-teal-700">MediConnect account</span>}
                       {!s.is_active && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">{s.left_on ? `Left ${fmtDate(s.left_on)}` : "Not started yet"}</span>}
@@ -124,7 +124,7 @@ export default function StaffManager({ kind }: { kind: StaffPage }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 md:justify-end">
-                  <span className="text-sm font-[650] tabular-nums text-[#0f2f3a]" title="Monthly salary">{fmtRupees(s.monthly_salary)}<span className="text-xs font-normal text-slate-400">/month</span></span>
+                  <span className="text-sm font-[650] tabular-nums text-[#00295c]" title="Monthly salary">{fmtRupees(s.monthly_salary)}<span className="text-xs font-normal text-slate-400">/month</span></span>
                   <button onClick={() => setEditing(s)} className="btn-outline px-3 py-1.5 text-xs" aria-label={`Edit ${s.full_name}`}>Edit</button>
                   <button onClick={() => remove(s)} className="btn border border-red-200 bg-white px-3 py-1.5 text-xs text-red-700 hover:bg-red-50" aria-label={`Delete ${s.full_name}`}>
                     Delete
@@ -210,7 +210,7 @@ function StaffForm({ kind, member, onClose, onSaved }: { kind: StaffPage; member
   return (
     <section aria-label={member ? `Edit ${member.full_name}` : `Add ${w.one}`} className="dash-card mb-6 p-5">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-base text-[#0f2f3a]">{member ? `Edit ${member.full_name}` : `Add a ${w.one}`}</h2>
+        <h2 className="text-base text-[#00295c]">{member ? `Edit ${member.full_name}` : `Add a ${w.one}`}</h2>
         <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" aria-label="Close form"><Icon name="close" className="h-4 w-4" /></button>
       </div>
       <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

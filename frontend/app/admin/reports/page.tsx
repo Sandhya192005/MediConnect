@@ -64,7 +64,7 @@ function Reports({ r, months }: { r: PlatformReports; months: number }) {
     <div className="space-y-10">
       {/* ---- Platform usage ---- */}
       <section aria-labelledby="usage-h" className="space-y-6">
-        <h2 id="usage-h" className="text-lg text-[#0f2f3a]">Platform usage</h2>
+        <h2 id="usage-h" className="text-lg text-[#00295c]">Platform usage</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon="users" tone="teal" label="New patient accounts" value={sum(u.new_patients)} detail={period} />
           <StatCard icon="stethoscope" tone="blue" label="New doctor accounts" value={sum(u.new_doctors)} detail={period} />
@@ -95,7 +95,7 @@ function Reports({ r, months }: { r: PlatformReports; months: number }) {
       {/* ---- Hospital growth ---- */}
       <section id="growth" aria-labelledby="growth-h" className="space-y-6">
         <div>
-          <h2 id="growth-h" className="text-lg text-[#0f2f3a]">Hospital growth</h2>
+          <h2 id="growth-h" className="text-lg text-[#00295c]">Hospital growth</h2>
           <p className="text-sm text-slate-500">How MediConnect grows as more hospitals connect. Each chart has its own scale.</p>
         </div>
         <div className="grid gap-6 lg:grid-cols-2">
@@ -145,7 +145,7 @@ function Reports({ r, months }: { r: PlatformReports; months: number }) {
                 <tbody className="divide-y divide-slate-100">
                   {r.hospitals.map((h) => (
                     <tr key={h.id}>
-                      <td className="py-2.5"><span className="font-[650] text-[#0f2f3a]">{h.name}</span><span className="text-slate-500"> · {h.city}</span></td>
+                      <td className="py-2.5"><span className="font-[650] text-[#00295c]">{h.name}</span><span className="text-slate-500"> · {h.city}</span></td>
                       <td className="py-2.5 text-slate-600">
                         {h.connected_on ? fmtDate(h.connected_on) : "—"}
                         {h.estimated && <span className="ml-1 text-xs text-slate-400" title="Connected before approval dates were recorded: this is the date it was added">(approx.)</span>}

@@ -85,7 +85,7 @@ export default function DoctorQueuePage() {
                   <TokenBadge token={current.token} large tone="bg-sky-600 text-white" />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-[650] uppercase tracking-wider text-sky-700">Now consulting</p>
-                    <p className="truncate text-xl font-bold text-[#0f2f3a]">{current.patient_name}</p>
+                    <p className="truncate text-xl font-bold text-[#00295c]">{current.patient_name}</p>
                     <p className="truncate text-sm text-slate-500">
                       Booked {fmtTime(current.start)}
                       {current.reason && ` · ${current.reason}`}
@@ -108,7 +108,7 @@ export default function DoctorQueuePage() {
                     <Icon name="stethoscope" className="h-7 w-7" />
                   </span>
                   <div className="flex-1">
-                    <p className="font-[650] text-[#0f2f3a]">No one in consultation</p>
+                    <p className="font-[650] text-[#00295c]">No one in consultation</p>
                     <p className="text-sm text-slate-500">{next ? `Token ${next.token} (${next.patient_name}) is next.` : "Nobody is waiting right now."}</p>
                   </div>
                   {next && (
@@ -145,7 +145,7 @@ export default function DoctorQueuePage() {
                     <li key={a.id} className="flex flex-wrap items-center gap-4 py-3 first:pt-0 last:pb-0">
                       <TokenBadge token={a.token} tone={i === 0 ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-800"} />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-[650] text-[#0f2f3a]">{a.patient_name}</p>
+                        <p className="truncate text-sm font-[650] text-[#00295c]">{a.patient_name}</p>
                         <p className="truncate text-xs text-slate-500">
                           Checked in {a.checked_in_at ? fmtTime(a.checked_in_at) : ""} · booked {fmtTime(a.start)}
                           {a.reason && ` · ${a.reason}`}
@@ -180,7 +180,7 @@ export default function DoctorQueuePage() {
                   {q.not_arrived.map((a) => (
                     <li key={a.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                       <span className="w-16 shrink-0 text-sm tabular-nums text-slate-500">{fmtTime(a.start)}</span>
-                      <span className="min-w-0 flex-1 truncate text-sm text-[#0f2f3a]">{a.patient_name}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm text-[#00295c]">{a.patient_name}</span>
                       <button
                         onClick={() => act(a, "check-in")}
                         disabled={busy === a.id}

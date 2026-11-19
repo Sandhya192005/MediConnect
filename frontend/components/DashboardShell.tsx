@@ -50,7 +50,7 @@ function Greeting({ heading, greeting, subtitle, wave, badge }: { heading: strin
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 className="text-xs font-[650] uppercase tracking-[0.14em] text-teal-700">{heading}</h1>
-        <p className="mt-1 text-2xl font-bold tracking-tight text-[#0f2f3a] sm:text-[1.75rem]">
+        <p className="mt-1 text-2xl font-bold tracking-tight text-[#00295c] sm:text-[1.75rem]">
           {greeting ?? `${hello}, ${name}!`} {wave && <span aria-hidden="true">👋</span>}
         </p>
         <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
@@ -59,7 +59,7 @@ function Greeting({ heading, greeting, subtitle, wave, badge }: { heading: strin
         <p className="hidden items-center gap-2 rounded-2xl border border-teal-100 bg-white/80 px-4 py-2.5 text-xs text-slate-500 shadow-sm sm:flex">
           <Icon name="heart" className="h-5 w-5 text-teal-600" />
           <span>
-            <span className="block font-[650] text-[#0f2f3a]">Your health</span>
+            <span className="block font-[650] text-[#00295c]">Your health</span>
             Our priority
           </span>
         </p>
@@ -117,8 +117,8 @@ export function StatCard({
         <IconTile icon={icon} tone={tone} />
         {soon && <SoonBadge phase={soon} />}
       </div>
-      <p className="mt-4 text-sm font-[650] text-[#0f2f3a]">{label}</p>
-      {value !== undefined && <p className="mt-1 text-2xl font-bold tracking-tight text-[#0f2f3a]">{value}</p>}
+      <p className="mt-4 text-sm font-[650] text-[#00295c]">{label}</p>
+      {value !== undefined && <p className="mt-1 text-2xl font-bold tracking-tight text-[#00295c]">{value}</p>}
       {trend !== undefined && (
         <p className="mt-1 text-xs text-slate-500">
           {trend === null ? (
@@ -159,7 +159,7 @@ export function Panel({
   return (
     <section className={`dash-card p-5 ${className}`} aria-label={title}>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-base text-[#0f2f3a]">{title}</h2>
+        <h2 className="text-base text-[#00295c]">{title}</h2>
         {action &&
           (action.external ? (
             <a href={action.href} target="_blank" rel="noreferrer" className="dash-link text-xs">
@@ -192,7 +192,7 @@ export function EmptyState({ icon, title, text, children }: { icon: string; titl
       <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm">
         <Icon name={icon} />
       </span>
-      <p className="mt-3 text-sm font-[650] text-[#0f2f3a]">{title}</p>
+      <p className="mt-3 text-sm font-[650] text-[#00295c]">{title}</p>
       {text && <p className="mt-1 max-w-xs text-xs text-slate-500">{text}</p>}
       {children}
     </div>

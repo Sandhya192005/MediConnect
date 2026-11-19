@@ -9,7 +9,7 @@ import {
 } from "@/lib/types";
 
 const label = "block text-sm font-medium text-slate-700";
-const legend = "mb-2 text-sm font-[650] text-[#0f2f3a]";
+const legend = "mb-2 text-sm font-[650] text-[#00295c]";
 const check = "flex items-center gap-2 text-sm text-slate-700";
 
 /** "" = not answered yet, which is different from "no" (the patient said they have none). */
@@ -189,7 +189,7 @@ export default function HealthDetailsForm({ personal, beforeSave, onDone, onCanc
             <div className={label}>
               BMI
               <p className="mt-1 flex h-[42px] items-center text-sm text-slate-600" aria-live="polite">
-                {bmi === null ? "Enter height and weight" : <span><span className="font-[650] text-[#0f2f3a]">{bmi}</span> · {bmiBand(bmi)}</span>}
+                {bmi === null ? "Enter height and weight" : <span><span className="font-[650] text-[#00295c]">{bmi}</span> · {bmiBand(bmi)}</span>}
               </p>
             </div>
           </div>

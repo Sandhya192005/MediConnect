@@ -47,16 +47,16 @@ export default function AdminPatientsPage() {
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <IconTile icon="user" tone="teal" size="sm" />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-[650] text-[#0f2f3a]">
+                    <p className="truncate text-sm font-[650] text-[#00295c]">
                       {p.name} <span className="ml-1 font-mono text-xs font-normal text-slate-500">{p.patient_id}</span>
                     </p>
                     <p className="truncate text-xs text-slate-500">{[p.email, p.phone].filter(Boolean).join(" · ")}</p>
                   </div>
                 </div>
                 <dl className="grid grid-cols-3 gap-4 text-xs md:w-[26rem]">
-                  <div><dt className="text-slate-400">Visits</dt><dd className="font-[650] text-[#0f2f3a]">{p.visits}</dd></div>
-                  <div><dt className="text-slate-400">Last visit</dt><dd className="text-[#0f2f3a]">{p.last_visit ? fmtDate(p.last_visit) : "—"}</dd></div>
-                  <div><dt className="text-slate-400">Next visit</dt><dd className="text-[#0f2f3a]">{p.next_visit ? fmtDate(p.next_visit) : "—"}</dd></div>
+                  <div><dt className="text-slate-400">Visits</dt><dd className="font-[650] text-[#00295c]">{p.visits}</dd></div>
+                  <div><dt className="text-slate-400">Last visit</dt><dd className="text-[#00295c]">{p.last_visit ? fmtDate(p.last_visit) : "—"}</dd></div>
+                  <div><dt className="text-slate-400">Next visit</dt><dd className="text-[#00295c]">{p.next_visit ? fmtDate(p.next_visit) : "—"}</dd></div>
                 </dl>
                 {p.patient_id && (
                   <Link href={`/admin/patients/records?id=${p.patient_id}`} className="btn-outline shrink-0 px-3 py-1.5 text-xs" aria-label={`Records of ${p.name}`}>

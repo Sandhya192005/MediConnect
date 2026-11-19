@@ -15,7 +15,7 @@ export function TreatmentNoteView({ note, compact = false }: { note: TreatmentNo
   return (
     <article aria-label={`Treatment note: ${note.diagnosis}`} className="rounded-xl border border-slate-100 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="font-[650] text-[#0f2f3a]">{note.diagnosis}</p>
+        <p className="font-[650] text-[#00295c]">{note.diagnosis}</p>
         <p className="text-xs text-slate-500">
           {fmtDate(note.visit_start)} · {note.doctor_name}{note.hospital_name && `, ${note.hospital_name}`}
           {note.edited && " · edited"}

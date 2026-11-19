@@ -114,7 +114,7 @@ function HospitalDashboard() {
                 <li key={i} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <IconTile icon={a.kind === "staff" ? "user" : "calendar"} tone={a.kind === "staff" ? "blue" : "teal"} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-[650] text-[#0f2f3a]">{a.title}</p>
+                    <p className="truncate text-sm font-[650] text-[#00295c]">{a.title}</p>
                     <p className="truncate text-xs text-slate-500">{a.detail} · {timeAgo(a.at)}</p>
                   </div>
                 </li>
@@ -212,7 +212,7 @@ function PlatformDashboard() {
                   <IconTile icon={e.kind === "hospital" ? "hospital" : e.kind === "hospital_account" ? "settings" : e.kind === "doctor" ? "stethoscope" : "user"}
                             tone={e.kind === "hospital" ? "indigo" : e.kind === "hospital_account" ? "rose" : e.kind === "doctor" ? "blue" : "teal"} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-[650] text-[#0f2f3a]">{e.title}</p>
+                    <p className="truncate text-sm font-[650] text-[#00295c]">{e.title}</p>
                     <p className="truncate text-xs text-slate-500">{e.detail} · {e.estimated ? "date approx." : timeAgo(e.at)}</p>
                   </div>
                 </li>
@@ -234,7 +234,7 @@ function PlatformDashboard() {
                 <li key={`c${r.id}`} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <IconTile icon="hospital" tone="indigo" size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-[650] text-[#0f2f3a]">Hospital wants to connect</p>
+                    <p className="truncate text-sm font-[650] text-[#00295c]">Hospital wants to connect</p>
                     <p className="truncate text-xs text-slate-500">{r.hospital_name} · {r.hospital_city} · {timeAgo(r.created_at)}</p>
                   </div>
                   <Link href="/admin/connections" className="dash-link text-xs">Review</Link>
@@ -244,7 +244,7 @@ function PlatformDashboard() {
                 <li key={`h${h.id}`} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <IconTile icon="hospital" tone="teal" size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-[650] text-[#0f2f3a]">Hospital awaiting approval</p>
+                    <p className="truncate text-sm font-[650] text-[#00295c]">Hospital awaiting approval</p>
                     <p className="truncate text-xs text-slate-500">{h.name}{h.city && ` · ${h.city}`}</p>
                   </div>
                   <Link href="/admin/hospitals" className="dash-link text-xs">Review</Link>
@@ -254,7 +254,7 @@ function PlatformDashboard() {
                 <li key={`r${r.id}`} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <IconTile icon="calendar" tone="orange" size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-[650] text-[#0f2f3a]">Appointment request</p>
+                    <p className="truncate text-sm font-[650] text-[#00295c]">Appointment request</p>
                     <p className="truncate text-xs text-slate-500">
                       {r.hospital_name} · {timeAgo(r.created_at)}
                     </p>

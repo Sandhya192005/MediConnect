@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from "react";
 
 /**
  * Small plain-SVG charts for the dashboards and reports (no chart library).
- * Colours validated with the dataviz skill's checker on a light surface: teal #0d9488 + indigo #6366f1.
+ * Colours validated with the dataviz skill's checker on a light surface: teal #1f4f9e + indigo #0f8f7e.
  * Their colour-blind separation is in the "needs a second cue" band, so a 2-series line chart also uses
  * marker shapes (circle / square), direct end labels and a legend. One y-axis only; a hidden table
  * gives screen readers the numbers. Charts draw at the card's real width so labels stay 11 px on phones.
  */
 const SERIES_STYLE = [
-  { color: "#0d9488", shape: "circle" as const },
-  { color: "#6366f1", shape: "square" as const },
+  { color: "#1f4f9e", shape: "circle" as const },
+  { color: "#0f8f7e", shape: "square" as const },
 ];
 const H = 220;
 const PAD = { top: 16, right: 76, bottom: 28, left: 34 };
@@ -152,7 +152,7 @@ export function BarChart({ labels, series, ariaLabel, tick = String, value = Str
                 {v > 0 && (
                   <path
                     d={`M${x(i) - barW / 2},${base} V${base - h + Math.min(4, h)} q0,-${Math.min(4, h)} ${Math.min(4, h)},-${Math.min(4, h)} H${x(i) + barW / 2 - Math.min(4, h)} q${Math.min(4, h)},0 ${Math.min(4, h)},${Math.min(4, h)} V${base} Z`}
-                    fill={hover === i ? "#0b7a70" : SERIES_STYLE[0].color}
+                    fill={hover === i ? "#183f84" : SERIES_STYLE[0].color}
                   />
                 )}
                 {(i % every === 0 || i === n - 1) && (

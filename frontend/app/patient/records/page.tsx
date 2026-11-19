@@ -70,7 +70,7 @@ export default function PatientRecordsPage() {
                   <li key={e.id} className="flex items-start gap-3 py-2.5 text-sm first:pt-0 last:pb-0">
                     <Icon name={e.action === "download" ? "file" : "eye"} className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
                     <span className="min-w-0 flex-1">
-                      <span className="font-[650] text-[#0f2f3a]">{e.viewer_role === "admin" ? e.viewer_name : `Dr. ${e.viewer_name}`}</span>
+                      <span className="font-[650] text-[#00295c]">{e.viewer_role === "admin" ? e.viewer_name : `Dr. ${e.viewer_name}`}</span>
                       {e.viewer_role === "admin" && <span className="text-slate-500"> (hospital admin)</span>}
                       {e.hospital_name && <span className="text-slate-500"> · {e.hospital_name}</span>}
                       <span className="block text-xs text-slate-500">
@@ -115,7 +115,7 @@ function PatientIdCard() {
 
   return (
     <section className="dash-card overflow-hidden" aria-label="Your patient ID">
-      <div className="bg-gradient-to-br from-[#0d5a5f] to-[#0a4248] p-5 text-white">
+      <div className="bg-gradient-to-br from-[#0b3a78] to-[#00295c] p-5 text-white">
         <p className="text-xs font-[650] uppercase tracking-[0.14em] text-white/70">Your patient ID</p>
         <div className="mt-1 flex items-center justify-between gap-3">
           <p className="font-mono text-3xl font-bold tracking-wider" data-testid="patient-id">{id || "…"}</p>

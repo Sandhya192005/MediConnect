@@ -17,20 +17,20 @@ const POINTS = [
 export default function AuthLayout({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <div className="app-shell grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
-      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-[#e3f4f2] via-[#eef8f7] to-[#d5eeeb] px-12 py-12 lg:flex lg:flex-col">
+      <aside className="relative hidden overflow-hidden bg-gradient-to-br from-[#e3ebf7] via-[#eef3fb] to-[#d6e2f3] px-12 py-12 lg:flex lg:flex-col">
         <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-teal-200/30 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-32 -left-20 h-96 w-96 rounded-full bg-white/60 blur-2xl" />
 
         <Link href="/" className="relative flex items-center gap-3" aria-label="MediConnect home">
           <Image src="/logo-mark-clear.png" alt="" width={56} height={56} priority />
           <span>
-            <span className="block text-3xl font-bold tracking-tight text-[#0b4f55]">MediConnect</span>
+            <span className="block text-3xl font-bold tracking-tight text-[#00295c]">MediConnect</span>
             <span className="block text-sm text-slate-600">Connect · Consult · Care</span>
           </span>
         </Link>
 
         <div className="relative my-auto max-w-lg py-10">
-          <p className="text-4xl font-bold leading-tight tracking-tight text-[#0f2f3a] xl:text-5xl">
+          <p className="text-4xl font-bold leading-tight tracking-tight text-[#00295c] xl:text-5xl">
             Smart healthcare for a healthier tomorrow
           </p>
           <p className="mt-5 text-lg text-slate-600">
@@ -61,10 +61,10 @@ export default function AuthLayout({ title, subtitle, children }: { title: strin
           {/* Logo for phones, where the brand panel is hidden */}
           <Link href="/" className="mb-6 flex items-center justify-center gap-2 lg:hidden" aria-label="MediConnect home">
             <Image src="/logo-mark-clear.png" alt="" width={40} height={40} priority />
-            <span className="text-2xl font-bold tracking-tight text-[#0b4f55]">MediConnect</span>
+            <span className="text-2xl font-bold tracking-tight text-[#00295c]">MediConnect</span>
           </Link>
           <div className="dash-card p-6 sm:p-8">
-            <h1 className="text-2xl text-[#0f2f3a]">{title}</h1>
+            <h1 className="text-2xl text-[#00295c]">{title}</h1>
             <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
             <div className="mt-6">{children}</div>
           </div>

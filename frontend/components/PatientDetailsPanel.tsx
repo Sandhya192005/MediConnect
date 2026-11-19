@@ -45,7 +45,7 @@ export default function PatientDetailsPanel({ patientId, recordsHref, refreshKey
       <div className="dash-card flex flex-wrap items-center gap-3 p-5">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-[650] uppercase tracking-wider text-slate-500">Patient details</p>
-          <p className="text-lg font-bold text-[#0f2f3a]">{p.patient.name}</p>
+          <p className="text-lg font-bold text-[#00295c]">{p.patient.name}</p>
           <p className="text-sm text-slate-500">
             Patient ID <span className="font-mono">{p.patient.patient_id}</span>
             {facts.length > 0 && ` · ${facts.join(" · ")}`}
@@ -57,13 +57,13 @@ export default function PatientDetailsPanel({ patientId, recordsHref, refreshKey
       <HealthSummary d={d} />
 
       <div className="dash-card p-5">
-        <h3 className="mb-3 text-sm font-[650] text-[#0f2f3a]">Reports and scans ({p.records.length})</h3>
+        <h3 className="mb-3 text-sm font-[650] text-[#00295c]">Reports and scans ({p.records.length})</h3>
         <RecordList records={p.records.slice(0, 3)} empty={{ title: "No reports uploaded yet" }} />
         {p.records.length > 3 && <Link href={recordsHref} className="dash-link mt-2 text-xs">See all {p.records.length}</Link>}
       </div>
 
       <div className="dash-card p-5">
-        <h3 className="mb-3 text-sm font-[650] text-[#0f2f3a]">Earlier visit notes ({p.notes.length})</h3>
+        <h3 className="mb-3 text-sm font-[650] text-[#00295c]">Earlier visit notes ({p.notes.length})</h3>
         {p.notes.length === 0 ? (
           <p className="text-sm text-slate-500">No treatment notes yet.</p>
         ) : (

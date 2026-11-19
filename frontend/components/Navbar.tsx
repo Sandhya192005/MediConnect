@@ -34,7 +34,7 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-navy-800/10 bg-[#f4f7fa]">
+    <header className="sticky top-0 z-30 border-b border-navy-800/10 bg-[#f3f6fb]">
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5">
         <Link href="/" className="flex items-center gap-2" aria-label="MediConnect home">
           <Image src="/logo-mark-clear.png" alt="" width={32} height={32} priority />

@@ -132,7 +132,7 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
                 )}
                 {noteFor === a.id && (
                   <div className="w-full rounded-xl border border-slate-100 bg-white p-4">
-                    <p className="mb-3 text-sm font-[650] text-[#0f2f3a]">Treatment note · {a.patient_name}</p>
+                    <p className="mb-3 text-sm font-[650] text-[#00295c]">Treatment note · {a.patient_name}</p>
                     <TreatmentNoteForm appointmentId={a.id} noteId={a.treatment_note}
                                        onCancel={() => setNoteFor(null)} onSaved={() => { setNoteFor(null); load(); }} />
                   </div>

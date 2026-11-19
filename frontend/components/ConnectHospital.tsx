@@ -59,7 +59,7 @@ export default function ConnectHospital({ onConnected }: { onConnected?: () => v
       <div className="flex flex-wrap items-center gap-4">
         <IconTile icon="hospital" tone={pending ? "orange" : "indigo"} />
         <div className="min-w-0 flex-1">
-          <p className="font-[650] text-[#0f2f3a]">
+          <p className="font-[650] text-[#00295c]">
             {pending ? "Waiting for MediConnect to connect your hospital" : "Not connected to MediConnect yet"}
           </p>
           <p className="text-sm text-slate-500">

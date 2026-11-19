@@ -73,21 +73,21 @@ export default function AdminSalaryPage() {
               <tbody className="divide-y divide-slate-100">
                 {rows.map((r) => (
                   <tr key={r.department}>
-                    <td className="py-2.5 text-[#0f2f3a]">{r.department}</td>
+                    <td className="py-2.5 text-[#00295c]">{r.department}</td>
                     <td className="py-2.5 text-right tabular-nums text-slate-600">{r.doctors}</td>
                     <td className="py-2.5 text-right tabular-nums text-slate-600">{r.nurses}</td>
                     <td className="py-2.5 text-right tabular-nums text-slate-600">{r.other}</td>
-                    <td className="py-2.5 text-right font-[650] tabular-nums text-[#0f2f3a]">{fmtRupees(r.payroll)}</td>
+                    <td className="py-2.5 text-right font-[650] tabular-nums text-[#00295c]">{fmtRupees(r.payroll)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t border-slate-200">
-                  <td className="pt-2.5 font-[650] text-[#0f2f3a]">Total</td>
+                  <td className="pt-2.5 font-[650] text-[#00295c]">Total</td>
                   <td className="pt-2.5 text-right tabular-nums">{rows.reduce((n, r) => n + r.doctors, 0)}</td>
                   <td className="pt-2.5 text-right tabular-nums">{rows.reduce((n, r) => n + r.nurses, 0)}</td>
                   <td className="pt-2.5 text-right tabular-nums">{rows.reduce((n, r) => n + r.other, 0)}</td>
-                  <td className="pt-2.5 text-right font-[650] tabular-nums text-[#0f2f3a]">{fmtRupees(total())}</td>
+                  <td className="pt-2.5 text-right font-[650] tabular-nums text-[#00295c]">{fmtRupees(total())}</td>
                 </tr>
               </tfoot>
             </table>
@@ -130,7 +130,7 @@ function PayrollHistory() {
   return (
     <section aria-label="Payroll per month" className="dash-card mb-6 p-5">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-[650] text-[#0f2f3a]">Payroll per month</h2>
+        <h2 className="text-base font-[650] text-[#00295c]">Payroll per month</h2>
         {range}
       </div>
       <p className="mb-4 text-xs text-slate-500">
@@ -161,12 +161,12 @@ function PayrollHistory() {
               <tbody className="divide-y divide-slate-100">
                 {[...rows].reverse().map((r) => (
                   <tr key={r.month}>
-                    <td className="py-2.5 text-[#0f2f3a]">{r.month}</td>
+                    <td className="py-2.5 text-[#00295c]">{r.month}</td>
                     <td className="py-2.5 text-right tabular-nums text-slate-600">{r.people}</td>
                     <td className="py-2.5 text-right tabular-nums text-slate-600">{fmtRupees(r.doctors)}</td>
                     <td className="py-2.5 text-right tabular-nums text-slate-600">{fmtRupees(r.nurses)}</td>
                     <td className="py-2.5 text-right tabular-nums text-slate-600">{fmtRupees(r.other_staff)}</td>
-                    <td className="py-2.5 text-right font-[650] tabular-nums text-[#0f2f3a]">{fmtRupees(r.total)}</td>
+                    <td className="py-2.5 text-right font-[650] tabular-nums text-[#00295c]">{fmtRupees(r.total)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -54,8 +54,8 @@ export default function HospitalMap({ hospitals, user, radiusKm, selectedId, onS
 
       {user && (
         <>
-          {radiusKm && <Circle center={[user.lat, user.lng]} radius={radiusKm * 1000} pathOptions={{ color: "#0d9488", weight: 1, fillOpacity: 0.05 }} />}
-          <CircleMarker center={[user.lat, user.lng]} radius={8} pathOptions={{ color: "#ffffff", weight: 3, fillColor: "#2563eb", fillOpacity: 1 }}>
+          {radiusKm && <Circle center={[user.lat, user.lng]} radius={radiusKm * 1000} pathOptions={{ color: "#1f4f9e", weight: 1, fillOpacity: 0.05 }} />}
+          <CircleMarker center={[user.lat, user.lng]} radius={8} pathOptions={{ color: "#ffffff", weight: 3, fillColor: "#0f8f7e", fillOpacity: 1 }}>
             <Popup>You are here</Popup>
           </CircleMarker>
         </>
@@ -73,8 +73,8 @@ export default function HospitalMap({ hospitals, user, radiusKm, selectedId, onS
             pathOptions={{
               color: "#ffffff",
               weight: 2,
-              // teal = MediConnect partner (instant booking), grey = other hospitals
-              fillColor: selected ? "#b45309" : partner ? "#0d9488" : "#64748b",
+              // brand blue = MediConnect partner (instant booking), grey = other hospitals; the patient is teal
+              fillColor: selected ? "#b45309" : partner ? "#1f4f9e" : "#64748b",
               fillOpacity: 1,
               // Unverified pins are drawn dashed so they read as "approximate".
               dashArray: h.location_verified ? undefined : "3 3",

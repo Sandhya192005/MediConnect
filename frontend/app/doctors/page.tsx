@@ -351,7 +351,7 @@ export default function BookPage() {
           <p className="flex flex-wrap gap-4 px-2 pb-1 text-xs text-slate-500">
             <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-teal-600" /> MediConnect (instant booking)</span>
             <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-slate-500" /> Other hospitals</span>
-            {me && <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-blue-600" /> You</span>}
+            {me && <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-[#0f8f7e]" /> You</span>}
             <span>{pinned} of {pins.length} on the map (some have no pin yet). Tap a pin to find it in the list.</span>
           </p>
         </section>
