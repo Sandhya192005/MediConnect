@@ -344,12 +344,13 @@ Every login is one row in `users`; its `role` says which profile table holds the
 | `users` | login (patient, doctor or admin) | email, hashed password, name, phone, `role`, `is_superuser` |
 | `patient_profile` | patient | the general patient ID (e.g. `P319973`), date of birth, gender, health details (height, weight, blood group, allergies, conditions, medicines, emergency contact) |
 | `doctor_profile` | doctor | hospital, department, specialization, qualification, experience, fee |
-| `admin_profile` | hospital admin | the one hospital they manage |
+| `hospital_profile` | hospital account (role admin) | the one hospital it manages (renamed from `admin_profile` on 2026-11-19) |
+| `hospital` | hospital | name, address, phone, website, map pin, connected (`is_approved`), "Hospital confirms first"; signed-up and map-imported hospitals alike (renamed from `hospitals_hospital` on 2026-11-19; its departments link table is now `hospital_departments`) |
 | `staff_member` | doctor or nurse on a hospital's staff | join/leave date, monthly salary, department (nurses have no login) |
 
 - **Patients and doctors** sign up on the website.
 - **The platform admin** (the owner) is a user with `is_superuser` on, created once with `docker compose exec backend python manage.py createsuperuser`. It approves hospitals and creates hospital admins.
-- **Hospital admins:** in Django admin (http://localhost:8000/admin/), add a user with role Admin, then an **Admin profile** linking them to their hospital.
+- **Hospital admins:** in Django admin (http://localhost:8000/admin/), add a user with role Admin, then a **Hospital profile** linking them to their hospital (hospitals can also sign up themselves).
 
 ## Main API endpoints
 

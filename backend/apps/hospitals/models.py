@@ -69,6 +69,7 @@ class Hospital(models.Model):
     )
 
     class Meta:
+        db_table = "hospital"  # renamed from hospitals_hospital (owner request 2026-11-19)
         ordering = ["name"]
 
     def __str__(self):

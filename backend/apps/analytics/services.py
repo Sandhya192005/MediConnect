@@ -78,7 +78,7 @@ def active_appointments():
 def hospital_account_dates() -> list[datetime]:
     """
     Hospitals that run their management on MediConnect: they have at least one hospital admin login
-    (admin_profile). The date is when their first admin login was linked.
+    (hospital_profile). The date is when their first admin login was linked.
     """
     return list(
         HospitalAdmin.objects.values("hospital").annotate(since=Min("created_at")).values_list("since", flat=True)

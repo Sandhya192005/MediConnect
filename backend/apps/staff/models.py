@@ -15,8 +15,8 @@ class HospitalAdmin(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "admin_profile"
-        verbose_name = "admin profile (hospital admin)"
+        db_table = "hospital_profile"  # renamed from admin_profile (owner request 2026-11-19)
+        verbose_name = "hospital profile (hospital account)"
 
     def __str__(self):
         return f"{self.user.email} → {self.hospital.name}"
