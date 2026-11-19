@@ -34,7 +34,7 @@ class AppointmentViewSet(
 
     def get_queryset(self):
         user = self.request.user
-        qs = Appointment.objects.select_related("patient__patient_profile", "doctor__user", "doctor__hospital")
+        qs = Appointment.objects.select_related("patient__patient_profile", "doctor__user", "doctor__hospital", "treatment_note")
         if user.role == "patient":
             qs = qs.filter(patient=user)
         elif user.role == "doctor":

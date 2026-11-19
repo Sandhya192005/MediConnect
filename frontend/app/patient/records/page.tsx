@@ -4,10 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState, Panel, SkeletonRows } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
 import RecordList from "@/components/RecordList";
+import { TreatmentNoteView } from "@/components/TreatmentNotes";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { isoDate, RECORD_TYPES, timeAgo, type MedicalRecord, type RecordAccess, type RecordType } from "@/lib/types";
+import { isoDate, RECORD_TYPES, timeAgo, type MedicalRecord, type RecordAccess, type RecordType, type TreatmentNote } from "@/lib/types";
 
 const MAX_MB = 10;
 
@@ -52,6 +53,8 @@ export default function PatientRecordsPage() {
               />
             )}
           </Panel>
+
+          <VisitNotes />
 
           <Panel title="Who opened your records">
             <p className="-mt-2 mb-4 text-xs text-slate-500">
@@ -219,6 +222,26 @@ function UploadForm({ onUploaded }: { onUploaded: () => void }) {
           {busy ? "Uploading…" : "Upload record"}
         </button>
       </form>
+    </Panel>
+  );
+}
+
+/** The doctors' notes from your visits: diagnosis, medicines, advice, follow-up (reference design, Part 3). */
+function VisitNotes() {
+  const [notes, setNotes] = useState<TreatmentNote[] | null>(null);
+  useEffect(() => {
+    api<TreatmentNote[]>("/api/records/notes/").then(setNotes).catch(() => setNotes([]));
+  }, []);
+  return (
+    <Panel title={`Visit notes${notes ? ` (${notes.length})` : ""}`}>
+      <p className="-mt-2 mb-4 text-xs text-slate-500">What your doctors wrote after your visits on MediConnect.</p>
+      {notes === null ? (
+        <SkeletonRows rows={2} />
+      ) : notes.length === 0 ? (
+        <p className="text-sm text-slate-500">No visit notes yet. Your doctor adds one after your visit.</p>
+      ) : (
+        <div className="space-y-3">{notes.map((n) => <TreatmentNoteView key={n.id} note={n} />)}</div>
+      )}
     </Panel>
   );
 }

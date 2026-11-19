@@ -287,6 +287,17 @@ Owner request (2026-11-18): from their appointments, patients can find their way
 - **Also on appointment requests** to hospitals that aren't on MediConnect (e.g. MIOT; pending or confirmed) and on **visits booked directly with a hospital**. A hospital typed in by hand gets directions by its name. All three use `components/HospitalPlace.tsx`.
 - **API:** bookings include `hospital`, and requests and direct bookings include `hospital_place` (`id`, `address`, `city`, `phone`, `latitude`, `longitude`, `location_verified`); one helper, `appointments.serializers.hospital_place`.
 
+### Reference-design features, Part 3 (doctor)
+
+- **"+N from yesterday"** on the doctor dashboard's Today's appointments ("+2 from yesterday", "−1 from yesterday", "Same as yesterday"), from real appointments; cancelled visits aren't counted.
+- **Search patient by ID** in the top bar for doctors and hospital admins: typing an ID opens the patient's records. Patients keep the hospital and doctor search.
+- **Treatment notes** (owner decision 2026-11-19: the patient and any doctor read them):
+  - **Contents:** one note per visit, with a diagnosis, medicines (name and strength, dose, how often, days; up to 20), advice and an optional follow-up date.
+  - **Writing:** the visit's doctor writes it on the day of the visit or after, from the **Patient queue** (while the patient is in consultation) or from **Appointments** (Write note / Edit note). Only that doctor can edit it; edits are marked "edited". No notes for cancelled, future or not-yet-confirmed visits.
+  - **Reading:** the patient (My medical records → **Visit notes**), and any doctor or hospital admin through the patient-ID lookup, which is logged in the patient's "Who opened your records". Notes are not in Django admin, like reports.
+  - **API:** `GET/POST /api/records/notes/` (patient: own notes; doctor: notes they wrote, `?appointment=`), `PATCH /api/records/notes/<id>/`. The patient lookup `/api/records/patients/<id>/` includes `notes`, and appointments include `treatment_note` (its id).
+- **Patient Details panel** for the patient in consultation (Patient queue): name, patient ID, age and gender, health details (allergies first in red), recent reports and earlier visit notes. It uses the logged patient lookup. The dashboard's Current patient card links to it.
+
 ### Reference-design features, Part 2 (login and patient)
 
 - **Login and sign-up panel:**

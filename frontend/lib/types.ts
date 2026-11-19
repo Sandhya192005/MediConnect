@@ -169,6 +169,8 @@ export type Appointment = {
   hospital_name: string | null;
   /** Where to go: the hospital's address and map pin. */
   hospital: HospitalPlaceData | null;
+  /** This visit's treatment note id, if the doctor wrote one. */
+  treatment_note: number | null;
   patient_name: string;
   patient_email: string;
   start: string;
@@ -288,9 +290,30 @@ export function bmiBand(bmi: number): string {
   return "obese range";
 }
 
+/** One medicine on a treatment note. */
+export type Medicine = { name: string; dose: string; frequency: string; days: number | null };
+
+/** A doctor's notes for one visit (reference design, Part 3). Read by the patient and any doctor. */
+export type TreatmentNote = {
+  id: number;
+  appointment: number;
+  visit_start: string;
+  doctor_name: string;
+  hospital_name: string;
+  diagnosis: string;
+  medicines: Medicine[];
+  advice: string;
+  follow_up_on: string | null;
+  created_at: string;
+  updated_at: string;
+  edited: boolean;
+};
+
 export type PatientLookup = {
   patient: { patient_id: string; name: string };
   details: PatientDetails;
+  /** Treatment notes from every doctor, newest first. */
+  notes: TreatmentNote[];
   /** The viewer's own hospital (null if they have none). */
   hospital: string | null;
   records: MedicalRecord[];
