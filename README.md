@@ -276,6 +276,17 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### New logo and blue theme (2026-11-19)
+
+- **Logo:** the owner's new design (navy `#00295C`). All logo files (full logo, icon, see-through icon, browser-tab icons) are generated from `frontend/public/logo-original.png`. The login panel shows the logo's tagline "Connect · Consult · Care".
+- **Theme:** all blue, teal removed (owner's choice):
+  - text in the logo navy, buttons and links in a brand blue made from it (`#1f4f9e`; white text on it reads 7.6:1);
+  - light blue tints and a blue-grey ground; the patient sidebar in the logo navy.
+  - Tailwind's `teal-*` scale is re-tuned to these blues in `globals.css`, so the whole app changed in one place.
+- **Charts and maps:** brand blue + teal `#0f8f7e` for the second series, checked with the dataviz validator (colour-blind safe). On maps, MediConnect hospitals are blue and "You" is teal.
+- **Home page:** its palette is regenerated with the taste skill's `start.mjs brand`. Its dark sections use the deepest navy (the kit's rule), and the layout checker passes at all five sizes. Mentions of "the map" were updated now that Find hospitals is part of Book appointment.
+- **Status colours unchanged:** red for allergies, emergencies and errors; amber for waiting; green for done.
+
 ### Directions to the hospital (patients)
 
 Owner request (2026-11-18): from their appointments, patients can find their way to the hospital.
