@@ -128,6 +128,16 @@ test("each role gets its own dashboard and menu", async ({ page }) => {
   await expect(menu.getByRole("link", { name: "Duty schedule" })).toHaveAttribute("href", "/doctor/availability");
   await expect(menu.getByRole("link", { name: "Patient queue" })).toHaveAttribute("href", "/doctor/queue");
   await expect(menu.getByRole("link", { name: "Patient records" })).toHaveAttribute("href", "/doctor/records");
+
+  // Today's appointments compared with yesterday (reference design, Part 3).
+  await expect(page.getByText(/from yesterday$|^Same as yesterday$/).first()).toBeVisible();
+
+  // The top bar searches a patient by ID and opens their records.
+  const search = page.getByLabel("Search patient by ID");
+  await search.fill(e2e().patient.patient_id.toLowerCase());
+  await search.press("Enter");
+  await expect(page).toHaveURL(new RegExp(`/doctor/records\\?id=${e2e().patient.patient_id}$`));
+  await expect(page.getByRole("region", { name: "Patient" })).toContainText("Esha Patient");
 });
 
 test("planned features are listed but not clickable yet", async ({ page }) => {

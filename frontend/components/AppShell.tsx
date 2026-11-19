@@ -233,9 +233,18 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
   const name = !user ? "" : !fullName ? user.email : user.role === "doctor" && !/^dr\.?\s/i.test(fullName) ? `Dr. ${fullName}` : fullName;
   const initials = user ? (`${user.first_name?.[0] ?? ""}${user.last_name?.[0] ?? ""}` || user.email[0]).toUpperCase() : "";
 
+  // Doctors and hospital admins look patients up by their patient ID (reference design, Part 3);
+  // everyone else searches hospitals and doctors.
+  const recordsPage = user?.role === "doctor" ? "/doctor/records" : user?.role === "admin" && user.admin_hospital ? "/admin/patients/records" : null;
+
   function search(e: React.FormEvent) {
     e.preventDefault();
     const term = q.trim();
+    if (recordsPage) {
+      if (term) router.push(`${recordsPage}?id=${encodeURIComponent(term.toUpperCase())}`);
+      setQ("");
+      return;
+    }
     router.push(term ? `/doctors?q=${encodeURIComponent(term)}` : "/doctors");
   }
 
@@ -253,8 +262,9 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              aria-label="Quick search"
-              placeholder="Search doctors, hospitals…"
+              aria-label={recordsPage ? "Search patient by ID" : "Quick search"}
+              placeholder={recordsPage ? "Search patient by ID, e.g. P483920" : "Search doctors, hospitals…"}
+              maxLength={recordsPage ? 12 : undefined}
               className="w-full rounded-full border border-transparent bg-slate-100 py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-100"
             />
           </form>
