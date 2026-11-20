@@ -11,9 +11,9 @@ import StaffChart from "@/components/StaffChart";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { greetingFor } from "@/lib/greeting";
-import { fmtRupees, timeAgo, type AppointmentRequest, type ConnectionRequest, type HospitalOverview, type PlatformOverview } from "@/lib/types";
+import { fmtRupees, timeAgo, type AppointmentRequest, type ConnectionRequest, type HospitalOverview, type PlatformOverview, type SupportInboxItem } from "@/lib/types";
 
-type Counts = { connections: ConnectionRequest[] };
+type Counts = { connections: ConnectionRequest[]; support: SupportInboxItem[] };
 
 /** Hospital admins see their hospital; the platform admin (Django superuser) sees approvals and requests. */
 export default function AdminDashboard() {
@@ -146,6 +146,9 @@ function PlatformDashboard() {
     api<ConnectionRequest[]>("/api/platform/connection-requests/?status=pending")
       .then((rs) => setCounts((c) => ({ ...c, connections: rs })))
       .catch(fail);
+    api<SupportInboxItem[]>("/api/support/inbox/?status=open")
+      .then((rs) => setCounts((c) => ({ ...c, support: rs })))
+      .catch(fail);
     api<AppointmentRequest[]>("/api/appointment-requests/?status=pending")
       .then(setRequests)
       .catch(() => {
@@ -221,8 +224,8 @@ function PlatformDashboard() {
         <Panel title="Waiting for you" action={{ href: "/admin/requests", label: "View all" }}>
           {requests === null ? (
             <SkeletonRows rows={3} />
-          ) : requests.length === 0 && (counts.connections?.length ?? 0) === 0 ? (
-            <EmptyState icon="check" title="All caught up" text="No connection requests or appointment requests waiting." />
+          ) : requests.length === 0 && (counts.connections?.length ?? 0) === 0 && (counts.support?.length ?? 0) === 0 ? (
+            <EmptyState icon="check" title="All caught up" text="No connection requests, appointment requests or support messages waiting." />
           ) : (
             <ul className="divide-y divide-slate-100">
               {(counts.connections ?? []).slice(0, 3).map((r) => (
@@ -233,6 +236,16 @@ function PlatformDashboard() {
                     <p className="truncate text-xs text-slate-500">{r.hospital_name} · {r.hospital_city} · {timeAgo(r.created_at)}</p>
                   </div>
                   <Link href="/admin/connections" className="dash-link text-xs">Review</Link>
+                </li>
+              ))}
+              {(counts.support ?? []).slice(0, 3).map((m) => (
+                <li key={`s${m.id}`} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                  <IconTile icon="chat" tone="rose" size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-[650] text-[#00295c]">Support message</p>
+                    <p className="truncate text-xs text-slate-500">{m.subject} · {m.sender_name} ({m.sender_role}) · {timeAgo(m.created_at)}</p>
+                  </div>
+                  <Link href="/admin/support" className="dash-link text-xs">Reply</Link>
                 </li>
               ))}
               {requests.slice(0, 4).map((r) => (

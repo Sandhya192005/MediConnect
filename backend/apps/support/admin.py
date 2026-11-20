@@ -7,7 +7,7 @@ from .models import SupportRequest
 
 @admin.register(SupportRequest)
 class SupportRequestAdmin(admin.ModelAdmin):
-    """Where the platform admin answers support requests. Saving a new reply notifies the user."""
+    """A backup to the Support inbox (/admin/support in the app). Saving a new reply notifies the user."""
 
     list_display = ["id", "subject", "topic", "user", "status", "created_at"]
     list_filter = ["status", "topic"]

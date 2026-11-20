@@ -532,3 +532,20 @@ export type ConnectedHospital = {
   doctor_count: number;
   has_pin: boolean;
 };
+
+/** GET /api/support/inbox/: a support message as the platform admin sees it (2026-11-20). */
+export type SupportInboxItem = {
+  id: number;
+  topic: string;
+  topic_label: string;
+  subject: string;
+  message: string;
+  status: "open" | "answered" | "closed";
+  status_label: string;
+  reply: string;
+  created_at: string;
+  updated_at: string;
+  sender_name: string;
+  sender_email: string;
+  sender_role: string;
+};

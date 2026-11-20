@@ -34,9 +34,10 @@ class Command(BaseCommand):
             hospitals.delete()  # their staff records go too
             # Test hospitals asking to connect notify every platform admin, including real ones: remove
             # those notifications too (they point to hospitals that no longer exist). The same for a test
-            # hospital changing its name or city (hospital profile, 2026-11-20).
+            # hospital changing its name or city (hospital profile, 2026-11-20), and for test support messages.
             n_notes, _ = Notification.objects.filter(
-                Q(kind__startswith="connection_") | Q(kind="hospital_updated"), message__contains="E2E ").delete()
+                Q(kind__startswith="connection_") | Q(kind__in=["hospital_updated", "support_request"]),
+                message__contains="E2E ").delete()
         self.stdout.write(f"Removed {n_users} e2e accounts, {n_hospitals} E2E hospitals and {n_notes} notifications about them.")
         try:
             from apps.search.documents import rebuild_all

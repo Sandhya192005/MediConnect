@@ -187,4 +187,25 @@ test("contact support from the sidebar", async ({ page }) => {
   const mine = page.getByRole("region", { name: "Your messages" });
   await expect(mine.getByText(subject)).toBeVisible();
   await expect(mine.getByText("Open").first()).toBeVisible();
+
+  // Support inbox (2026-11-20): the platform admin sees it in the app, without "Need help?" of their own.
+  await page.getByRole("button", { name: "Log out" }).click();
+  await login(page, e2e().platform.email);
+  await expect(page.getByRole("link", { name: /Need help\?/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Support inbox .*open message/ })).toBeVisible();
+  await page.getByRole("navigation", { name: "Main menu" }).getByRole("link", { name: "Support inbox" }).click();
+  const msg = page.getByRole("listitem", { name: subject });
+  await expect(msg).toContainText("Doctor · Eshwar Testdoctor");
+  await expect(msg).toContainText("I can't open a patient's X-ray file.");
+  await msg.getByLabel(/Reply to/).fill("Please upload it again as a PDF.");
+  await msg.getByRole("button", { name: "Send reply" }).click();
+  await expect(msg).toHaveCount(0); // answered: gone from "Open"
+  await page.getByRole("button", { name: "Answered" }).click();
+  await expect(page.getByRole("listitem", { name: subject })).toContainText("Your reply: Please upload it again as a PDF.");
+
+  // The doctor sees the answer on their Need help? page.
+  await page.getByRole("button", { name: "Log out" }).click();
+  await login(page, e2e().doctor.email);
+  await page.goto("/support");
+  await expect(page.getByRole("region", { name: "Your messages" })).toContainText("Please upload it again as a PDF.");
 });

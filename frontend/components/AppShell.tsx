@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { Role } from "@/lib/api";
+import { api, type Role } from "@/lib/api";
+import { NOTIFICATION_EVENT } from "@/lib/notifications";
 import { useAuth } from "@/lib/auth";
 import { activeHref, navFor, type NavItem } from "@/lib/nav";
 import Icon from "./Icons";
@@ -93,14 +94,19 @@ function Sidebar({ role, dark }: { role: Role; dark: boolean }) {
         ))}
       </nav>
 
-      {/* Reference design: "Need Help? Contact Support". The emergency numbers stay just below it. */}
-      <Link href="/support" className={`mt-4 flex items-center gap-3 rounded-2xl p-4 transition ${dark ? "bg-white/10 hover:bg-white/15" : "bg-teal-50 hover:bg-teal-100"}`}>
-        <Icon name="chat" className={`h-5 w-5 ${dark ? "text-white" : "text-teal-700"}`} />
-        <span>
-          <span className={`block text-sm font-[650] ${dark ? "text-white" : "text-[#00295c]"}`}>Need help?</span>
-          <span className={`block text-xs ${dark ? "text-white/75" : "text-slate-500"}`}>Contact support</span>
-        </span>
-      </Link>
+      {/* Reference design: "Need Help? Contact Support". The emergency numbers stay just below it. The platform
+          admin IS the support, so they get their Support inbox here instead (owner request 2026-11-20). */}
+      {user?.is_platform_admin ? (
+        <SupportInboxLink />
+      ) : (
+        <Link href="/support" className={`mt-4 flex items-center gap-3 rounded-2xl p-4 transition ${dark ? "bg-white/10 hover:bg-white/15" : "bg-teal-50 hover:bg-teal-100"}`}>
+          <Icon name="chat" className={`h-5 w-5 ${dark ? "text-white" : "text-teal-700"}`} />
+          <span>
+            <span className={`block text-sm font-[650] ${dark ? "text-white" : "text-[#00295c]"}`}>Need help?</span>
+            <span className={`block text-xs ${dark ? "text-white/75" : "text-slate-500"}`}>Contact support</span>
+          </span>
+        </Link>
+      )}
       <p className={`mt-2 px-1 text-[11px] ${dark ? "text-white/70" : "text-red-700"}`}>
         Emergency? Call <a href="tel:112" className="font-[650] underline">112</a> or ambulance{" "}
         <a href="tel:108" className="font-[650] underline">108</a>.
@@ -165,9 +171,39 @@ function SidebarItem({ item, active, dark }: { item: NavItem; active: boolean; d
   );
 }
 
+/** How many support messages are waiting for the platform admin; refreshed when a notification arrives. */
+function useOpenSupportCount(enabled: boolean): number | null {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    const load = () => api<unknown[]>("/api/support/inbox/?status=open").then((rows) => setCount(rows.length)).catch(() => {});
+    load();
+    window.addEventListener(NOTIFICATION_EVENT, load);
+    return () => window.removeEventListener(NOTIFICATION_EVENT, load);
+  }, [enabled]);
+  return count;
+}
+
+/** The platform admin's sidebar box (in place of "Need help?"): their Support inbox, with the open count. */
+function SupportInboxLink() {
+  const open = useOpenSupportCount(true);
+  return (
+    <Link href="/admin/support" className="mt-4 flex items-center gap-3 rounded-2xl bg-teal-50 p-4 transition hover:bg-teal-100">
+      <Icon name="chat" className="h-5 w-5 text-teal-700" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-[650] text-[#00295c]">Support inbox</span>
+        <span className="block text-xs text-slate-500">
+          {open === null ? "Messages from users" : open === 0 ? "No open messages" : `${open} open message${open === 1 ? "" : "s"}`}
+        </span>
+      </span>
+      {!!open && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-[650] text-white" aria-hidden="true">{open}</span>}
+    </Link>
+  );
+}
+
 /** The avatar in the top bar (reference design): opens Profile & settings, Contact support and Log out. */
 function UserMenu({ initials, name, email }: { initials: string; name: string; email: string }) {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -207,7 +243,9 @@ function UserMenu({ initials, name, email }: { initials: string; name: string; e
       {open && (
         <div role="menu" className="absolute right-0 z-30 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10">
           <Link role="menuitem" href="/settings" className={item}><Icon name="settings" className="h-4 w-4" /> Profile &amp; settings</Link>
-          <Link role="menuitem" href="/support" className={item}><Icon name="chat" className="h-4 w-4" /> Contact support</Link>
+          {user?.is_platform_admin
+            ? <Link role="menuitem" href="/admin/support" className={item}><Icon name="chat" className="h-4 w-4" /> Support inbox</Link>
+            : <Link role="menuitem" href="/support" className={item}><Icon name="chat" className="h-4 w-4" /> Contact support</Link>}
           <button
             role="menuitem"
             onClick={() => {

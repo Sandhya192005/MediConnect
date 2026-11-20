@@ -276,6 +276,15 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Support inbox for the platform admin (2026-11-20)
+
+"Need help?" messages from patients, doctors and hospitals used to be answered only in Django admin, and the platform admin got no notification. Now:
+- A new message sends every platform admin an in-app notification ("New support message", links to the inbox). The email to the support address stays.
+- **Support inbox** (`/admin/support`, platform admin menu): Open / Answered / Closed / All tabs; each message shows who sent it (patient, doctor or hospital), the topic and the text. **Send reply** (→ Answered) or **Send and close**; **Close** / **Reopen**. The sender gets a "Support replied" notification and sees the reply on their Need help? page, as before.
+- The platform admin's sidebar box shows **Support inbox** with the open count (instead of "Need help?"), and the account menu says "Support inbox". Open messages also appear under "Waiting for you" on the platform dashboard.
+- API: `GET /api/support/inbox/?status=`, `POST /api/support/inbox/<id>/reply/ {reply, close}`, `POST /api/support/inbox/<id>/status/ {status}` (platform admin only). Django admin still works as a backup.
+- Tests: 4 new in `support/tests.py`; e2e `settings.spec.ts` "contact support" now goes doctor → platform admin reply → doctor sees it.
+
 ### Connected hospitals replaces "Add hospital" (2026-11-20)
 
 Owner decision: hospitals join MediConnect only by signing up and asking to connect; the platform admin accepts or declines (Connection requests). So the platform admin's old **Hospital approvals** page (an "Add hospital" form for hospitals without a login, plus a silent approve/unapprove toggle) is now **Connected hospitals** (`/admin/hospitals`):

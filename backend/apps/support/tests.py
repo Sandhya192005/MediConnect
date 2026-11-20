@@ -87,3 +87,65 @@ def test_sending_is_rate_limited(monkeypatch):
     c = client_for(User.objects.create_user("a@example.com", "pw"))
     assert [send(c).status_code for _ in range(3)] == [201, 201, 429]
     assert c.get("/api/support/").status_code == 200  # reading isn't limited
+
+
+# ---- Support inbox in the app (owner request 2026-11-20) ------------------------------------------------------
+
+INBOX = "/api/support/inbox/"
+
+
+@pytest.fixture
+def inbox_world(db):
+    doctor = User.objects.create_user("dr@example.com", "pw", role="doctor", first_name="Jeeva", last_name="D")
+    patient = User.objects.create_user("pt@example.com", "pw", role="patient")
+    boss = User.objects.create_superuser("boss@example.com", "pw", role="admin")
+    return {"doctor": doctor, "patient": patient, "boss": boss}
+
+
+def test_a_new_message_notifies_the_platform_admin(inbox_world, django_capture_on_commit_callbacks):
+    with django_capture_on_commit_callbacks(execute=True):
+        assert send(client_for(inbox_world["doctor"]), subject="Slots not showing").status_code == 201
+    n = Notification.objects.get(user=inbox_world["boss"])
+    assert n.kind == "support_request" and n.link == "/admin/support"
+    assert "Jeeva D (doctor): Slots not showing" == n.message
+    assert not Notification.objects.filter(user=inbox_world["doctor"]).exists()
+
+
+def test_inbox_lists_everyone_with_sender_and_filters_by_status(inbox_world):
+    send(client_for(inbox_world["doctor"]), subject="From the doctor")
+    send(client_for(inbox_world["patient"]), subject="From the patient")
+    rows = client_for(inbox_world["boss"]).get(INBOX, {"status": "open"}).json()
+    assert {r["subject"] for r in rows} == {"From the doctor", "From the patient"}
+    doc = next(r for r in rows if r["subject"] == "From the doctor")
+    assert (doc["sender_name"], doc["sender_email"], doc["sender_role"]) == ("Jeeva D", "dr@example.com", "doctor")
+    assert client_for(inbox_world["boss"]).get(INBOX, {"status": "closed"}).json() == []
+
+
+def test_reply_notifies_the_sender_and_they_see_it(inbox_world, django_capture_on_commit_callbacks):
+    send(client_for(inbox_world["doctor"]))
+    req = SupportRequest.objects.get()
+    boss = client_for(inbox_world["boss"])
+    assert boss.post(f"{INBOX}{req.id}/reply/", {"reply": "  "}, format="json").status_code == 400
+    with django_capture_on_commit_callbacks(execute=True):
+        r = boss.post(f"{INBOX}{req.id}/reply/", {"reply": "Fixed it, try again."}, format="json")
+    assert r.status_code == 200 and r.json()["status"] == "answered"
+    n = Notification.objects.get(user=inbox_world["doctor"], kind="support_reply")
+    assert "Fixed it" in n.message
+    mine = client_for(inbox_world["doctor"]).get("/api/support/").json()
+    assert mine[0]["reply"] == "Fixed it, try again." and mine[0]["status"] == "answered"
+    # Reply and close in one go, then reopen.
+    assert boss.post(f"{INBOX}{req.id}/reply/", {"reply": "Done.", "close": True}, format="json").json()["status"] == "closed"
+    assert boss.post(f"{INBOX}{req.id}/status/", {"status": "open"}, format="json").json()["status"] == "open"
+    assert boss.post(f"{INBOX}{req.id}/status/", {"status": "lost"}, format="json").status_code == 400
+
+
+def test_only_the_platform_admin_uses_the_inbox(inbox_world):
+    send(client_for(inbox_world["patient"]))
+    req = SupportRequest.objects.get()
+    hospital = User.objects.create_user("h@example.com", "pw", role="hospital")
+    for user in (inbox_world["doctor"], inbox_world["patient"], hospital):
+        assert client_for(user).get(INBOX).status_code == 403
+        assert client_for(user).post(f"{INBOX}{req.id}/reply/", {"reply": "x"}, format="json").status_code == 403
+    assert client_for().get(INBOX).status_code == 401
+    # Users still only see their own messages.
+    assert client_for(inbox_world["doctor"]).get("/api/support/").json() == []

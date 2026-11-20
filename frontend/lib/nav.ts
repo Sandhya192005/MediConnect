@@ -42,12 +42,13 @@ export const NAV: Record<Role, NavItem[]> = {
   admin: [], // the platform admin's menu is built by navFor
 };
 
-/** Platform admin (Django superuser): approves hospitals and answers requests to non-partner hospitals. */
+/** Platform admin (Django superuser): connects hospitals, answers appointment requests and support messages. */
 const PLATFORM: NavItem[] = [
   { label: "Reports & analytics", icon: "chart", href: "/admin/reports" },
   { label: "Connection requests", icon: "hospital", href: "/admin/connections" },
   { label: "Connected hospitals", icon: "hospital", href: "/admin/hospitals" },
   { label: "Appointment requests", icon: "calendar", href: "/admin/requests" },
+  { label: "Support inbox", icon: "chat", href: "/admin/support" },
   { label: "Django admin", icon: "external", href: `${API_URL}/admin/`, external: true },
 ];
 

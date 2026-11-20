@@ -23,3 +23,18 @@ class SupportRequestSerializer(serializers.ModelSerializer):
         if len(value) < 10:
             raise serializers.ValidationError("Tell us a little more (at least 10 characters).")
         return value
+
+
+class SupportInboxSerializer(SupportRequestSerializer):
+    """The platform admin's view of a message: also who sent it."""
+
+    sender_name = serializers.SerializerMethodField()
+    sender_email = serializers.EmailField(source="user.email", read_only=True)
+    sender_role = serializers.CharField(source="user.role", read_only=True)
+
+    class Meta(SupportRequestSerializer.Meta):
+        fields = SupportRequestSerializer.Meta.fields + ["sender_name", "sender_email", "sender_role"]
+        read_only_fields = SupportRequestSerializer.Meta.fields
+
+    def get_sender_name(self, r):
+        return r.user.get_full_name() or r.user.email
