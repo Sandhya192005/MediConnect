@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BarChart, LineChart } from "@/components/Charts";
 import { EmptyState, Panel, SkeletonRows, StatCard } from "@/components/DashboardShell";
+import HospitalReports from "@/components/HospitalReports";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -13,10 +14,23 @@ const RANGES = [6, 12, 24];
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
 /**
+ * /admin/reports: each account sees its own reports. A hospital account sees its hospital's reports
+ * (HospitalReports, 2026-11-20); the platform admin sees the platform's.
+ */
+export default function ReportsPage() {
+  const { user } = useAuth();
+  return (
+    <RoleGuard role={["hospital", "admin"]}>
+      {user?.role === "hospital" ? <HospitalReports /> : <PlatformReportsPage />}
+    </RoleGuard>
+  );
+}
+
+/**
  * Reports & analytics for the platform admin: how patients and doctors use MediConnect month by month,
  * and how the platform grows as more hospitals connect. Data from /api/platform/reports/.
  */
-export default function PlatformReportsPage() {
+function PlatformReportsPage() {
   const { user } = useAuth();
   const [months, setMonths] = useState(12);
   const [r, setR] = useState<PlatformReports | null>(null);
@@ -29,7 +43,7 @@ export default function PlatformReportsPage() {
   }, [months, user?.is_platform_admin]);
 
   return (
-    <RoleGuard role="admin">
+    <>
       {!user?.is_platform_admin ? (
         <EmptyState icon="chart" title="Platform reports are for the MediConnect platform admin" />
       ) : (
@@ -53,7 +67,7 @@ export default function PlatformReportsPage() {
           {r === null ? <SkeletonRows rows={6} /> : <Reports r={r} months={months} />}
         </>
       )}
-    </RoleGuard>
+    </>
   );
 }
 

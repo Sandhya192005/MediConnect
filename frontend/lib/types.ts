@@ -453,6 +453,19 @@ export type PlatformReports = {
   }[];
 };
 
+/** One hospital's reports (/api/hospital-admin/reports/, 2026-11-20). Visits are counted by visit date. */
+export type HospitalReports = {
+  months: string[];
+  appointments: { booked: number[]; completed: number[] };
+  totals: {
+    appointments: number; completed: number; upcoming: number;
+    cancelled_by_patient: number; cancelled_by_doctor: number; declined_by_hospital: number;
+  };
+  patients: { new: number[]; returning: number[]; unique: number; new_total: number };
+  doctors: { id: number; name: string; specialization: string; department: string; appointments: number; completed: number; cancelled: number; patients: number }[];
+  departments: { name: string; doctors: number; appointments: number; completed: number; cancelled: number; patients: number }[];
+};
+
 /** ₹ in Indian grouping, no paise: 1250000 → "₹12,50,000". */
 export const fmtRupees = (v: string | number) => `₹${Math.round(Number(v)).toLocaleString("en-IN")}`;
 

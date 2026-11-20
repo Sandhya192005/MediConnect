@@ -64,6 +64,14 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   await menu.getByRole("link", { name: "Dashboard" }).click();
   await expect(page.getByRole("region", { name: "Staff summary" }).getByRole("img", { name: /Doctors and nurses on staff/ })).toBeVisible();
 
+  // Reports (2026-11-20): the hospital's own numbers, with its doctor in the per-doctor table.
+  await menu.getByRole("link", { name: "Reports" }).click();
+  await expect(page.getByRole("heading", { name: "Reports", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: /Appointments and completed visits per month, last 12 months/ })).toBeVisible();
+  await expect(page.getByRole("table", { name: /Appointments per doctor/ }).getByText(e2e().doctor.name)).toBeVisible(); // "Dr. Eshwar Testdoctor"
+  await page.getByRole("button", { name: "6 months" }).click();
+  await expect(page.getByRole("img", { name: /New and returning patients per month, last 6 months/ })).toBeVisible();
+
   // Patients: the booked patient is listed; their records open (and the view is logged for them).
   await menu.getByRole("link", { name: "Patient management" }).click();
   await page.getByRole("link", { name: "Records of Esha Patient" }).click();

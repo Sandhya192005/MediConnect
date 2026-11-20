@@ -35,7 +35,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Patient management", icon: "users", href: "/admin/patients" },
     { label: "Appointments", icon: "calendar", href: "/admin/appointments" },
     { label: "Staff & salary", icon: "rupee", href: "/admin/salary" },
-    { label: "Reports", icon: "chart", soon: "Later" },
+    { label: "Reports", icon: "chart", href: "/admin/reports" },
     { label: "Settings", icon: "settings", href: "/settings" },
   ],
   admin: [], // the platform admin's menu is built by navFor

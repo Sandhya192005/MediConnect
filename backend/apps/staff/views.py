@@ -122,6 +122,21 @@ class PatientsView(APIView):
         ])
 
 
+class ReportsView(APIView):
+    """GET /api/hospital-admin/reports/?months=12 (3–24) — appointments, patients, doctors and departments."""
+
+    permission_classes = [IsHospitalAdmin]
+
+    def get(self, request):
+        from .reports import hospital_reports
+
+        try:
+            months = min(24, max(3, int(request.query_params.get("months", 12))))
+        except ValueError:
+            months = 12
+        return Response(hospital_reports(request.admin_hospital, months))
+
+
 class BookingSettingsView(APIView):
     """
     GET/PATCH /api/hospital-admin/booking-settings/ {confirm_bookings}: whether new bookings wait for the

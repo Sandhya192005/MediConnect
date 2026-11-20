@@ -276,6 +276,15 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Hospital Reports (2026-11-20)
+
+The hospital menu's **Reports** item (was "Soon") now opens the hospital's own reports at `/admin/reports` (the platform admin still gets the platform reports at the same address). Period switch: 6 / 12 / 24 months. Everything is counted from the hospital's real appointments (`GET /api/hospital-admin/reports/?months=`, `staff/reports.py`):
+- **Totals:** appointments (not cancelled), still upcoming, completed visits (with %), patients (with how many are new), cancellations split by who cancelled (patient, doctor, or declined by the hospital).
+- **Appointments per month:** booked vs completed, by visit date.
+- **Patients per month:** new (first visit at this hospital that month) vs returning.
+- **Doctors** and **Departments** tables: appointments, completed, cancelled and patients in the period.
+- Not shown: no-shows (MediConnect has no "no-show" status yet). Staff and payroll stay on Staff & salary.
+
 ### Hospital accounts get their own role (2026-11-19)
 
 Owner request: a hospital logs in as the hospital, not as a person.
