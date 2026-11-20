@@ -276,6 +276,15 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Connected hospitals replaces "Add hospital" (2026-11-20)
+
+Owner decision: hospitals join MediConnect only by signing up and asking to connect; the platform admin accepts or declines (Connection requests). So the platform admin's old **Hospital approvals** page (an "Add hospital" form for hospitals without a login, plus a silent approve/unapprove toggle) is now **Connected hospitals** (`/admin/hospitals`):
+- Lists the connected hospitals with their hospital account email, doctors, map pin and connection date; search by name or city (`GET /api/platform/connected-hospitals/?q=`).
+- **Disconnect** needs a reason (`POST /api/platform/connected-hospitals/<id>/disconnect/ {note}`): patients can't find or book the hospital any more, appointments already booked stay, and the hospital gets a notification. Its dashboard shows "Disconnected from MediConnect" with the reason and **Ask again**. Kept in the connection history as a new status `disconnected` (migration `hospitals 0017`).
+- The platform dashboard no longer lists "Hospital awaiting approval" (hand-added or website hospitals); it shows connection and appointment requests.
+- Nothing in the database was deleted. Hospitals can still be edited in Django admin.
+- Tests: 3 new in `hospitals/test_connections.py`; e2e `platform.spec.ts` now also disconnects the hospital.
+
 ### Hospital profile (2026-11-20)
 
 New hospital menu item **Hospital profile** (`/admin/hospital`, `GET/PATCH /api/hospital-admin/profile/`, `staff/profile.py`): the hospital edits its own details.

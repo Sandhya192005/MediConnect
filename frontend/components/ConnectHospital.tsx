@@ -52,6 +52,7 @@ export default function ConnectHospital({ onConnected }: { onConnected?: () => v
   const req = c.request;
   const pending = req?.status === "pending";
   const declined = req?.status === "declined";
+  const disconnected = req?.status === "disconnected"; // by the platform admin, with a reason (2026-11-20)
   const label = "block text-sm font-medium text-slate-700";
 
   return (
@@ -60,22 +61,23 @@ export default function ConnectHospital({ onConnected }: { onConnected?: () => v
         <IconTile icon="hospital" tone={pending ? "orange" : "indigo"} />
         <div className="min-w-0 flex-1">
           <p className="font-[650] text-[#00295c]">
-            {pending ? "Waiting for MediConnect to connect your hospital" : "Not connected to MediConnect yet"}
+            {pending ? "Waiting for MediConnect to connect your hospital"
+              : disconnected ? "Disconnected from MediConnect" : "Not connected to MediConnect yet"}
           </p>
           <p className="text-sm text-slate-500">
             {pending
               ? `You asked on ${fmtDate(req!.created_at)}. You'll get a notification when MediConnect answers.`
               : "You can manage your doctors, staff, salaries and patient records now. Connect your hospital so patients can find it and book your doctors."}
           </p>
-          {declined && (
+          {(declined || disconnected) && (
             <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              <span className="font-[650]">Declined on {fmtDate(req!.decided_at ?? req!.created_at)}:</span> {req!.admin_note}
+              <span className="font-[650]">{disconnected ? "Disconnected" : "Declined"} on {fmtDate(req!.decided_at ?? req!.created_at)}:</span> {req!.admin_note}
             </p>
           )}
         </div>
         {!pending && !open && (
           <button onClick={() => setOpen(true)} className="btn-solid rounded-xl px-4 py-2.5">
-            <Icon name="arrow" className="h-4 w-4" /> {declined ? "Ask again" : "Request connection"}
+            <Icon name="arrow" className="h-4 w-4" /> {declined || disconnected ? "Ask again" : "Request connection"}
           </button>
         )}
       </div>

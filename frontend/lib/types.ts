@@ -370,7 +370,7 @@ export type ConnectionRequest = {
   hospital_source: string;
   requested_by_email: string | null;
   message: string;
-  status: "pending" | "approved" | "declined";
+  status: "pending" | "approved" | "declined" | "disconnected";
   status_label: string;
   admin_note: string;
   decided_at: string | null;
@@ -516,4 +516,19 @@ export type HospitalProfile = {
   location_verified: boolean;
   departments: { id: number; name: string }[];
   connected: boolean;
+};
+
+/** GET /api/platform/connected-hospitals/: hospitals patients can see and book (platform admin, 2026-11-20). */
+export type ConnectedHospital = {
+  id: number;
+  name: string;
+  city: string;
+  address: string;
+  phone: string;
+  source: string;
+  approved_at: string | null;
+  approved_at_estimated: boolean;
+  account_emails: string[];
+  doctor_count: number;
+  has_pin: boolean;
 };

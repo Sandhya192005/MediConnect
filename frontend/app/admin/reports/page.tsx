@@ -139,7 +139,7 @@ function Reports({ r, months }: { r: PlatformReports; months: number }) {
         <Panel title={`Connected hospitals (${r.hospitals.length})`}>
           {r.hospitals.length === 0 ? (
             <EmptyState icon="hospital" title="No hospitals connected yet">
-              <Link href="/admin/hospitals" className="dash-link mt-3">Review approvals</Link>
+              <Link href="/admin/connections" className="dash-link mt-3">Connection requests</Link>
             </EmptyState>
           ) : (
             <div className="overflow-x-auto">

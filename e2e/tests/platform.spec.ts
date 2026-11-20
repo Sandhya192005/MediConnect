@@ -40,7 +40,7 @@ test("hospital admins don't get the platform reports", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Hospital growth" })).toHaveCount(0);
 });
 
-test("a signed-up hospital asks to connect; the platform admin declines, then approves", async ({ page, browser, request }) => {
+test("a signed-up hospital asks to connect; the platform admin declines, approves, then disconnects it", async ({ page, browser, request }) => {
   const stamp = Date.now();
   const name = `E2E Signup Hospital ${stamp}`; // removed by e2e_setup / e2e_cleanup
   const email = `e2e.new.hospital.${stamp}@mediconnect.dev`;
@@ -93,5 +93,25 @@ test("a signed-up hospital asks to connect; the platform admin declines, then ap
   await hospital.reload();
   await expect(hospital.getByText("Hospital overview")).toBeVisible();
   await expect(box).toHaveCount(0);
+
+  // Connected hospitals (2026-11-20, replaced "Add hospital"): the platform admin disconnects it with a reason.
+  await page.getByRole("navigation", { name: "Main menu" }).getByRole("link", { name: "Connected hospitals" }).click();
+  await page.getByLabel("Search connected hospitals").fill(name);
+  const connected = page.getByRole("listitem", { name });
+  await expect(connected).toContainText(`Hospital account: ${email}`);
+  await expect(page.getByRole("button", { name: "Add hospital" })).toHaveCount(0); // the old form is gone
+  await connected.getByRole("button", { name: "Disconnect" }).click();
+  await connected.getByLabel(/Reason/).fill("Licence expired.");
+  await connected.getByRole("button", { name: `Disconnect ${name}` }).click();
+  await expect(page.getByRole("status")).toContainText(`${name} was disconnected`);
+  await expect(connected).toHaveCount(0);
+  const after = await (await request.get(`${API}/api/hospitals/`)).json();
+  expect(after.map((h: { name: string }) => h.name)).not.toContain(name);
+
+  // The hospital sees why and can ask again.
+  await hospital.reload();
+  await expect(box).toContainText("Disconnected from MediConnect");
+  await expect(box).toContainText("Licence expired.");
+  await expect(box.getByRole("button", { name: "Ask again" })).toBeVisible();
   await hospitalCtx.close();
 });

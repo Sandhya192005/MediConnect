@@ -133,5 +133,5 @@ class HospitalProfileView(APIView):
 
                 _notify(User.objects.filter(is_superuser=True, is_active=True), "hospital_updated",
                         "Hospital details changed", f"{h.name} changed its " + " and ".join(changes) + ".",
-                        "/admin/hospitals")
+                        "/admin/hospitals")  # Connected hospitals
         return Response(HospitalProfileSerializer(h).data)

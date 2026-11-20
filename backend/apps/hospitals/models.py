@@ -114,11 +114,13 @@ class ConnectionRequest(models.Model):
         PENDING = "pending", "Waiting for MediConnect"
         APPROVED = "approved", "Connected"
         DECLINED = "declined", "Declined"
+        # The platform admin disconnected a connected hospital (2026-11-20), with a reason in admin_note.
+        DISCONNECTED = "disconnected", "Disconnected"
 
     hospital = models.ForeignKey(Hospital, on_delete=models.CASCADE, related_name="connection_requests")
     requested_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, related_name="+")
     message = models.CharField(max_length=500, blank=True, help_text="From the hospital to MediConnect")
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
     admin_note = models.CharField(max_length=500, blank=True, help_text="MediConnect's answer (e.g. why declined)")
     decided_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     decided_at = models.DateTimeField(null=True, blank=True)

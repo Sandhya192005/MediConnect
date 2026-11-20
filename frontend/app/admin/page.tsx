@@ -11,9 +11,9 @@ import StaffChart from "@/components/StaffChart";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { greetingFor } from "@/lib/greeting";
-import { fmtRupees, timeAgo, type AppointmentRequest, type ConnectionRequest, type Hospital, type HospitalOverview, type PlatformOverview } from "@/lib/types";
+import { fmtRupees, timeAgo, type AppointmentRequest, type ConnectionRequest, type HospitalOverview, type PlatformOverview } from "@/lib/types";
 
-type Counts = { awaiting: Hospital[]; connections: ConnectionRequest[] };
+type Counts = { connections: ConnectionRequest[] };
 
 /** Hospital admins see their hospital; the platform admin (Django superuser) sees approvals and requests. */
 export default function AdminDashboard() {
@@ -141,13 +141,8 @@ function PlatformDashboard() {
   useEffect(() => {
     const fail = () => setFailed(true);
     api<PlatformOverview>("/api/platform/overview/").then(setO).catch(fail);
-    api<Hospital[]>("/api/hospitals/")
-      .then((hs) =>
-        // Map imports (source "osm") are listed automatically and don't need approval; hospital sign-ups
-        // ("account") are private workspaces that haven't asked to connect.
-        setCounts((c) => ({ ...c, awaiting: hs.filter((h) => !h.is_approved && !["osm", "account"].includes(h.source as string)) })),
-      )
-      .catch(fail);
+    // Hospitals join only through their own connection request (2026-11-20: the old "Add hospital" /
+    // approval toggle page is now "Connected hospitals").
     api<ConnectionRequest[]>("/api/platform/connection-requests/?status=pending")
       .then((rs) => setCounts((c) => ({ ...c, connections: rs })))
       .catch(fail);
@@ -226,8 +221,8 @@ function PlatformDashboard() {
         <Panel title="Waiting for you" action={{ href: "/admin/requests", label: "View all" }}>
           {requests === null ? (
             <SkeletonRows rows={3} />
-          ) : requests.length === 0 && (counts.awaiting?.length ?? 0) === 0 && (counts.connections?.length ?? 0) === 0 ? (
-            <EmptyState icon="check" title="All caught up" text="No connection requests, appointment requests or hospitals waiting for approval." />
+          ) : requests.length === 0 && (counts.connections?.length ?? 0) === 0 ? (
+            <EmptyState icon="check" title="All caught up" text="No connection requests or appointment requests waiting." />
           ) : (
             <ul className="divide-y divide-slate-100">
               {(counts.connections ?? []).slice(0, 3).map((r) => (
@@ -238,16 +233,6 @@ function PlatformDashboard() {
                     <p className="truncate text-xs text-slate-500">{r.hospital_name} · {r.hospital_city} · {timeAgo(r.created_at)}</p>
                   </div>
                   <Link href="/admin/connections" className="dash-link text-xs">Review</Link>
-                </li>
-              ))}
-              {(counts.awaiting ?? []).slice(0, 3).map((h) => (
-                <li key={`h${h.id}`} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                  <IconTile icon="hospital" tone="teal" size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-[650] text-[#00295c]">Hospital awaiting approval</p>
-                    <p className="truncate text-xs text-slate-500">{h.name}{h.city && ` · ${h.city}`}</p>
-                  </div>
-                  <Link href="/admin/hospitals" className="dash-link text-xs">Review</Link>
                 </li>
               ))}
               {requests.slice(0, 4).map((r) => (

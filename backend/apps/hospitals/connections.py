@@ -3,6 +3,8 @@ Connecting a signed-up hospital with MediConnect (owner request 2026-11-18).
 
 Hospital side (its admins):  GET/POST /api/hospital-admin/connection/
 Platform side (superuser):   GET /api/platform/connection-requests/?status=pending
+                             GET /api/platform/connected-hospitals/?q=  (connected hospitals, 2026-11-20)
+                             POST /api/platform/connected-hospitals/<id>/disconnect/ {note}
                              POST /api/platform/connection-requests/<id>/approve/ {note}
                              POST /api/platform/connection-requests/<id>/decline/ {note}
 """
@@ -19,7 +21,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.permissions import IsHospitalAdmin, IsPlatformAdmin
 
-from .models import ConnectionRequest
+from .models import ConnectionRequest, Hospital
 
 User = get_user_model()
 
@@ -147,3 +149,62 @@ class ConnectionRequestViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     @action(detail=True, methods=["post"])
     def decline(self, request, pk=None):
         return self._decide(request, pk, approve=False)
+
+
+class ConnectedHospitalSerializer(serializers.ModelSerializer):
+    account_emails = serializers.SerializerMethodField()
+    doctor_count = serializers.IntegerField(read_only=True)
+    has_pin = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Hospital
+        fields = ["id", "name", "city", "address", "phone", "source", "approved_at", "approved_at_estimated",
+                  "account_emails", "doctor_count", "has_pin"]
+
+    def get_account_emails(self, h):
+        return [a.user.email for a in h.admins.all()]
+
+    def get_has_pin(self, h):
+        return h.location is not None
+
+
+class ConnectedHospitalViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """
+    The platform admin's list of connected hospitals (the ones patients can see and book), with Disconnect
+    (owner request 2026-11-20). It replaces the old "Add hospital" page: the only way in is now the hospital's
+    own sign-up and connection request.
+    """
+
+    serializer_class = ConnectedHospitalSerializer
+    permission_classes = [IsPlatformAdmin]
+
+    def get_queryset(self):
+        from django.db.models import Count, Q
+
+        qs = (Hospital.objects.filter(is_approved=True)
+              .annotate(doctor_count=Count("doctors", distinct=True))
+              .prefetch_related("admins__user").order_by("name"))
+        if q := self.request.query_params.get("q", "").strip():
+            qs = qs.filter(Q(name__icontains=q) | Q(city__icontains=q))
+        return qs
+
+    @action(detail=True, methods=["post"])
+    def disconnect(self, request, pk=None):
+        note = str(request.data.get("note", "")).strip()[:500]
+        if not note:
+            raise ValidationError({"note": "Tell the hospital why, so they can fix it and ask again."})
+        with transaction.atomic():
+            h = get_object_or_404(Hospital.objects.select_for_update(), pk=pk)
+            if not h.is_approved:
+                raise ValidationError({"detail": "This hospital isn't connected."})
+            h.is_approved = False
+            h.save()  # hidden from patients again; the search signal re-indexes it and its doctors
+            # Kept with the hospital's connection history, so its dashboard shows why (and "Ask again").
+            ConnectionRequest.objects.create(
+                hospital=h, status=ConnectionRequest.Status.DISCONNECTED, admin_note=note,
+                decided_by=request.user, decided_at=timezone.now())
+        _notify(User.objects.filter(hospital_admin__hospital=h, is_active=True), "connection_disconnected",
+                "Your hospital was disconnected",
+                f"MediConnect disconnected {h.name}: {note} Patients can't find or book it until it's connected again.",
+                "/admin")
+        return Response({"id": h.id, "connected": False})

@@ -10,7 +10,7 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   await expect(page.getByText(/^Good (morning|afternoon|evening), E2E Partner Hospital!/)).toBeVisible(); // the hospital is the account
   const menu = page.getByRole("navigation", { name: "Main menu" });
   // Hospital admins don't get the platform pages (hospital approvals, requests to other hospitals).
-  await expect(menu.getByRole("link", { name: "Hospital approvals" })).toHaveCount(0);
+  await expect(menu.getByRole("link", { name: "Connected hospitals" })).toHaveCount(0);
 
   // Doctors: link the doctor's MediConnect account; the name comes from the account.
   await menu.getByRole("link", { name: "Doctor management" }).click();
