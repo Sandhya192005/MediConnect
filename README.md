@@ -276,6 +276,15 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Hospital profile (2026-11-20)
+
+New hospital menu item **Hospital profile** (`/admin/hospital`, `GET/PATCH /api/hospital-admin/profile/`, `staff/profile.py`): the hospital edits its own details.
+- **Name, address, city, state, phone, website** and **departments** (picked from MediConnect's list). Changes apply at once, also for a connected hospital: patients see them straight away. A name or city change sends the platform admin an in-app notification. The account name follows the hospital's name (the dashboard greeting changes too).
+- **Map pin:** the hospital clicks its entrance on the map (or uses "Use my current location"). Owner decision: the hospital's own pin counts as confirmed (`location_verified`), so patients' "Get directions" goes to that exact pin; the platform admin isn't involved and gets no notification for pins. Without a pin the hospital doesn't appear on the map or in "Near me".
+- A connected hospital can change its address and phone but can't empty them (patients need them).
+- The hospital email is the login, so it is read-only here (change it through Support).
+- Tests: `staff/test_profile.py` (12), e2e `hospital-profile.spec.ts`. `e2e_cleanup` also removes "hospital details changed" notifications about E2E hospitals. Fixed an order-dependent chatbot test (it relied on the test search index not existing yet; it now uses the database search on purpose).
+
 ### Hospital Reports (2026-11-20)
 
 The hospital menu's **Reports** item (was "Soon") now opens the hospital's own reports at `/admin/reports` (the platform admin still gets the platform reports at the same address). Period switch: 6 / 12 / 24 months. Everything is counted from the hospital's real appointments (`GET /api/hospital-admin/reports/?months=`, `staff/reports.py`):
@@ -292,7 +301,7 @@ Owner request: a hospital logs in as the hospital, not as a person.
 - New column **`all_hospitals.email`**: for a hospital account it is also its login email.
 - **Sign-up:** choosing Hospital asks only for the hospital's name, city, phone, **hospital email** and password (no person's name). The account is named after the hospital, so the dashboard says "Good evening, ABC Hospital!".
 - **Login:** Hospital tab = role `hospital`, Admin tab = the platform admin.
-- **Existing accounts:** the demo hospital logins were converted by a migration. The test hospital "ABC Hospital" and its person login (madhu@gmail.com) were deleted at the owner's request (database backed up first).
+- **Existing accounts:** the demo hospital logins were converted by a migration. The test hospital "ABC Hospital" and its person login were deleted at the owner's request (database backed up first).
 - Hospital pages keep their `/admin/...` addresses; their dashboard heading is now "Hospital dashboard". "Who opened your records" shows hospitals as "(hospital)".
 
 ### New logo and blue theme (2026-11-19)

@@ -501,3 +501,19 @@ export function areaOf(h: { address?: string | null; city?: string | null }): st
   if (area && area.length <= 30) return city ? `${area}, ${city}` : area;
   return city || "Area not listed";
 }
+/** GET/PATCH /api/hospital-admin/profile/: the hospital account's own hospital (2026-11-20). */
+export type HospitalProfile = {
+  id: number;
+  name: string;
+  email: string; // the login: read-only
+  address: string;
+  city: string;
+  state: string;
+  phone: string;
+  website: string;
+  latitude: number | null;
+  longitude: number | null;
+  location_verified: boolean;
+  departments: { id: number; name: string }[];
+  connected: boolean;
+};

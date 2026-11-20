@@ -11,6 +11,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.db.models import Q
 
 from apps.hospitals.models import Hospital
 from apps.notifications.models import Notification
@@ -32,8 +33,10 @@ class Command(BaseCommand):
             n_hospitals = hospitals.count()
             hospitals.delete()  # their staff records go too
             # Test hospitals asking to connect notify every platform admin, including real ones: remove
-            # those notifications too (they point to hospitals that no longer exist).
-            n_notes, _ = Notification.objects.filter(kind__startswith="connection_", message__contains="E2E ").delete()
+            # those notifications too (they point to hospitals that no longer exist). The same for a test
+            # hospital changing its name or city (hospital profile, 2026-11-20).
+            n_notes, _ = Notification.objects.filter(
+                Q(kind__startswith="connection_") | Q(kind="hospital_updated"), message__contains="E2E ").delete()
         self.stdout.write(f"Removed {n_users} e2e accounts, {n_hospitals} E2E hospitals and {n_notes} notifications about them.")
         try:
             from apps.search.documents import rebuild_all

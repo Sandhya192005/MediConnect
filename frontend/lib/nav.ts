@@ -29,6 +29,7 @@ export const NAV: Record<Role, NavItem[]> = {
   // Hospital account (role "hospital"): one hospital's staff and patients (Step 4).
   hospital: [
     { label: "Dashboard", icon: "grid", href: "/admin" },
+    { label: "Hospital profile", icon: "hospital", href: "/admin/hospital" },
     { label: "Doctor management", icon: "stethoscope", href: "/admin/doctors" },
     { label: "Nurse management", icon: "nurse", href: "/admin/nurses" },
     { label: "Staff management", icon: "user", href: "/admin/staff" },
