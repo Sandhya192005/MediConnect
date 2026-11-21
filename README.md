@@ -276,6 +276,14 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Doctor's "My hospital & profile" redesigned (2026-11-21)
+
+Owner request: a professional look after editing. The page (`/doctor/profile`) used to be only an open form. Now:
+- It opens as a **read-only profile**: avatar, "Dr. name", specialization · qualification, hospital, an **Accepting bookings / Not bookable yet** badge, and three key facts (experience, consultation fee as "₹700", slot length). Below: **Hospital**, **Practice details** and **About you** sections. **View public page** opens what patients see.
+- If patients can't book the doctor yet, a box says why: choose a hospital, set working hours (link to Duty schedule), or the hospital isn't connected yet.
+- **Edit profile** opens the form, grouped into the same sections, with **Save changes** and **Cancel**; saving returns to the profile with "Profile saved.". The page heading matches the menu ("My hospital & profile").
+- No backend change. e2e `doctor-profile.spec.ts` (view, cancel, save, puts the bio back).
+
 ### Duty schedule with AM/PM (2026-11-21)
 
 The doctor's **Duty schedule** used the browser's time box, which shows AM/PM only on some computers (it follows the system clock setting), so the owner saw 24-hour times. Each time is now three dropdowns, **hour (1–12) : minutes (5-minute steps) AM/PM** (`components/TimeSelect.tsx`), the same on every computer and phone. The API still stores 24-hour "HH:MM", so nothing else changed. The doctor dashboard's "Today's duty" panel (renamed from "Duty today") shows times as "6:00 AM – 10:00 PM". e2e `duty-schedule.spec.ts` (changes a time, checks it after a reload, puts it back).
