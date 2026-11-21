@@ -308,6 +308,11 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
               className="w-full rounded-full border border-transparent bg-slate-100 py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-400 focus:bg-white focus:ring-4 focus:ring-teal-100"
             />
           </form>
+        ) : user?.role === "patient" ? (
+          // Where a patient's search box was removed (owner request 2026-11-21): a short brand line instead.
+          <p className="min-w-0 flex-1 text-xs font-[650] leading-snug text-[#00295c] sm:text-sm">
+            <span className="text-teal-600">MediConnect</span> is your Better Partner
+          </p>
         ) : (
           <div className="flex-1" />
         )}

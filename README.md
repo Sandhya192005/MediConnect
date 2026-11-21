@@ -279,7 +279,7 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
 ### Small menu and search changes (2026-11-21)
 
 - The "Emergency? Call 112 or ambulance 108" line under Need help? is gone from the **hospital** and **platform admin** menus; patients and doctors keep it.
-- Patients no longer get the top-bar "Search doctors, hospitals…" box on **My appointments**, **My medical records** and **Profile & settings** (it stays on their dashboard; Book appointment has its own search).
+- Patients no longer get the top-bar "Search doctors, hospitals…" box on **My appointments**, **My medical records** and **Profile & settings** (it stays on their dashboard; Book appointment has its own search). On those pages and on Book appointment, the top bar shows "MediConnect is your Better Partner" instead.
 - e2e `admin`, `settings` and `no-show` specs check both.
 
 ### % trends on the hospital dashboard (2026-11-21)
