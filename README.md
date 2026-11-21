@@ -308,6 +308,7 @@ Owner decisions: a no-show is marked **by hand** (never automatically: hospitals
 - A new message sends every platform admin an in-app notification ("New support message", links to the inbox). The email to the support address stays.
 - **Support inbox** (`/admin/support`, platform admin menu): Open / Answered / Closed / All tabs; each message shows who sent it (patient, doctor or hospital), the topic and the text. **Send reply** (→ Answered) or **Send and close**; **Close** / **Reopen**. The sender gets a "Support replied" notification and sees the reply on their Need help? page, as before.
 - The platform admin's sidebar box shows **Support inbox** with the open count (instead of "Need help?"), and the account menu says "Support inbox". Open messages also appear under "Waiting for you" on the platform dashboard.
+- **Close without reply** (added 2026-11-21) on Open messages that need no answer (e.g. "thanks, it works now"): the message moves to Closed with no reply; the sender sees it as Closed. **Reopen** brings it back.
 - API: `GET /api/support/inbox/?status=`, `POST /api/support/inbox/<id>/reply/ {reply, close}`, `POST /api/support/inbox/<id>/status/ {status}` (platform admin only). Django admin still works as a backup.
 - Tests: 4 new in `support/tests.py`; e2e `settings.spec.ts` "contact support" now goes doctor → platform admin reply → doctor sees it.
 

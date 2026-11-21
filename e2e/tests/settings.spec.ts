@@ -215,3 +215,31 @@ test("contact support from the sidebar", async ({ page }) => {
   await page.goto("/support");
   await expect(page.getByRole("region", { name: "Your messages" })).toContainText("Please upload it again as a PDF.");
 });
+
+test("the platform admin closes a support message without replying", async ({ page }) => {
+  await login(page, e2e().doctor.email);
+  await page.goto("/support");
+  const subject = `E2E no reply needed ${Date.now()}`;
+  await page.getByLabel("Subject").fill(subject);
+  await page.getByLabel("Message", { exact: true }).fill("Thanks, it works now.");
+  await page.getByRole("button", { name: "Send message" }).click();
+  await expect(page.getByRole("status")).toContainText("Sent.");
+
+  await page.getByRole("button", { name: "Log out" }).click();
+  await login(page, e2e().platform.email);
+  await page.goto("/admin/support");
+  const msg = page.getByRole("listitem", { name: subject });
+  await msg.getByRole("button", { name: "Close without reply" }).click();
+  await expect(msg).toHaveCount(0); // gone from "Open"
+  await page.getByRole("button", { name: "Closed" }).click();
+  const closed = page.getByRole("listitem", { name: subject });
+  await expect(closed).toContainText("Closed");
+  await expect(closed).not.toContainText("Your reply");
+  await expect(closed.getByRole("button", { name: "Reopen" })).toBeVisible();
+
+  // The doctor sees it closed on their Need help? page.
+  await page.getByRole("button", { name: "Log out" }).click();
+  await login(page, e2e().doctor.email);
+  await page.goto("/support");
+  await expect(page.getByRole("region", { name: "Your messages" }).getByRole("listitem").filter({ hasText: subject })).toContainText("Closed");
+});

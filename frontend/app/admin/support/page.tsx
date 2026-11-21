@@ -139,6 +139,11 @@ function Message({ m, onChange }: { m: SupportInboxItem; onChange: () => void })
             <button className="btn-solid rounded-xl px-4 py-2 text-sm" disabled={busy}>{busy ? "Sending…" : "Send reply"}</button>
             <button type="button" onClick={() => post("reply", { reply, close: true })} disabled={busy || !reply.trim()}
                     className="btn-outline px-4 py-2 text-sm">Send and close</button>
+            {/* Some messages need no answer (spam, "thanks", already solved): close them straight away (2026-11-21). */}
+            {m.status === "open" && (
+              <button type="button" onClick={() => post("status", { status: "closed" })} disabled={busy}
+                      className="btn-ghost px-4 py-2 text-sm text-slate-600">Close without reply</button>
+            )}
             {m.status !== "open" && (
               <button type="button" onClick={() => { setOpen(false); setReply(m.reply); setError(""); }} className="btn-ghost px-4 py-2 text-sm">Cancel</button>
             )}
