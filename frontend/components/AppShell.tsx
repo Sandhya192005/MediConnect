@@ -7,9 +7,12 @@ import { useEffect, useRef, useState } from "react";
 import { api, type Role } from "@/lib/api";
 import { NOTIFICATION_EVENT } from "@/lib/notifications";
 import { useAuth } from "@/lib/auth";
-import { activeHref, navFor, type NavItem } from "@/lib/nav";
+import { activeHref, matches, navFor, type NavItem } from "@/lib/nav";
 import Icon from "./Icons";
 import NotificationBell from "./NotificationBell";
+
+/** Patient pages without the top-bar search (owner request 2026-11-21). */
+const NO_SEARCH_PAGES = ["/patient/appointments", "/patient/records"];
 
 /**
  * Layout for logged-in users: a sidebar with the role's menu, a top bar with search,
@@ -107,10 +110,13 @@ function Sidebar({ role, dark }: { role: Role; dark: boolean }) {
           </span>
         </Link>
       )}
-      <p className={`mt-2 px-1 text-[11px] ${dark ? "text-white/70" : "text-red-700"}`}>
-        Emergency? Call <a href="tel:112" className="font-[650] underline">112</a> or ambulance{" "}
-        <a href="tel:108" className="font-[650] underline">108</a>.
-      </p>
+      {/* Emergency numbers are for patients and doctors; not on the hospital or platform admin menu (owner request 2026-11-21). */}
+      {user?.role !== "hospital" && user?.role !== "admin" && (
+        <p className={`mt-2 px-1 text-[11px] ${dark ? "text-white/70" : "text-red-700"}`}>
+          Emergency? Call <a href="tel:112" className="font-[650] underline">112</a> or ambulance{" "}
+          <a href="tel:108" className="font-[650] underline">108</a>.
+        </p>
+      )}
 
       <button
         onClick={doLogout}
@@ -273,7 +279,9 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
 
   // Patients (and the platform admin) search hospitals and doctors here. Doctors and hospitals get no top-bar
   // search: finding a patient by ID is the "Patient records" menu item (owner request 2026-11-21).
-  const showSearch = user?.role !== "doctor" && user?.role !== "hospital" && pathname !== "/doctors";
+  // Not on the patient's My appointments and My medical records pages either (owner request 2026-11-21).
+  const showSearch = user?.role !== "doctor" && user?.role !== "hospital" && pathname !== "/doctors"
+    && !NO_SEARCH_PAGES.some((p) => matches(pathname, p));
 
   function search(e: React.FormEvent) {
     e.preventDefault();

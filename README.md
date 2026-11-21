@@ -276,6 +276,12 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Small menu and search changes (2026-11-21)
+
+- The "Emergency? Call 112 or ambulance 108" line under Need help? is gone from the **hospital** and **platform admin** menus; patients and doctors keep it.
+- Patients no longer get the top-bar "Search doctors, hospitals…" box on **My appointments** and **My medical records** (it stays on their dashboard; Book appointment has its own search).
+- e2e `admin`, `settings` and `no-show` specs check both.
+
 ### % trends on the hospital dashboard (2026-11-21)
 
 The five cards on the hospital dashboard now show a change in percent (green ↑, red ↓, grey → for no change), counted from real data (`GET /api/hospital-admin/overview/` → `trends`, each `{now, before, change_pct}`):
