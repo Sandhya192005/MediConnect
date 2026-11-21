@@ -26,7 +26,11 @@ class Command(BaseCommand):
         if not settings.DEBUG:
             raise CommandError("e2e_cleanup only runs with DEBUG=1.")
         with transaction.atomic():
-            users = User.objects.filter(email__startswith="e2e.", email__endswith="@mediconnect.dev")
+            users = User.objects.filter(
+                Q(email__startswith="e2e.", email__endswith="@mediconnect.dev")
+                # patients an E2E hospital created in Patient management (they may have no email)
+                | Q(hospital_links__created_account=True, hospital_links__hospital__name__startswith="E2E ")
+            ).distinct()
             n_users = users.count()
             users.delete()  # cascades: profiles, admin links, appointments, records, notifications, chats
             hospitals = Hospital.objects.filter(name__startswith="E2E ")

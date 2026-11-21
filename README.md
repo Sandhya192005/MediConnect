@@ -276,6 +276,15 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Hospital Patient management: add patients, details and records in one place (2026-11-21) — Phase 1 of 2 (backend)
+
+Owner decisions: the hospital adds **every patient who visits**, whether or not they have a MediConnect account, and manages their details and medical records inside Patient management (the separate "Patient records" menu item goes in Phase 2).
+- **The hospital's patient list** = patients it added (new table `hospital_patient`) + everyone with a visit booked there.
+- **Add a patient** (`POST /api/hospital-admin/patients/add/`): by **patient ID** (already on MediConnect), or **new**: name and phone, optional email, date of birth, gender. A new patient gets a patient ID but **no password and no email** (hospitals and doctors open records by ID). Without an email they get a hidden placeholder on the reserved `no-email.mediconnect.invalid` domain, which never receives mail. A patient with an email can claim the account later with "Forgot password?". A used email is refused without revealing whose it is.
+- **Open a patient** (`GET /api/hospital-admin/patients/<patient_id>/`): details, health details, records, treatment notes and visits at this hospital; logged in the patient's access log, like every records view. Any patient can be opened by ID; **editing** (`PATCH`: name, phone, email if they had none, health details) and **uploading records** need the patient in the hospital's list. **Both the hospital and the patient can edit health details.** `DELETE` removes a patient the hospital added from its list (the account stays; patients with visits stay listed).
+- **Records the hospital uploads** (`POST …/records/`, `DELETE …/records/<id>/`): the patient sees them in My medical records ("Uploaded by <hospital>") and gets a "New medical record" notification. **Each side's Delete removes only its own copy** (`hidden_for_patient` / `hidden_for_hospital` on `MedicalRecord`); the record and file are deleted once neither side keeps it. The hospital can delete only its own uploads; the patient can't edit a hospital upload's details. Doctors and other hospitals see what the patient keeps.
+- Tests: `staff/test_patients.py` (6); 291 backend tests pass. `e2e_setup`/`e2e_cleanup` remove patients created by E2E hospitals.
+
 ### New booking flow — Phase 2 of 2 (screens) (2026-11-21)
 
 - **Booking page** (`/doctors/<id>`): reached from a hospital's specialist list (`?via=hospital`) it sends a hospital request and says "Booking through <hospital>: the hospital accepts your request and assigns a doctor, then the doctor confirms"; reached directly it says "Personal request to Dr. …". The chatbot's booking is a personal request ("✓ Request sent! Your time is held until the doctor accepts").

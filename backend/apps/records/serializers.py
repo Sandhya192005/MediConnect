@@ -11,12 +11,14 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
     record_type_label = serializers.CharField(source="get_record_type_display", read_only=True)
     # Upload only: the file itself is never part of a JSON response (download it from /file/).
     file = serializers.FileField(write_only=True)
+    # "Uploaded by <hospital>" (owner request 2026-11-21); null = the patient uploaded it.
+    uploaded_by_hospital_name = serializers.CharField(source="uploaded_by_hospital.name", read_only=True, default=None)
 
     class Meta:
         model = MedicalRecord
         fields = [
             "id", "title", "record_type", "record_type_label", "record_date", "notes",
-            "file", "original_name", "content_type", "size", "created_at",
+            "file", "original_name", "content_type", "size", "created_at", "uploaded_by_hospital_name",
         ]
         read_only_fields = ["original_name", "content_type", "size", "created_at"]
 
@@ -44,10 +46,13 @@ class MedicalRecordSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         file = validated_data["file"]
         request = self.context["request"]
+        # A hospital uploads for a patient (context "patient" + "hospital"); a patient uploads their own.
+        patient = self.context.get("patient", request.user)
         return MedicalRecord.objects.create(
             **validated_data,
-            patient=request.user,
+            patient=patient,
             uploaded_by=request.user,
+            uploaded_by_hospital=self.context.get("hospital"),
             original_name=os.path.basename(file.name)[:255],
             content_type=self._content_type,
             size=file.size,

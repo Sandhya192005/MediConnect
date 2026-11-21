@@ -22,7 +22,7 @@ from apps.doctors.models import DoctorProfile
 from apps.records.models import MedicalRecord
 from apps.records.services import RELATED_STATUSES
 
-from .models import StaffMember
+from .models import HospitalPatient, StaffMember
 from .serializers import StaffMemberSerializer
 
 User = get_user_model()
@@ -82,10 +82,13 @@ class DoctorAccountsView(APIView):
 
 
 def hospital_patients(hospital):
-    """Patients with a booked, confirmed or completed appointment at the hospital (the records-access rule)."""
-    return User.objects.filter(
-        role="patient", appointments__doctor__hospital=hospital, appointments__status__in=RELATED_STATUSES
-    ).distinct()
+    """
+    The hospital's patients: everyone with a booked, confirmed or completed visit there, plus the patients
+    it added in Patient management (owner request 2026-11-21).
+    """
+    from .patients import hospital_patient_q
+
+    return User.objects.filter(hospital_patient_q(hospital), role="patient").distinct()
 
 
 class PatientsView(APIView):
@@ -106,14 +109,18 @@ class PatientsView(APIView):
         )
         if q := request.query_params.get("q", "").strip():
             qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(email__icontains=q)
-                           | Q(patient_profile__patient_id__iexact=q))
-        rows = qs.order_by("first_name", "last_name")[:200]
+                           | Q(phone__icontains=q) | Q(patient_profile__patient_id__iexact=q))
+        rows = list(qs.order_by("first_name", "last_name")[:200])
+        added = dict(HospitalPatient.objects.filter(hospital=hospital, patient__in=rows)
+                     .values_list("patient_id", "created_account"))
         return Response([
             {
                 "patient_id": getattr(getattr(p, "patient_profile", None), "patient_id", None),
                 "name": p.get_full_name() or p.email,
-                "email": p.email,
+                "email": p.email if p.has_real_email else None,
                 "phone": p.phone,
+                "added_by_you": p.id in added,
+                "created_by_you": added.get(p.id, False),
                 "visits": p.visits,
                 "last_visit": p.last_visit,
                 "next_visit": p.next_visit,
@@ -307,8 +314,10 @@ class OverviewView(APIView):
             return staff.active(on=on).filter(kind__in=kinds).count()
 
         patients_before = User.objects.filter(
-            role="patient", appointments__doctor__hospital=hospital, appointments__status__in=RELATED_STATUSES,
-            appointments__created_at__lt=aware(month_start),
+            Q(appointments__doctor__hospital=hospital, appointments__status__in=RELATED_STATUSES,
+              appointments__created_at__lt=aware(month_start))
+            | Q(hospital_links__hospital=hospital, hospital_links__created_at__lt=aware(month_start)),
+            role="patient",
         ).distinct().count()
         week_ago_start, week_ago_end = day_bounds(today - timedelta(days=7))
         start, end = day_bounds(today)
