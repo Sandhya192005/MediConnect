@@ -11,8 +11,8 @@ import { activeHref, matches, navFor, type NavItem } from "@/lib/nav";
 import Icon from "./Icons";
 import NotificationBell from "./NotificationBell";
 
-/** Patient pages without the top-bar search (owner request 2026-11-21). */
-const NO_SEARCH_PAGES = ["/patient/appointments", "/patient/records"];
+/** Pages without the top-bar search (owner requests 2026-11-21): My appointments, My medical records, Profile & settings. */
+const NO_SEARCH_PAGES = ["/patient/appointments", "/patient/records", "/settings"];
 
 /**
  * Layout for logged-in users: a sidebar with the role's menu, a top bar with search,
@@ -279,7 +279,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
 
   // Patients (and the platform admin) search hospitals and doctors here. Doctors and hospitals get no top-bar
   // search: finding a patient by ID is the "Patient records" menu item (owner request 2026-11-21).
-  // Not on the patient's My appointments and My medical records pages either (owner request 2026-11-21).
+  // Not on My appointments, My medical records or Profile & settings either (owner requests 2026-11-21).
   const showSearch = user?.role !== "doctor" && user?.role !== "hospital" && pathname !== "/doctors"
     && !NO_SEARCH_PAGES.some((p) => matches(pathname, p));
 

@@ -43,6 +43,9 @@ test("doctor and hospital mark a missed visit; the patient is told; reports coun
   await page.goto("/patient/records");
   await expect(page.getByRole("heading", { name: /medical records/i })).toBeVisible();
   await expect(page.getByLabel("Quick search")).toHaveCount(0); // no top-bar search here (2026-11-21)
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "Profile & settings" })).toBeVisible();
+  await expect(page.getByLabel("Quick search")).toHaveCount(0);
   await page.goto("/patient/appointments");
   await expect(page.getByLabel("Quick search")).toHaveCount(0);
   await page.getByRole("button", { name: "past" }).click();
