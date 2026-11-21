@@ -83,7 +83,13 @@ test("a patient fills in health details and a doctor sees them, allergies first"
   await page.goto("/settings");
   await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
 
+  // The patient ID is shown but locked (2026-11-21): on the profile and in the edit form.
+  const shownId = (await page.getByTestId("profile-patient-id").textContent())!.trim();
+  await expect(page.getByTestId("patient-id-row")).toHaveText(shownId);
+  await expect(page.getByRole("region", { name: "Personal information" })).toContainText("Can't be changed");
   const edit = await openEdit(page);
+  await expect(edit.getByLabel("Patient ID")).toHaveValue(shownId);
+  await expect(edit.getByLabel("Patient ID")).toBeDisabled();
   await edit.getByLabel("Date of birth").fill("1996-05-20");
   await edit.getByLabel("Height (cm)").fill("160");
   await edit.getByLabel("Weight (kg)").fill("64");

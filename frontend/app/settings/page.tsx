@@ -151,6 +151,16 @@ function ProfileView({ details: d, flash, onEdit }: { details: PatientDetails | 
         <Row k="Phone" v={user.phone} />
         {isPatient && d && (
           <>
+            {/* Given once when the account is made; it never changes (owner request 2026-11-21). */}
+            <div className="grid grid-cols-[8.5rem_1fr] gap-4 py-2.5 text-sm sm:grid-cols-[12rem_1fr]">
+              <dt className="text-slate-500">Patient ID</dt>
+              <dd className="flex flex-wrap items-center gap-2">
+                <span className="font-mono font-[650] text-[#00295c]" data-testid="patient-id-row">{d.patient_id}</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                  <Icon name="lock" className="h-3 w-3" /> Can&apos;t be changed
+                </span>
+              </dd>
+            </div>
             <Row k="Date of birth" v={d.date_of_birth ? `${fmtDate(d.date_of_birth)}${d.age !== null ? ` (${d.age} years)` : ""}` : ""} />
             <Row k="Gender" v={d.gender ? d.gender[0].toUpperCase() + d.gender.slice(1) : ""} />
           </>
@@ -253,6 +263,14 @@ function usePersonalFields() {
         {!isHospital && <label className={label}>Last name<input className="input mt-1" maxLength={150} value={p.last_name} onChange={(e) => setP((x) => ({ ...x, last_name: e.target.value }))} /></label>}
         <label className={label}>Phone<input className="input mt-1" type="tel" maxLength={20} value={p.phone} onChange={(e) => setP((x) => ({ ...x, phone: e.target.value }))} /></label>
       </div>
+      {user?.patient_id && (
+        <label className={`${label} mt-3 block sm:w-1/3`}>
+          Patient ID
+          <input className="input mt-1 cursor-not-allowed bg-slate-100 font-mono text-slate-500" value={user.patient_id} readOnly disabled
+                 aria-describedby="patient-id-note" />
+          <span id="patient-id-note" className="mt-1 block text-xs font-normal text-slate-500">Given by MediConnect; it can&apos;t be changed.</span>
+        </label>
+      )}
       <p className="mt-2 text-xs text-slate-500">Email: {user?.email} (can&apos;t be changed here)</p>
     </fieldset>
   );

@@ -276,6 +276,13 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Patient ID shown, locked, on the patient's profile (2026-11-21)
+
+- **Profile & settings → Personal information** has a **Patient ID** row with a "Can't be changed" badge (the header already showed it with Copy ID).
+- **Edit profile** shows the Patient ID as a locked (greyed-out) field: "Given by MediConnect; it can't be changed."
+- How it's made: when a patient account is created, a signal (`accounts/signals.py`) calls `PatientProfile.for_user`, which picks a random 6-digit number with Python's `secrets` (`P100000`–`P999999`, not counting up, so it can't be guessed) and retries if the database's unique check finds it taken. It is `editable=False` and read-only in the API.
+- Tests: `test_the_patient_id_can_never_be_changed` (sending a new ID to `/api/auth/me/` or `/api/auth/me/patient/` changes nothing); e2e `settings.spec.ts` checks the row and the locked field.
+
 ### Patient records: its own menu item (2026-11-21)
 
 Owner request: opening a patient's records by patient ID is a separate feature in the left menu, not on the dashboard.

@@ -189,3 +189,15 @@ def test_reset_requests_are_rate_limited(monkeypatch):
     codes = [client_for().post("/api/auth/password-reset/", {"email": "x@example.com"}, format="json").status_code
              for _ in range(3)]
     assert codes == [200, 200, 429]
+
+
+@pytest.mark.django_db
+def test_the_patient_id_can_never_be_changed(patient):
+    """Owner request 2026-11-21: the ID is given once by MediConnect; the API ignores attempts to change it."""
+    c = client_for(patient)
+    original = c.get("/api/auth/me/").json()["patient_id"]
+    assert c.patch("/api/auth/me/", {"patient_id": "P111111"}, format="json").status_code == 200
+    assert c.patch("/api/auth/me/patient/", {"patient_id": "P111111", "gender": "male"}, format="json").status_code == 200
+    patient.patient_profile.refresh_from_db()
+    assert patient.patient_profile.patient_id == original != "P111111"
+    assert c.get("/api/auth/me/patient/").json()["patient_id"] == original
