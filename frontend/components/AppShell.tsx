@@ -110,8 +110,8 @@ function Sidebar({ role, dark }: { role: Role; dark: boolean }) {
           </span>
         </Link>
       )}
-      {/* Emergency numbers are for patients and doctors; not on the hospital or platform admin menu (owner request 2026-11-21). */}
-      {user?.role !== "hospital" && user?.role !== "admin" && (
+      {/* Emergency numbers are for patients only: not on the doctor, hospital or platform admin menu (owner requests 2026-11-21). */}
+      {user?.role === "patient" && (
         <p className={`mt-2 px-1 text-[11px] ${dark ? "text-white/70" : "text-red-700"}`}>
           Emergency? Call <a href="tel:112" className="font-[650] underline">112</a> or ambulance{" "}
           <a href="tel:108" className="font-[650] underline">108</a>.
