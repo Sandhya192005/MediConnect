@@ -276,6 +276,15 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### % trends on the hospital dashboard (2026-11-21)
+
+The five cards on the hospital dashboard now show a change in percent (green ↑, red ↓, grey → for no change), counted from real data (`GET /api/hospital-admin/overview/` → `trends`, each `{now, before, change_pct}`):
+- **Doctors, nurses, other staff:** on staff today vs on the last day of last month (from join and leave dates).
+- **Patients:** the hospital's patients now vs at the start of this month (by when their booking was made).
+- **Today's appointments:** vs the same weekday last week ("vs 2 last Saturday"), because weekdays differ.
+- When there's nothing earlier (e.g. a new hospital, or 0 before), the card says "No earlier data to compare" instead of a made-up %.
+- Tests: `staff/test_trends.py` (3, clock frozen on 2026-11-21); e2e `admin.spec.ts` checks the empty case.
+
 ### Patient ID shown, locked, on the patient's profile (2026-11-21)
 
 - **Profile & settings → Personal information** has a **Patient ID** row with a "Can't be changed" badge (the header already showed it with Copy ID).

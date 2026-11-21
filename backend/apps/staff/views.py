@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import IsHospitalAdmin
+from apps.analytics.services import aware, pct_change
 from apps.appointments.models import ACTIVE_STATUSES, Appointment
 from apps.appointments.queue import day_bounds
 from apps.doctors.models import DoctorProfile
@@ -260,8 +261,42 @@ class OverviewView(APIView):
                 "other_staff": active.filter(kind__in=OTHER_STAFF_KINDS).aggregate(t=Sum("monthly_salary"))["t"] or 0,
             },
             "staff_chart": chart,
+            "trends": self._trends(hospital, staff, today),
             "recent_activity": self._recent(hospital, staff),
         })
+
+    def _trends(self, hospital, staff, today):
+        """
+        % change for the dashboard cards (owner request 2026-11-21), counted from real data only. Each card
+        has "now", "before" and "change_pct" (None when "before" is 0: nothing to compare with).
+        - staff (doctors / nurses / other staff): on staff today vs on the last day of last month;
+        - patients: the hospital's patients now vs at the start of this month (by when the booking was made);
+        - today's appointments: vs the same weekday last week (weekdays differ: Sundays are quieter).
+        """
+        month_start = today.replace(day=1)
+        last_month_end = month_start - timedelta(days=1)
+
+        def trend(now, before):
+            return {"now": now, "before": before, "change_pct": pct_change(now, before)}
+
+        def on_staff(kinds, on=None):
+            return staff.active(on=on).filter(kind__in=kinds).count()
+
+        patients_before = User.objects.filter(
+            role="patient", appointments__doctor__hospital=hospital, appointments__status__in=RELATED_STATUSES,
+            appointments__created_at__lt=aware(month_start),
+        ).distinct().count()
+        week_ago_start, week_ago_end = day_bounds(today - timedelta(days=7))
+        start, end = day_bounds(today)
+        visits = Appointment.objects.filter(doctor__hospital=hospital).exclude(status="cancelled")
+        return {
+            "doctors": trend(on_staff(["doctor"]), on_staff(["doctor"], last_month_end)),
+            "nurses": trend(on_staff(["nurse"]), on_staff(["nurse"], last_month_end)),
+            "other_staff": trend(on_staff(OTHER_STAFF_KINDS), on_staff(OTHER_STAFF_KINDS, last_month_end)),
+            "patients": trend(hospital_patients(hospital).count(), patients_before),
+            "appointments_today": trend(visits.filter(start__gte=start, start__lt=end).count(),
+                                        visits.filter(start__gte=week_ago_start, start__lt=week_ago_end).count()),
+        }
 
     def _recent(self, hospital, staff, limit=6):
         """Newest staff records and bookings at the hospital, merged by time."""

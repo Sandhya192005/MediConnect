@@ -396,6 +396,8 @@ export type DoctorAccount = { id: number; name: string; email: string; specializ
 
 export type StaffChartPoint = { month: string; doctors: number; nurses: number };
 
+export type Trend = { now: number; before: number; change_pct: number | null };
+
 export type HospitalOverview = {
   /** connected = approved by MediConnect: patients can find and book it. Signed-up hospitals start unconnected. */
   hospital: { id: number; name: string; city: string; connected: boolean; confirm_bookings: boolean };
@@ -412,6 +414,8 @@ export type HospitalOverview = {
   };
   payroll: { monthly_total: string | number; doctors: string | number; nurses: string | number; other_staff: string | number };
   staff_chart: StaffChartPoint[];
+  /** % change per card (2026-11-21); change_pct null = nothing to compare with yet. */
+  trends: Record<"doctors" | "nurses" | "other_staff" | "patients" | "appointments_today", Trend>;
   recent_activity: { kind: "staff" | "booking"; title: string; detail: string; at: string }[];
 };
 
