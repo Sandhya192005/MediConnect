@@ -1,19 +1,15 @@
 """
 Turn page text into clean, structured hospital data.
 
-- With an OpenAI key: the model reads the text and fills a fixed JSON shape. It is told to
-  copy only what is written on the pages and leave everything else empty (never guess).
-- Without a key (or if OpenAI fails): a simple rule-based fallback finds phone numbers,
-  emails and "Dr. Name – Specialty" lines.
-Either way, the output is validated and cleaned before anything is saved.
+Rules only, no AI (owner decision 2026-11-17: the OpenAI key is for the chatbot, never for scraping).
+Pages are read with Playwright (browser.py), and these patterns find phone numbers, emails, booking links,
+OPD timings and doctors ("Dr. Name – Specialty" lines, doctor profile pages, specialty from the URL).
+The result is validated and cleaned (normalize) before anything is saved.
 """
 
-import json
 import logging
 import re
 from urllib.parse import urlparse
-
-from django.conf import settings
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +37,7 @@ NOT_SPECIALTY = re.compile(
     r"centers?-of-excellence|centres?-of-excellence|departments?|specialities|specialties|key-specialities|en|index\.html?)$",
     re.I,
 )
-# Words that make a phrase look like a medical specialty (rule-based fallback only).
+# Words that make a phrase look like a medical specialty.
 MEDICAL_WORD = re.compile(
     r"olog|iatr|surg|physician|medicine|specialist|consultant|cardi|ortho|neuro|derma|gyn|obstet|paediat|pediat|"
     r"\bent\b|dental|dentist|onco|radio|nephro|uro|gastro|hepat|transplant|therap|anaesth|anesth|ophthal|eye|skin|"
@@ -50,25 +46,6 @@ MEDICAL_WORD = re.compile(
 )
 BOOKING_LINK = re.compile(r"appointment|(?<![a-z])book(?:ing|\s+now|\s+an?)?(?![a-z])", re.I)
 GENERAL_HOURS_LINE = re.compile(r"\b(?:OPD|opening|visiting)\b|\b(?:timings?|hours)\b", re.I)
-
-SCHEMA_HINT = {
-    "hospital_name": "string",
-    "address": "string",
-    "phones": ["string"],
-    "emails": ["string"],
-    "booking_url": "string (the hospital's own online appointment page, if a link exists)",
-    "opd_timings": "string (general outpatient hours as written)",
-    "departments": ["string"],
-    "doctors": [{"name": "string", "specialization": "string", "qualification": "string", "timings": "string"}],
-    "notes": "string (short, e.g. 'Appointments by phone only')",
-}
-
-SYSTEM = (
-    "You extract facts about a hospital from text copied from its own website. "
-    "Copy ONLY information that is written in the text. If something is not in the text, use an empty "
-    "string or empty list. Never guess or add doctors, phone numbers, timings or links. "
-    "Return one JSON object with exactly these keys: " + json.dumps(SCHEMA_HINT)
-)
 
 
 def _clean_str(v, n=200) -> str:
@@ -87,7 +64,7 @@ def _clean_url(v: str, site_url: str) -> str:
 
 
 def normalize(raw: dict, site_url: str) -> dict:
-    """Validate whatever came back (LLM or fallback) into a safe, predictable shape."""
+    """Validate what the rules found into a safe, predictable shape."""
     doctors, seen = [], {}
     for d in raw.get("doctors") or []:
         if not isinstance(d, dict):
@@ -145,7 +122,7 @@ def specialty_from_url(url: str) -> str:
 
 
 def rule_based(pages: list[dict]) -> dict:
-    """No-AI fallback: good enough for simple, well-labelled pages."""
+    """The page reader: patterns for well-labelled hospital pages (no AI)."""
     text = "\n".join(p["text"] for p in pages)
     doctors = []
     for p in pages:  # a doctor's own profile page: one doctor, specialty from where the page sits
@@ -189,25 +166,6 @@ def rule_based(pages: list[dict]) -> dict:
     }
 
 
-def with_openai(pages: list[dict]) -> dict:
-    from openai import OpenAI
-
-    client = OpenAI(api_key=settings.OPENAI_API_KEY, timeout=60, max_retries=1)
-    corpus = "\n\n".join(f"### PAGE {p['url']}\n{p['text']}" for p in pages)[:60_000]
-    resp = client.chat.completions.create(
-        model=settings.OPENAI_MODEL,
-        response_format={"type": "json_object"},
-        temperature=0,
-        messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": corpus}],
-    )
-    return json.loads(resp.choices[0].message.content or "{}")
-
-
 def extract(pages: list[dict], site_url: str) -> tuple[dict, str]:
-    """Returns (clean_data, method) where method is 'openai' or 'rules'."""
-    if settings.OPENAI_API_KEY:
-        try:
-            return normalize(with_openai(pages), site_url), "openai"
-        except Exception as e:  # bad key, no credits, network, bad JSON…
-            log.warning("OpenAI extraction failed, using rule-based fallback: %s", e)
+    """Returns (clean_data, method). Always the rule-based reader: scraping never calls OpenAI."""
     return normalize(rule_based(pages), site_url), "rules"

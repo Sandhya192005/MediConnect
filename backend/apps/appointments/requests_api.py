@@ -10,6 +10,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
+from apps.accounts.permissions import is_platform_admin
 from apps.notifications.realtime import create_notification
 
 from .models import AppointmentRequest
@@ -21,15 +22,21 @@ class AppointmentRequestSerializer(serializers.ModelSerializer):
     hospital_phone = serializers.CharField(source="hospital.phone", read_only=True)
     doctor_name = serializers.CharField(source="scraped_doctor.name", read_only=True, default=None)
     patient_email = serializers.EmailField(source="patient.email", read_only=True)
+    hospital_place = serializers.SerializerMethodField()  # directions and a small map
 
     class Meta:
         model = AppointmentRequest
         fields = [
-            "id", "hospital", "hospital_name", "hospital_phone", "scraped_doctor", "doctor_name",
+            "id", "hospital", "hospital_name", "hospital_phone", "hospital_place", "scraped_doctor", "doctor_name",
             "preferred_date", "preferred_time", "reason", "phone", "status", "status_label",
             "admin_note", "patient_email", "created_at",
         ]
         read_only_fields = ["status", "admin_note"]
+
+    def get_hospital_place(self, obj):
+        from .serializers import hospital_place
+
+        return hospital_place(obj.hospital)
 
     def validate_preferred_date(self, value):
         today = timezone.localdate()
@@ -52,7 +59,7 @@ class AppointmentRequestViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, 
 
     def get_queryset(self):
         qs = AppointmentRequest.objects.select_related("hospital", "scraped_doctor", "patient")
-        if self.request.user.role == "admin":
+        if is_platform_admin(self.request.user):  # requests to non-partner hospitals: the platform answers them
             return qs.filter(status=s) if (s := self.request.query_params.get("status")) else qs
         return qs.filter(patient=self.request.user)  # patients only ever see their own
 
@@ -71,7 +78,7 @@ class AppointmentRequestViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, 
 
     def _set_status(self, new_status, *, admin_only):
         req = self.get_object()
-        if admin_only and self.request.user.role != "admin":
+        if admin_only and not is_platform_admin(self.request.user):
             raise PermissionDenied("Only an admin can do this.")
         if req.status != "pending":
             raise ValidationError({"status": f"Request is already {req.get_status_display().lower()}."})

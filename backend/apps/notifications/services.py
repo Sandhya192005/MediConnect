@@ -10,3 +10,13 @@ def notify_appointment(appointment, event: str):
     from .tasks import queue_appointment_notifications
 
     transaction.on_commit(lambda: queue_appointment_notifications(appointment.id, event))
+
+
+def notify_queue(appointment, event: str):
+    """
+    Patient-queue events ("checked_in" → doctor, "called_in" → patient): live in-app notifications only.
+    No email: a message for every step of the queue would be spam.
+    """
+    from .tasks import push_in_app_notification_task
+
+    transaction.on_commit(lambda: push_in_app_notification_task.delay(appointment.id, event))

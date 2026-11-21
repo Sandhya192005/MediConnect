@@ -1,7 +1,17 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import User
+from .models import PatientProfile, User
+
+
+@admin.register(PatientProfile)
+class PatientProfileAdmin(admin.ModelAdmin):
+    list_display = ["patient_id", "user", "created_at"]
+    search_fields = ["patient_id", "user__email", "user__first_name", "user__last_name"]
+    readonly_fields = ["user", "patient_id", "created_at"]
+
+    def has_add_permission(self, request):
+        return False  # created automatically for every patient
 
 
 @admin.register(User)

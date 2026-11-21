@@ -7,9 +7,15 @@ node_modules/
 playwright-report/
 test-results/
 
+# Uploaded medical records when the backend runs outside Docker (never commit patient files)
+backend/private_media/
+
 # taste-skill (UI design kit): screenshots and browser profiles from its checks
 shots/
 .taste-profile/
 
 # Machine-specific Claude Code notes
 CLAUDE.local.md
+
+# Demo logins written by manage.py demo_setup (contains the demo password)
+backend/.demo-logins.json

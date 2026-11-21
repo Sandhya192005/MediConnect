@@ -7,6 +7,31 @@ from django.utils import timezone
 
 # event -> (who gets it, subject, headline, message)
 EVENTS = {
+    # Hospital confirms first (owner request 2026-11-18). Hospital managers get the in-app notification only.
+    "requested": (
+        ["patient"],
+        "Booking received",
+        "We've received your booking",
+        "Your slot is held. The hospital will confirm it soon, and we'll email you when it does.",
+    ),
+    "hospital_confirmed": (
+        ["patient", "doctor"],
+        "Appointment confirmed",
+        "Your appointment is confirmed",
+        "The hospital has confirmed your appointment. See you there!",
+    ),
+    "hospital_declined": (
+        ["patient"],
+        "Appointment declined",
+        "The hospital couldn't confirm your appointment",
+        "Your slot has been released. You can book another time.",
+    ),
+    "request_cancelled": (
+        ["patient"],
+        "Appointment cancelled",
+        "This appointment was cancelled",
+        "Your booking was cancelled before the hospital confirmed it.",
+    ),
     "booked": (
         ["patient", "doctor"],
         "Appointment booked",
@@ -69,6 +94,8 @@ def send_external_reminder_email(ext, event: str) -> int:
 
 def send_appointment_email(appointment, event: str) -> int:
     recipients, subject, headline, message = EVENTS[event]
+    if event == "hospital_declined" and appointment.cancel_reason:
+        message = f"Reason from the hospital: {appointment.cancel_reason}. {message}"
     patient = appointment.patient
     doctor_user = appointment.doctor.user
     hospital = appointment.doctor.hospital

@@ -9,8 +9,8 @@ import Icon from "./Icons";
 import NotificationBell from "./NotificationBell";
 
 const LINKS = [
-  { href: "/doctors", label: "Find hospitals or doctors", short: "Find", icon: "search" },
-  { href: "/hospitals", label: "Map", short: "Map", icon: "map" },
+  // Find hospitals is part of Book appointment since 2026-11-18 (/hospitals forwards there).
+  { href: "/doctors", label: "Book an appointment", short: "Book", icon: "calendar" },
 ];
 
 export default function Navbar() {
@@ -34,7 +34,7 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-navy-800/10 bg-[#f4f7fa]">
+    <header className="sticky top-0 z-30 border-b border-navy-800/10 bg-[#f3f6fb]">
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-2.5">
         <Link href="/" className="flex items-center gap-2" aria-label="MediConnect home">
           <Image src="/logo-mark-clear.png" alt="" width={32} height={32} priority />

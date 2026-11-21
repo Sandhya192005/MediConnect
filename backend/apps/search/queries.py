@@ -31,9 +31,14 @@ def doctor_text_query(q: str) -> dict:
 
 
 def hospital_text_query(q: str) -> dict:
+    # cross_fields + "and": every word typed must match, in any field, so "anna nagar" finds hospitals in
+    # Anna Nagar rather than everything with "nagar" (2026-11-18). Exact matches rank above typo matches.
     # AUTO:3,5 = allow 2 typos from 5 letters ("applo" -> "apollo"); hospital names are often misspelt.
-    return {"multi_match": {"query": q, "fields": ["name^3", "departments^2", "city^2", "address", "state"],
-                            "fuzziness": "AUTO:3,5"}}
+    return {"bool": {"should": [
+        {"multi_match": {"query": q, "type": "cross_fields", "operator": "and", "boost": 2,
+                         "fields": ["name^3", "departments^2", "city^2", "address", "state"]}},
+        {"multi_match": {"query": q, "fields": ["name^3", "departments^2"], "operator": "and", "fuzziness": "AUTO:3,5"}},
+    ], "minimum_should_match": 1}}
 
 
 def search_doctors(q="", department=None, city=None, min_fee=None, max_fee=None, page=1, size=12):
@@ -81,10 +86,14 @@ def search_doctors(q="", department=None, city=None, min_fee=None, max_fee=None,
     }
 
 
-def search_hospitals(q="", city=None, page=1, size=12):
+def search_hospitals(q="", city=None, page=1, size=12, partners_only=False, exclude_partners=False):
     filters = [{"term": {"listed": True}}]  # partners + hospitals from OpenStreetMap / websites
     if city:
         filters.append({"term": {"city.raw": city}})
+    if partners_only:  # "Instant booking only"
+        filters.append({"term": {"is_partner": True}})
+    if exclude_partners:  # Book appointment lists MediConnect hospitals separately, above the others
+        filters.append({"term": {"is_partner": False}})
     must = [hospital_text_query(q)] if q else [{"match_all": {}}]
     res = es().search(
         index=index_name("hospitals"),
@@ -94,10 +103,13 @@ def search_hospitals(q="", city=None, page=1, size=12):
         sort=["_score", {"is_partner": {"order": "desc", "unmapped_type": "boolean"}}],
         from_=(page - 1) * size,
         size=size,
+        # Cities to filter by (the Find hospitals page); hospitals without a city are left out of the list.
+        aggs={"cities": {"terms": {"field": "city.raw", "size": 30, "min_doc_count": 1, "exclude": ""}}},
     )
     return {
         "total": res["hits"]["total"]["value"],
         "page": page,
+        "cities": [{"name": b["key"], "count": b["doc_count"]} for b in res["aggregations"]["cities"]["buckets"]],
         "results": [{**h["_source"], "score": h["_score"], "highlight": h.get("highlight", {})} for h in res["hits"]["hits"]],
     }
 

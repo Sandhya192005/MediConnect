@@ -3,9 +3,11 @@
 /*
  * MediConnect design system, matched to the public home page (frontend/public/home, built with the
  * taste-skill kit): Funnel Display headings and Funnel Sans text, weights 400 and 500 only, the logo
- * navy as ink, the logo teal darkened to #0e8073 so white text on it reads 4.5:1, a cool off-white
- * ground, pill buttons, flat colour (no decorative gradients).
- * Tailwind's teal scale is re-tuned, so every existing `teal-*` class follows the brand.
+ * pill buttons, flat colour (no decorative gradients).
+ * Colours from the logo (new logo, owner's design 2026-11-19): logo navy #00295C as ink, and a brand blue
+ * made from it (#1f4f9e for buttons and links: white text on it reads 7.6:1), a cool blue-grey ground.
+ * Tailwind's `teal-*` scale is re-tuned to these blues, so every existing `teal-*` class follows the brand
+ * (the class name stayed `teal` so the whole app changed in one place).
  */
 @theme inline {
   --font-sans: var(--font-funnel-sans), ui-sans-serif, system-ui, sans-serif;
@@ -16,31 +18,33 @@
   --font-weight-bold: 500;
   --font-weight-extrabold: 500;
 
-  --color-teal-50: #e9f5f3;
-  --color-teal-100: #cfe9e5;
-  --color-teal-200: #a4d6cf;
-  --color-teal-300: #6fbcb2;
-  --color-teal-400: #3a9f93;
-  --color-teal-500: #158b7e;
-  --color-teal-600: #0e8073;
-  --color-teal-700: #0b6a5f;
-  --color-teal-800: #0b564e;
-  --color-teal-900: #0b4741;
+  /* "teal" = the brand blue scale (see above) */
+  --color-teal-50: #eef3fb;
+  --color-teal-100: #dbe6f6;
+  --color-teal-200: #b8cdee;
+  --color-teal-300: #8badde;
+  --color-teal-400: #5784c8;
+  --color-teal-500: #2d62b0;
+  --color-teal-600: #1f4f9e;
+  --color-teal-700: #183f84;
+  --color-teal-800: #12336b;
+  --color-teal-900: #00295c;
 
-  --color-navy-50: #eef3f7;
-  --color-navy-100: #dce5ee;
-  --color-navy-200: #b9c8d6;
-  --color-navy-500: #3a4e60;
-  --color-navy-700: #163a5c;
-  --color-navy-800: #0f2f4f;
-  --color-navy-900: #030c16;
+  /* ink: the logo navy */
+  --color-navy-50: #eef2f8;
+  --color-navy-100: #dbe3ef;
+  --color-navy-200: #b6c4dc;
+  --color-navy-500: #3b4f6e;
+  --color-navy-700: #0d3570;
+  --color-navy-800: #00295c;
+  --color-navy-900: #001a3d;
 
-  --color-brand-blue: #1565c0;
+  --color-brand-blue: #1f4f9e;
 }
 
 body {
-  background: #f4f7fa;
-  color: #0f2f4f;
+  background: #f3f6fb;
+  color: #00295c;
 }
 
 h1, h2, .page-title, .section-title {
@@ -52,10 +56,41 @@ h1, h2, .page-title, .section-title {
 /* The logo's teal→blue gradient. */
 /* Was the logo's teal→blue gradient; the skill bans decorative gradients, so it is the deep brand navy. */
 .bg-brand-gradient {
-  background-color: #0f2f4f;
+  background-color: #00295c;
 }
 .text-brand-gradient {
-  color: #0e8073;
+  color: #1f4f9e;
+}
+
+/*
+ * ---- Logged-in dashboards (AppShell) ----
+ * Follow the owner's reference design: soft blue-tinted ground (from the logo navy), white cards with soft shadows,
+ * semibold headings in Funnel Sans. Scoped to .app-shell so the public pages keep their look.
+ */
+.app-shell {
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(31, 79, 158, 0.08), transparent 60%),
+    #eef3fa;
+  color: #00295c;
+}
+/* The page behind the dashboard layout gets the same ground, so long pages show no strip at the bottom. */
+body:has(.app-shell) {
+  background: #eef3fa;
+}
+.app-shell h1,
+.app-shell h2,
+.app-shell .page-title,
+.app-shell .section-title {
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+.app-shell h1,
+.app-shell .page-title {
+  font-weight: 700;
+}
+.app-shell h2,
+.app-shell .section-title {
+  font-weight: 650;
 }
 
 /* ---- Building blocks used across pages ---- */
@@ -109,5 +144,13 @@ h1, h2, .page-title, .section-title {
   }
   .chip-active {
     @apply inline-flex items-center gap-1 rounded-full bg-teal-600 px-3 py-1 text-xs font-medium text-white;
+  }
+
+  /* Dashboard cards and links (reference design) */
+  .dash-card {
+    @apply rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(0,41,92,0.04),0_10px_28px_-14px_rgba(0,41,92,0.18)];
+  }
+  .dash-link {
+    @apply inline-flex items-center gap-1 text-sm font-[650] text-teal-700 transition hover:gap-1.5 hover:text-teal-800;
   }
 }

@@ -3,7 +3,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.accounts.permissions import ReadOnlyOrAdmin
+from apps.accounts.permissions import ReadOnlyOrAdmin, is_platform_admin
 
 from .models import Department, Hospital
 from .serializers import (
@@ -29,9 +29,8 @@ class HospitalViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Hospital.objects.prefetch_related("departments")
-        # Admins also see hospitals that are waiting for approval.
-        user = self.request.user
-        if not (user.is_authenticated and user.role == "admin"):
+        # Platform admins (who approve hospitals) also see hospitals that are waiting for approval.
+        if not is_platform_admin(self.request.user):
             qs = qs.filter(is_approved=True)
         if city := self.request.query_params.get("city"):
             qs = qs.filter(city__iexact=city)

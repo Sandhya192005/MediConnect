@@ -39,7 +39,9 @@ def search(request):
     q = p.get("q", "").strip()[:100]
     try:
         if p.get("type") == "hospitals":
-            data = queries.search_hospitals(q, city=p.get("city") or None, page=_page(request))
+            data = queries.search_hospitals(q, city=p.get("city") or None, page=_page(request),
+                                            size=20 if p.get("size") == "20" else 12, partners_only=p.get("partners") == "1",
+                                            exclude_partners=p.get("partners") == "0")
         else:
             data = queries.search_doctors(
                 q,

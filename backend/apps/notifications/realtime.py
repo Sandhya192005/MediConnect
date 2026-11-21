@@ -33,7 +33,14 @@ def notify_appointment_in_app(appointment, event: str) -> int:
     doctor = str(appointment.doctor)
     patient_name = patient.get_full_name() or patient.email
     when = timezone.localtime(appointment.start).strftime("%a %d %b, %I:%M %p")
-    p_link, d_link = "/patient/appointments", "/doctor/appointments"
+    p_link, d_link, h_link = "/patient/appointments", "/doctor/appointments", "/admin/appointments"
+    hospital = appointment.doctor.hospital
+    hospital_name = hospital.name if hospital else "The hospital"
+    # The hospital's managers, only for the events that go to them (one query, not on every event).
+    hospital_admins = (
+        [a.user for a in hospital.admins.select_related("user") if a.user.is_active]
+        if hospital and event in ("requested", "request_cancelled") else []
+    )
 
     # event -> list of (user, title, message, link)
     messages = {
@@ -46,8 +53,30 @@ def notify_appointment_in_app(appointment, event: str) -> int:
             (patient, "Appointment cancelled", f"{doctor} · {when}", p_link),
             (doctor_user, "Appointment cancelled", f"{patient_name} · {when}", d_link),
         ],
+        # Hospital confirms first (owner request 2026-11-18)
+        "requested": [
+            (patient, "Booking received", f"{doctor} · {when}. Waiting for the hospital to confirm.", p_link),
+            *[(a, "New booking to confirm", f"{patient_name} with {doctor} · {when}", h_link) for a in hospital_admins],
+        ],
+        "hospital_confirmed": [
+            (patient, "Appointment confirmed", f"{hospital_name} confirmed your visit with {doctor} on {when}", p_link),
+            (doctor_user, "New booking", f"{patient_name} · {when}", d_link),
+        ],
+        "hospital_declined": [
+            (patient, "Appointment declined", f"{hospital_name} couldn't confirm {doctor} on {when}: {appointment.cancel_reason}", p_link),
+        ],
+        "request_cancelled": [
+            (patient, "Appointment cancelled", f"{doctor} · {when}", p_link),
+            *[(a, "Booking cancelled by the patient", f"{patient_name} with {doctor} · {when}", h_link) for a in hospital_admins],
+        ],
         "reminder_24h": [(patient, "Appointment tomorrow", f"{doctor} · {when}", p_link)],
         "reminder_1h": [(patient, "Appointment in 1 hour", f"{doctor} · {when}", p_link)],
+        # Patient queue (Step 3)
+        "checked_in": [(doctor_user, "Patient checked in", f"{patient_name} · token {appointment.token}", "/doctor/queue")],
+        "called_in": [(patient, "It's your turn", f"{doctor} is ready to see you now (token {appointment.token})", p_link)],
+        # No-show (2026-11-20): marked by the doctor or hospital; in-app only
+        "no_show": [(patient, "Missed appointment", f"You missed your visit with {doctor} on {when}. You can book a new one any time.", p_link)],
+        "no_show_undone": [(patient, "Visit no longer marked as missed", f"Your visit with {doctor} on {when} counts as attended.", p_link)],
     }
     items = messages.get(event, [])
     for user, title, message, link in items:

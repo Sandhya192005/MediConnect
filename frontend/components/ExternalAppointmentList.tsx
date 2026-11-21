@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { fmtDateTime, type ExternalAppointment } from "@/lib/types";
 import ExternalAppointmentForm from "./ExternalAppointmentForm";
+import HospitalPlace from "./HospitalPlace";
 
 /** Appointments the patient booked directly with hospitals (reminders only). */
 export default function ExternalAppointmentList() {
@@ -47,6 +48,7 @@ export default function ExternalAppointmentList() {
                 </p>
                 <p className="text-sm text-slate-600">{fmtDateTime(e.start)}{e.booking_reference ? ` · Ref ${e.booking_reference}` : ""}</p>
                 <p className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{e.label}</p>
+                {e.status !== "cancelled" && <HospitalPlace name={e.display_hospital} place={e.hospital_place} />}
               </div>
               <button onClick={() => remove(e.id)} className="btn-ghost px-3 py-1.5">Remove</button>
             </li>

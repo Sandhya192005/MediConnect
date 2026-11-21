@@ -26,10 +26,11 @@ def test_register_login_me():
 
 
 @pytest.mark.django_db
-def test_cannot_register_as_admin():
+@pytest.mark.parametrize("role", ["admin", "hospital"])  # hospitals sign up through register-hospital only
+def test_cannot_register_as_admin(role):
     res = APIClient().post(
         "/api/auth/register/",
-        {"email": "a@example.com", "password": "StrongPass!123", "role": "admin"},
+        {"email": "a@example.com", "password": "StrongPass!123", "role": role},
         format="json",
     )
     assert res.status_code == 400

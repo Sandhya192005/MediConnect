@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { NOTIFICATION_EVENT } from "@/lib/notifications";
 import type { AppointmentRequest } from "@/lib/types";
+import HospitalPlace from "./HospitalPlace";
 
 const STYLES: Record<AppointmentRequest["status"], string> = {
   pending: "bg-amber-50 text-amber-800 ring-1 ring-amber-200",
@@ -52,6 +53,10 @@ export default function RequestList() {
                 {r.doctor_name ? ` · ${r.doctor_name}` : ""}
               </p>
               {r.admin_note && <p className="text-sm text-slate-500">Note: {r.admin_note}</p>}
+              {/* The patient still has to get there: directions, a map, the hospital's phone (2026-11-18). */}
+              {(r.status === "pending" || r.status === "confirmed") && (
+                <HospitalPlace name={r.hospital_name} place={r.hospital_place} phone={r.hospital_phone} />
+              )}
             </div>
             {r.status === "pending" && (
               <button onClick={() => cancel(r.id)} className="btn border border-red-200 bg-white px-3 py-1.5 text-red-700 hover:bg-red-50">Cancel</button>

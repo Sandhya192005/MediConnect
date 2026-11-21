@@ -8,7 +8,7 @@ It never touches other data, and refuses to run unless DEBUG is on (so never on 
 """
 
 import json
-from datetime import time
+from datetime import datetime, time, timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -16,15 +16,22 @@ from django.contrib.gis.geos import Point
 from django.core.cache import cache
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
 
+from apps.accounts.models import PatientProfile
 from apps.appointments.models import Appointment, AppointmentRequest, ExternalAppointment
+from apps.records.models import MedicalRecord, RecordAccess
+from apps.staff.models import HospitalAdmin, StaffMember
 from apps.doctors.models import DoctorProfile, WeeklyAvailability
 from apps.hospitals.models import Department, Hospital
 
 User = get_user_model()
 PASSWORD = "E2e@12345"
 PATIENT_EMAIL = "e2e.patient@mediconnect.dev"
+NO_SHOW_PATIENT_EMAIL = "e2e.noshow@mediconnect.dev"
 DOCTOR_EMAIL = "e2e.doctor@mediconnect.dev"
+ADMIN_EMAIL = "e2e.admin@mediconnect.dev"  # hospital admin of "E2E Partner Hospital"
+PLATFORM_EMAIL = "e2e.platform@mediconnect.dev"  # platform admin (superuser)
 NEW_USER_PREFIX = "e2e.new."  # accounts created by the sign-up test, deleted on the next run
 # Chennai, a few km from the real hospitals: the map test puts the browser here.
 LAT, LNG = 13.0500, 80.2400
@@ -39,6 +46,7 @@ class Command(BaseCommand):
             raise CommandError("e2e_setup only runs with DEBUG=1 (it resets test accounts).")
 
         User.objects.filter(email__startswith=NEW_USER_PREFIX, email__endswith="@mediconnect.dev").delete()
+        Hospital.objects.filter(name__startswith="E2E Signup Hospital").delete()  # from the hospital sign-up test
 
         patient = self._user(PATIENT_EMAIL, "patient", "Esha", "Patient")
         doctor_user = self._user(DOCTOR_EMAIL, "doctor", "Eshwar", "Testdoctor")
@@ -48,9 +56,23 @@ class Command(BaseCommand):
         partner, _ = Hospital.objects.update_or_create(
             name="E2E Partner Hospital",
             defaults=dict(address="1 Test Street", city="Chennai", state="Tamil Nadu", source="manual",
-                          is_approved=True, location=Point(LNG, LAT, srid=4326), location_verified=True),
+                          is_approved=True, location=Point(LNG, LAT, srid=4326), location_verified=True,
+                          # Bookings go straight to the doctor here; hospital-appointments.spec turns
+                          # "confirm first" on for its own test and off again.
+                          confirm_bookings=False),
         )
         partner.departments.add(cardiology)
+        # A hospital admin for the partner hospital (Step 4), with no staff records at the start of each run.
+        # The hospital account (role "hospital", 2026-11-19) logs in with the hospital's email.
+        admin_user = self._user(ADMIN_EMAIL, "hospital", partner.name, "")
+        HospitalAdmin.objects.update_or_create(user=admin_user, defaults={"hospital": partner})
+        Hospital.objects.filter(pk=partner.pk).update(email=ADMIN_EMAIL)
+        StaffMember.objects.filter(hospital=partner).delete()
+        # A platform admin (superuser) for the platform analytics tests. e2e_setup only runs with DEBUG on.
+        platform_user = self._user(PLATFORM_EMAIL, "admin", "Priya", "Platform")
+        platform_user.is_superuser = platform_user.is_staff = True
+        platform_user.save(update_fields=["is_superuser", "is_staff"])
+
         doctor = DoctorProfile.objects.get(user=doctor_user)
         doctor.hospital, doctor.department = partner, cardiology
         doctor.specialization, doctor.qualification, doctor.fee = "Cardiologist", "MBBS, MD", 700
@@ -61,6 +83,15 @@ class Command(BaseCommand):
             [WeeklyAvailability(doctor=doctor, weekday=d, start_time=time(6), end_time=time(22)) for d in range(7)]
         )
         Appointment.objects.filter(doctor=doctor).delete()  # fresh calendar every run
+        # No-show test (2026-11-20): a visit two days ago that the hourly job already auto-completed, for its
+        # own patient (so the "Didn't come" button is the only one with that name).
+        missed_patient = self._user(NO_SHOW_PATIENT_EMAIL, "patient", "Mani", "Noshow")
+        missed_patient.notifications.all().delete()
+        two_days_ago = timezone.make_aware(datetime.combine(timezone.localdate() - timedelta(days=2), time(10)))
+        missed = Appointment.objects.create(
+            patient=missed_patient, doctor=doctor, start=two_days_ago, end=two_days_ago + timedelta(minutes=30),
+            status=Appointment.Status.COMPLETED, reason="E2E missed visit",
+        )
 
         # Not a partner: its "website" is our mock hospital site (the only site tests may read).
         mock, _ = Hospital.objects.update_or_create(
@@ -78,6 +109,8 @@ class Command(BaseCommand):
             user.chat_sessions.all().delete()
         AppointmentRequest.objects.filter(patient=patient).delete()
         ExternalAppointment.objects.filter(patient=patient).delete()
+        MedicalRecord.objects.filter(patient=patient).delete()  # files are removed after commit (records/signals.py)
+        RecordAccess.objects.filter(patient=patient).delete()
         cache.delete(f"scrape:quota:{patient.id}")  # the website-read test must not hit the hourly limit
         cache.delete(f"chat:rl:{patient.id}")
 
@@ -86,11 +119,15 @@ class Command(BaseCommand):
 
         self.stdout.write(json.dumps({
             "password": PASSWORD,
-            "patient": {"email": PATIENT_EMAIL, "id": patient.id},
+            "patient": {"email": PATIENT_EMAIL, "id": patient.id,
+                        "patient_id": PatientProfile.for_user(patient).patient_id},
             "doctor": {"email": DOCTOR_EMAIL, "id": doctor.id, "name": str(doctor)},
+            "admin": {"email": ADMIN_EMAIL},
+            "platform": {"email": PLATFORM_EMAIL},
             "partner_hospital": {"id": partner.id, "name": partner.name},
             "mock_hospital": {"id": mock.id, "name": mock.name},
             "location": {"lat": LAT, "lng": LNG},
+            "no_show": {"email": NO_SHOW_PATIENT_EMAIL, "name": "Mani Noshow", "appointment": missed.id},
         }))
 
     def _user(self, email, role, first, last):

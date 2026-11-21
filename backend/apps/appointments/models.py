@@ -16,6 +16,7 @@ class Appointment(models.Model):
         CONFIRMED = "confirmed", "Confirmed"
         CANCELLED = "cancelled", "Cancelled"
         COMPLETED = "completed", "Completed"
+        NO_SHOW = "no_show", "No-show"  # the patient didn't come, marked by hand (see no_show.py)
 
     patient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="appointments")
     doctor = models.ForeignKey("doctors.DoctorProfile", on_delete=models.CASCADE, related_name="appointments")
@@ -24,9 +25,21 @@ class Appointment(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.BOOKED)
     reason = models.CharField(max_length=300, blank=True)
     cancelled_by = models.CharField(max_length=10, blank=True)
+    # Hospital confirms first (owner request 2026-11-18): at a hospital with a hospital account (and its
+    # "confirm bookings" switch on) a new booking holds the slot but waits for the hospital. The doctor
+    # sees it only after the hospital confirms. Declining cancels it with a reason the patient sees.
+    # It stays True if the booking is cancelled before a Confirm: the doctor was never given it, so it
+    # never appears in their list. Only the hospital's Confirm sets it to False.
+    awaiting_hospital = models.BooleanField(default=False, db_index=True)
+    cancel_reason = models.CharField(max_length=300, blank=True)
+    no_show_by = models.CharField(max_length=10, blank=True, help_text="Who marked it missed: doctor or hospital")
     # Set by the reminder task so each reminder is sent only once.
     reminder_24h_sent_at = models.DateTimeField(null=True, blank=True)
     reminder_1h_sent_at = models.DateTimeField(null=True, blank=True)
+    # Patient queue (Step 3), filled in on the day of the visit: see queue.py.
+    checked_in_at = models.DateTimeField(null=True, blank=True)
+    token = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Queue number for the day, per doctor")
+    consultation_started_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -40,11 +53,32 @@ class Appointment(models.Model):
                 fields=["doctor", "start"],
                 condition=Q(status__in=ACTIVE_STATUSES),
                 name="unique_active_slot_per_doctor",
-            )
+            ),
+            # …and a second patient in consultation with the same doctor while one is still in.
+            models.UniqueConstraint(
+                fields=["doctor"],
+                condition=Q(status__in=ACTIVE_STATUSES, consultation_started_at__isnull=False),
+                name="one_consultation_at_a_time_per_doctor",
+            ),
         ]
 
     def __str__(self):
         return f"{self.patient} with {self.doctor} at {self.start:%Y-%m-%d %H:%M}"
+
+    @property
+    def queue_status(self) -> str:
+        """Where the visit is today: not_arrived → waiting → in_consultation → done (or cancelled)."""
+        if self.status == self.Status.CANCELLED:
+            return "cancelled"
+        if self.status == self.Status.COMPLETED:
+            return "done"
+        if self.status == self.Status.NO_SHOW:
+            return "no_show"
+        if self.consultation_started_at:
+            return "in_consultation"
+        if self.checked_in_at:
+            return "waiting"
+        return "not_arrived"
 
 
 class ExternalAppointment(models.Model):

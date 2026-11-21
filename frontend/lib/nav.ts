@@ -1,0 +1,78 @@
+import { API_URL, type Role, type User } from "./api";
+
+/**
+ * Sidebar menu for each role.
+ * An item without `href` is a planned feature: it is shown greyed out with "Soon" (its step of the
+ * dashboards plan in the tooltip),
+ * so the menu matches the plan without pretending the page exists.
+ */
+export type NavItem = { label: string; icon: string; href?: string; soon?: string; external?: boolean };
+
+export const NAV: Record<Role, NavItem[]> = {
+  patient: [
+    { label: "Dashboard", icon: "grid", href: "/patient" },
+    // Reference design: "Book appointment" (the MediConnect hospitals and their doctors, where booking starts).
+    { label: "Book appointment", icon: "stethoscope", href: "/doctors" },
+    { label: "My appointments", icon: "calendar", href: "/patient/appointments" },
+    { label: "My medical records", icon: "folder", href: "/patient/records" },
+    { label: "Profile & settings", icon: "settings", href: "/settings" },
+  ],
+  doctor: [
+    { label: "Dashboard", icon: "grid", href: "/doctor" },
+    { label: "My hospital & profile", icon: "hospital", href: "/doctor/profile" },
+    { label: "Duty schedule", icon: "clock", href: "/doctor/availability" },
+    { label: "Appointments", icon: "calendar", href: "/doctor/appointments" },
+    { label: "Patient queue", icon: "queue", href: "/doctor/queue" },
+    { label: "Patient records", icon: "file", href: "/doctor/records" },
+    { label: "Profile & settings", icon: "settings", href: "/settings" },
+  ],
+  // Hospital account (role "hospital"): one hospital's staff and patients (Step 4).
+  hospital: [
+    { label: "Dashboard", icon: "grid", href: "/admin" },
+    { label: "Hospital profile", icon: "hospital", href: "/admin/hospital" },
+    { label: "Doctor management", icon: "stethoscope", href: "/admin/doctors" },
+    { label: "Nurse management", icon: "nurse", href: "/admin/nurses" },
+    { label: "Staff management", icon: "user", href: "/admin/staff" },
+    { label: "Patient management", icon: "users", href: "/admin/patients" },
+    // Patient records by patient ID: its own menu item (owner request 2026-11-21), not on the dashboard or top bar.
+    { label: "Patient records", icon: "file", href: "/admin/patients/records" },
+    { label: "Appointments", icon: "calendar", href: "/admin/appointments" },
+    { label: "Staff & salary", icon: "rupee", href: "/admin/salary" },
+    { label: "Reports", icon: "chart", href: "/admin/reports" },
+    { label: "Settings", icon: "settings", href: "/settings" },
+  ],
+  admin: [], // the platform admin's menu is built by navFor
+};
+
+/** Platform admin (Django superuser): connects hospitals, answers appointment requests and support messages. */
+const PLATFORM: NavItem[] = [
+  { label: "Reports & analytics", icon: "chart", href: "/admin/reports" },
+  { label: "Connection requests", icon: "hospital", href: "/admin/connections" },
+  { label: "Connected hospitals", icon: "hospital", href: "/admin/hospitals" },
+  { label: "Appointment requests", icon: "calendar", href: "/admin/requests" },
+  { label: "Support inbox", icon: "chat", href: "/admin/support" },
+  { label: "Django admin", icon: "external", href: `${API_URL}/admin/`, external: true },
+];
+
+/** The menu for this user: hospital accounts get their hospital's menu, platform admins the platform pages. */
+export function navFor(role: Role, user: User | null): NavItem[] {
+  if (role !== "admin") return NAV[role];
+  const dashboard: NavItem = { label: "Dashboard", icon: "grid", href: "/admin" };
+  const settings: NavItem = { label: "Settings", icon: "settings", href: "/settings" };
+  return user?.is_platform_admin ? [dashboard, ...PLATFORM, settings] : [dashboard, settings];
+}
+
+/** Pages that open inside the dashboard layout for a logged-in user (besides /patient, /doctor, /admin). */
+export const SHELL_PATHS = ["/patient", "/doctor", "/admin", "/doctors", "/hospitals", "/settings", "/support"];
+
+/** Login, sign-up and password reset use their own full-screen layout. */
+export const AUTH_PATHS = ["/login", "/register", "/forgot-password", "/reset-password"];
+
+export const matches = (pathname: string, base: string) => pathname === base || pathname.startsWith(`${base}/`);
+
+/** The most specific menu item for the current page ("/doctor/profile" beats "/doctor"). */
+export function activeHref(pathname: string, items: NavItem[]) {
+  return items
+    .filter((i) => i.href && !i.external && matches(pathname, i.href))
+    .sort((a, b) => b.href!.length - a.href!.length)[0]?.href;
+}

@@ -87,7 +87,17 @@ def tomorrow():
 
 # ---- tests ------------------------------------------------------------------
 
-def test_tool_loop_searches_and_answers(use_fake, doctor, patient):
+def test_tool_loop_searches_and_answers(use_fake, doctor, patient, monkeypatch):
+    # This test is about the tool loop, not Elasticsearch: use the database search on purpose. (It used to
+    # depend on the test search index not existing yet, so it failed when an earlier test had created it.)
+    from elasticsearch import ConnectionError as ESConnectionError
+
+    import apps.search.queries
+
+    def search_down(*args, **kwargs):
+        raise ESConnectionError("search is down in this test")
+
+    monkeypatch.setattr(apps.search.queries, "search_doctors", search_down)
     fake = use_fake(
         answer(calls=[tool_call("search_doctors", {"query": "Cardiologist", "city": "Chennai"})]),
         answer("Dr. Anita Rao is a cardiologist at City Hospital."),

@@ -1,26 +1,39 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { NOTIFICATION_EVENT } from "@/lib/notifications";
 import { fmtDateTime, type Appointment } from "@/lib/types";
+import HospitalPlace from "./HospitalPlace";
 import Icon from "./Icons";
 import { Avatar } from "./PageHeader";
 import StatusBadge from "./StatusBadge";
+import { TreatmentNoteForm } from "./TreatmentNotes";
 
 type Viewer = "patient" | "doctor";
+
+const endOfToday = () => {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
+  return d;
+};
 
 /** Upcoming/past appointment list with the actions each role is allowed. */
 export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: Viewer; extraQuery?: string }) {
   const [when, setWhen] = useState<"upcoming" | "past">("upcoming");
   const [items, setItems] = useState<Appointment[] | null>(null);
   const [error, setError] = useState("");
+  const [noteFor, setNoteFor] = useState<number | null>(null); // the visit whose note form is open
 
+  // Only the newest request may fill the list: several reloads can overlap (a tab switch plus live
+  // notifications), and an older "upcoming" answer arriving last must not replace the "past" list.
+  const latest = useRef(0);
   const load = useCallback(() => {
+    const mine = ++latest.current;
     setItems(null);
     api<Appointment[]>(`/api/appointments/?when=${when}${extraQuery}`)
-      .then(setItems)
-      .catch((e) => setError(errorMessage(e)));
+      .then((list) => { if (mine === latest.current) setItems(list); })
+      .catch((e) => { if (mine === latest.current) setError(errorMessage(e)); });
   }, [when, extraQuery]);
 
   useEffect(load, [load]);
@@ -31,7 +44,7 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
     return () => window.removeEventListener(NOTIFICATION_EVENT, load);
   }, [load]);
 
-  async function act(id: number, action: "cancel" | "confirm" | "complete") {
+  async function act(id: number, action: "cancel" | "confirm" | "complete" | "no-show" | "undo-no-show") {
     if (action === "cancel" && !window.confirm("Cancel this appointment?")) return;
     try {
       await api(`/api/appointments/${id}/${action}/`, { method: "POST" });
@@ -80,13 +93,28 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
                   <Avatar name={who} />
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2 font-semibold text-navy-800">
-                      {who} <StatusBadge status={a.status} />
+                      {who} <StatusBadge status={a.status} awaiting={a.awaiting_hospital} />
                     </p>
                     <p className="text-sm text-slate-600">
                       {fmtDateTime(a.start)}
                       {viewer === "patient" ? ` · ${a.specialization} · ${a.hospital_name}` : ` · ${a.patient_email}`}
                     </p>
                     {a.reason && <p className="text-sm text-slate-500">Reason: {a.reason}</p>}
+                    {a.awaiting_hospital && a.status === "booked" && (
+                      <p className="text-sm text-orange-800">Your slot is held. The hospital will confirm it soon.</p>
+                    )}
+                    {a.status === "no_show" && (
+                      <p className="text-sm text-rose-700">
+                        {viewer === "patient" ? "You didn't come to this visit" : "The patient didn't come"}
+                        {a.no_show_by && ` (marked by the ${a.no_show_by})`}.
+                      </p>
+                    )}
+                    {a.cancelled_by === "hospital" && a.cancel_reason && (
+                      <p className="text-sm text-slate-600">Declined by the hospital: {a.cancel_reason}</p>
+                    )}
+                    {viewer === "patient" && a.hospital && a.status !== "cancelled" && (
+                      <HospitalPlace name={a.hospital_name ?? ""} place={a.hospital} />
+                    )}
                   </div>
                 </div>
                 {active && when === "upcoming" && (
@@ -104,6 +132,30 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
                     <button onClick={() => act(a.id, "cancel")} className="btn border border-red-200 bg-white px-3 py-1.5 text-red-700 hover:bg-red-50">
                       Cancel
                     </button>
+                  </div>
+                )}
+                {/* No-show (2026-11-20): the server says when it's allowed (visit started, ≤ 7 days, never checked in). */}
+                {viewer === "doctor" && a.can_mark_no_show && (
+                  <button onClick={() => act(a.id, "no-show")} className="btn border border-rose-200 bg-white px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50">
+                    Didn&apos;t come<span className="sr-only"> for {a.patient_name}</span>
+                  </button>
+                )}
+                {viewer === "doctor" && a.can_undo_no_show && (
+                  <button onClick={() => act(a.id, "undo-no-show")} className="btn-ghost px-3 py-1.5 text-sm">
+                    Undo missed<span className="sr-only"> for {a.patient_name}</span>
+                  </button>
+                )}
+                {/* Treatment note (reference design, Part 3): on the day of the visit or after it. */}
+                {viewer === "doctor" && a.status !== "cancelled" && a.status !== "no_show" && new Date(a.start) <= endOfToday() && noteFor !== a.id && (
+                  <button onClick={() => setNoteFor(a.id)} className={`${a.treatment_note ? "btn-ghost" : "btn-outline"} px-3 py-1.5 text-sm`}>
+                    <Icon name="file" className="h-4 w-4" /> {a.treatment_note ? "Edit note" : "Write note"}
+                  </button>
+                )}
+                {noteFor === a.id && (
+                  <div className="w-full rounded-xl border border-slate-100 bg-white p-4">
+                    <p className="mb-3 text-sm font-[650] text-[#00295c]">Treatment note · {a.patient_name}</p>
+                    <TreatmentNoteForm appointmentId={a.id} noteId={a.treatment_note}
+                                       onCancel={() => setNoteFor(null)} onSaved={() => { setNoteFor(null); load(); }} />
                   </div>
                 )}
               </li>

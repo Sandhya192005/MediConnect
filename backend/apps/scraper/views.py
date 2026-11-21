@@ -122,7 +122,7 @@ def refresh(request, hospital_id):
 @api_view(["GET"])
 def job_detail(request, job_id):
     job = get_object_or_404(ScrapeJob, pk=job_id)
-    if request.user.role != "admin" and job.requested_by_id != request.user.id:
+    if not request.user.is_superuser and job.requested_by_id != request.user.id:
         return Response(status=404)
     return Response(ScrapeJobSerializer(job).data)
 

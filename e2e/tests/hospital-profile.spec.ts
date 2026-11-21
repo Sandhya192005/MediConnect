@@ -1,0 +1,48 @@
+import { expect, test } from "@playwright/test";
+import { API } from "./helpers";
+
+test("a hospital edits its profile, departments and map pin", async ({ page, request }) => {
+  const stamp = Date.now();
+  const name = `E2E Signup Hospital ${stamp}`; // removed by e2e_setup / e2e_cleanup (also after the rename: same prefix)
+  const email = `e2e.new.hospital.${stamp}@mediconnect.dev`;
+  const password = "Strong@pass1";
+  expect((await request.post(`${API}/api/auth/register-hospital/`, {
+    data: { email, password, hospital_name: name, hospital_city: "Chennai" },
+  })).status()).toBe(201);
+
+  await page.goto("/login");
+  await page.getByRole("tab", { name: "Hospital" }).click();
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Log in" }).click();
+
+  await page.getByRole("navigation", { name: "Main menu" }).getByRole("link", { name: "Hospital profile" }).click();
+  await expect(page.getByRole("heading", { name: "Hospital profile" })).toBeVisible();
+  await expect(page.getByLabel("Hospital name")).toHaveValue(name);
+  await expect(page.getByText(`${email} · to change it, contact support.`)).toBeVisible(); // the login email, read-only
+
+  const renamed = `${name} Care`;
+  await page.getByLabel("Hospital name").fill(renamed);
+  await page.getByLabel("Address").fill("12 Test Street, Guindy");
+  await page.getByLabel("Phone").fill("044 1234 5678");
+  await page.getByText("Cardiology", { exact: true }).click(); // e2e_setup creates this department
+  await expect(page.getByRole("checkbox", { name: "Cardiology" })).toBeChecked();
+
+  // The pin: click the map.
+  await expect(page.getByText("No pin yet")).toBeVisible();
+  await page.getByRole("region", { name: /click to place your hospital's pin/ }).click({ position: { x: 200, y: 150 } });
+  await expect(page.getByText(/^Pin: \d+\.\d+, \d+\.\d+$/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByRole("status")).toHaveText("Saved.");
+
+  // Saved for real: a reload shows the new details and the pin.
+  await page.reload();
+  await expect(page.getByLabel("Hospital name")).toHaveValue(renamed);
+  await expect(page.getByRole("checkbox", { name: "Cardiology" })).toBeChecked();
+  await expect(page.getByText(/^Pin: /)).toBeVisible();
+
+  // The account is named after the hospital, so the dashboard greets the new name.
+  await page.getByRole("navigation", { name: "Main menu" }).getByRole("link", { name: "Dashboard" }).click();
+  await expect(page.getByText(new RegExp(`^Good (morning|afternoon|evening), ${renamed}!`))).toBeVisible();
+});
