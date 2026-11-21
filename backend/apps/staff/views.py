@@ -100,12 +100,18 @@ class PatientsView(APIView):
         hospital, now = request.admin_hospital, timezone.now()
         here = Q(appointments__doctor__hospital=hospital)
         records = MedicalRecord.objects.filter(patient=OuterRef("pk")).values("patient").annotate(n=Count("id")).values("n")
+        # Payment slips (2026-11-21): what the patient still owes this hospital (pending slips).
+        from apps.billing.models import PaymentSlip
+
+        owed = (PaymentSlip.objects.filter(patient=OuterRef("pk"), hospital=hospital, status=PaymentSlip.Status.PENDING)
+                .values("patient").annotate(t=Sum("total")).values("t"))
         qs = hospital_patients(hospital).select_related("patient_profile").annotate(
             visits=Count("appointments", filter=here & Q(appointments__status="completed"), distinct=True),
             last_visit=Max("appointments__start", filter=here & Q(appointments__status="completed")),
             next_visit=Min("appointments__start", filter=here & Q(appointments__status__in=ACTIVE_STATUSES,
                                                                    appointments__start__gte=now)),
             records=Coalesce(Subquery(records), 0),
+            pending_amount=Coalesce(Subquery(owed), Decimal("0")),
         )
         if q := request.query_params.get("q", "").strip():
             qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(email__icontains=q)
@@ -125,6 +131,7 @@ class PatientsView(APIView):
                 "last_visit": p.last_visit,
                 "next_visit": p.next_visit,
                 "records": p.records,
+                "pending_amount": p.pending_amount,
             }
             for p in rows
         ])

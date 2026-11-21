@@ -20,6 +20,7 @@ from django.utils import timezone
 
 from apps.accounts.models import PatientProfile
 from apps.appointments.models import Appointment, AppointmentRequest, ExternalAppointment
+from apps.billing.models import PaymentSlip
 from apps.records.models import MedicalRecord, RecordAccess
 from apps.staff.models import HospitalAdmin, HospitalPatient, StaffMember
 from apps.doctors.models import DoctorProfile, WeeklyAvailability
@@ -68,6 +69,7 @@ class Command(BaseCommand):
         # Patient management (2026-11-21): patients the test hospital created go, and its added-patient list is reset.
         User.objects.filter(hospital_links__created_account=True, hospital_links__hospital=partner).delete()
         HospitalPatient.objects.filter(hospital=partner).delete()
+        PaymentSlip.objects.filter(hospital=partner).delete()  # payment slips (2026-11-21) start fresh too
         # A platform admin (superuser) for the platform analytics tests. e2e_setup only runs with DEBUG on.
         platform_user = self._user(PLATFORM_EMAIL, "admin", "Priya", "Platform")
         platform_user.is_superuser = platform_user.is_staff = True

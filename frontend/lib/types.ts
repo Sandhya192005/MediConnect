@@ -455,6 +455,8 @@ export type HospitalPatient = {
   phone: string;
   added_by_you: boolean;
   created_by_you: boolean;
+  /** What the patient still owes this hospital: pending payment slips (2026-11-21). */
+  pending_amount: number;
   visits: number;
   last_visit: string | null;
   next_visit: string | null;
@@ -601,3 +603,24 @@ export type HospitalPatientPage = {
   notes: TreatmentNote[];
   visits: { id: number; start: string; doctor_name: string; status: AppointmentStatus; reason: string }[];
 };
+
+// ---- Payment slips (2026-11-21) ----
+export type PaymentStatus = "pending" | "completed" | "cancelled";
+export type PaymentMethod = "cash" | "card" | "upi" | "insurance" | "other";
+export const PAYMENT_METHODS: [PaymentMethod, string][] = [["cash", "Cash"], ["card", "Card"], ["upi", "UPI"], ["insurance", "Insurance"], ["other", "Other"]];
+export type PaymentSlip = {
+  id: number; number: string; issued_on: string; status: PaymentStatus; status_label: string;
+  items: { description: string; quantity: number; unit_price: number; amount: number }[];
+  subtotal: number; discount: number; total: number; notes: string;
+  method: PaymentMethod | ""; method_label: string; paid_on: string | null;
+  reopen_reason: string; cancel_reason: string;
+  appointment: number | null; visit: { start: string; doctor_name: string } | null;
+  hospital: { name: string; address: string; city: string; state: string; phone: string; email: string };
+  patient: { name: string; patient_id: string | null; phone: string };
+  created_at: string;
+};
+export type PaymentList = { totals: { pending: number; completed: number }; slips: PaymentSlip[] };
+
+/** ₹ with paise, Indian grouping: 1100.5 → "₹1,100.50". */
+export const fmtMoney = (v: string | number) =>
+  `₹${Number(v).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

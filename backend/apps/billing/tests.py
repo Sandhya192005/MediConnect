@@ -123,6 +123,9 @@ def test_lists_totals_and_who_sees_what(world):
     assert data["totals"] == {"pending": 1100, "completed": 1100}
     assert [s["number"] for s in data["slips"]] == ["CCH-2026-0002", "CCH-2026-0001"]
     assert len(client_for(world["desk"]).get(f"{H}?status=pending").json()["slips"]) == 1
+    # Patient management's list shows what the patient still owes this hospital.
+    row = next(r for r in client_for(world["desk"]).get("/api/hospital-admin/patients/").json() if r["patient_id"] == world["pid"])
+    assert row["pending_amount"] == 1100
 
     # The patient sees their slips (read-only).
     me = client_for(world["asha"])

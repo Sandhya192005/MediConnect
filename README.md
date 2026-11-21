@@ -276,6 +276,14 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Payment slips — Phase 2 of 2 (screens) (2026-11-21)
+
+- **Patient management → a patient's page → Payments:** Pending and Paid totals; **New payment slip** with lines (description, quantity, price; + Add line, remove), discount, slip date, optional visit, notes, a **live total**, and "Already paid" (with the method) for bills paid on the spot. Each slip shows its number, status badge, total and lines, with **Slip** (view/print), **Mark as paid** (method + date), **Edit** and **Cancel** while pending, and **Back to pending** (reason required) once paid.
+- **Patient list:** a **Pending** column with what each patient still owes the hospital (`pending_amount` in `GET /api/hospital-admin/patients/`).
+- **Printable slip** (`/admin/payments/<id>`, `/patient/payments/<id>`): hospital name, address, phone and email; slip number, date and status; patient and patient ID; the visit; lines, subtotal, discount and total; paid on/by or "Payment pending. Amount due". **Print or save as PDF** uses the browser's print dialog; print styles show only the slip, on white (`.print-area` in `globals.css`). No new library.
+- **Patient:** new menu item **My payments** (`/patient/payments`): Pending and Paid totals and every slip from every hospital, each openable and printable. It has the "MediConnect is your Better Partner" top bar like the other patient pages without search.
+- `e2e_setup` clears the test hospital's slips each run. e2e `payments.spec.ts`: bill the E2E patient with two lines and a discount (live total ₹1,100.00) → print page → mark paid by UPI (locked) → the patient sees it in My payments.
+
 ### Payment slips in Patient management (2026-11-21) — Phase 1 of 2 (backend)
 
 Owner decisions: an **itemised** slip, status **Pending / Completed**, the **patient sees** their slips, a **printable** slip page, and **completed slips are locked**.

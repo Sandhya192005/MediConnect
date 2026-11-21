@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { EmptyState, IconTile, Panel, SkeletonRows, StatusPill } from "@/components/DashboardShell";
 import HealthDetailsForm from "@/components/HealthDetailsForm";
 import Icon from "@/components/Icons";
+import PatientPayments from "@/components/PatientPayments";
 import { HealthSummary } from "@/components/PatientRecordsLookup";
 import RecordList from "@/components/RecordList";
 import RecordUploadForm from "@/components/RecordUploadForm";
@@ -131,6 +132,9 @@ export default function HospitalPatientPageView() {
               <Panel title="Upload a record"><p className="text-sm text-slate-500">Add this patient to your patients to upload records or edit details.</p></Panel>
             )}
           </div>
+
+          {/* ---- Payments (2026-11-21) ---- */}
+          <PatientPayments patientId={p.patient_id} visits={data.visits} canAdd={p.in_list} />
 
           {/* ---- Visits and notes ---- */}
           <div className="grid gap-6 lg:grid-cols-2">

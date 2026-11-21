@@ -15,6 +15,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Book appointment", icon: "stethoscope", href: "/doctors" },
     { label: "My appointments", icon: "calendar", href: "/patient/appointments" },
     { label: "My medical records", icon: "folder", href: "/patient/records" },
+    { label: "My payments", icon: "rupee", href: "/patient/payments" }, // payment slips from hospitals (2026-11-21)
     { label: "Profile & settings", icon: "settings", href: "/settings" },
   ],
   doctor: [

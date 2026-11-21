@@ -7,7 +7,7 @@ import { EmptyState, IconTile, Panel, SkeletonRows } from "@/components/Dashboar
 import Icon from "@/components/Icons";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
-import { fmtDate, isoDate, type HospitalPatient } from "@/lib/types";
+import { fmtDate, fmtMoney, isoDate, type HospitalPatient } from "@/lib/types";
 
 /**
  * The hospital's Patient management (owner request 2026-11-21): every patient it added, plus everyone with a
@@ -67,11 +67,13 @@ export default function AdminPatientsPage() {
                     <p className="truncate text-xs text-slate-500">{[p.phone, p.email ?? "No email"].filter(Boolean).join(" · ")}</p>
                   </div>
                 </div>
-                <dl className="grid grid-cols-4 gap-4 text-xs md:w-[30rem]">
+                <dl className="grid grid-cols-5 gap-4 text-xs md:w-[36rem]">
                   <div><dt className="text-slate-400">Visits</dt><dd className="font-[650] text-[#00295c]">{p.visits}</dd></div>
                   <div><dt className="text-slate-400">Last visit</dt><dd className="text-[#00295c]">{p.last_visit ? fmtDate(p.last_visit) : "—"}</dd></div>
                   <div><dt className="text-slate-400">Next visit</dt><dd className="text-[#00295c]">{p.next_visit ? fmtDate(p.next_visit) : "—"}</dd></div>
                   <div><dt className="text-slate-400">Records</dt><dd className="font-[650] text-[#00295c]">{p.records}</dd></div>
+                  <div><dt className="text-slate-400">Pending</dt>
+                    <dd className={`font-[650] tabular-nums ${p.pending_amount > 0 ? "text-amber-800" : "text-[#00295c]"}`}>{p.pending_amount > 0 ? fmtMoney(p.pending_amount) : "—"}</dd></div>
                 </dl>
                 {p.patient_id && (
                   <Link href={`/admin/patients/${p.patient_id}`} className="btn-outline shrink-0 px-3 py-1.5 text-xs" aria-label={`Open ${p.name}`}>

@@ -154,3 +154,25 @@ body:has(.app-shell) {
     @apply inline-flex items-center gap-1 text-sm font-[650] text-teal-700 transition hover:gap-1.5 hover:text-teal-800;
   }
 }
+
+/* Payment slips (2026-11-21): when printing, only the slip (.print-area) is shown — no sidebar, top bar or buttons. */
+@media print {
+  html,
+  body,
+  .app-shell {
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0 0 auto 0;
+    box-shadow: none;
+    max-width: none;
+  }
+}

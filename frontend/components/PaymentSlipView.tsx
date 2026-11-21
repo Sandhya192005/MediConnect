@@ -1,0 +1,82 @@
+"use client";
+
+import { fmtDate, fmtDateTime, fmtMoney, type PaymentSlip } from "@/lib/types";
+
+/** Status badge colours: pending amber, completed green, cancelled grey. */
+export function SlipStatus({ s }: { s: PaymentSlip }) {
+  const cls = s.status === "completed" ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+    : s.status === "pending" ? "bg-amber-50 text-amber-800 ring-amber-200" : "bg-slate-100 text-slate-500 ring-slate-200";
+  return <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-[650] ring-1 ${cls}`}>{s.status_label}</span>;
+}
+
+/**
+ * A payment slip as a printable document (owner request 2026-11-21): the hospital, the patient, the lines,
+ * discount and total, and the payment status. `print-area` makes it the only thing printed (globals.css), so
+ * the browser's Print → "Save as PDF" gives a clean slip.
+ */
+export default function PaymentSlipView({ s }: { s: PaymentSlip }) {
+  const h = s.hospital;
+  return (
+    <article aria-label={`Payment slip ${s.number}`} className="print-area mx-auto max-w-2xl rounded-2xl bg-white p-8 text-sm text-slate-700 shadow-sm ring-1 ring-slate-200">
+      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-5">
+        <div>
+          <p className="text-lg font-bold text-[#00295c]">{h.name}</p>
+          <p className="text-slate-500">{[h.address, h.city, h.state].filter(Boolean).join(", ")}</p>
+          <p className="text-slate-500">{[h.phone && `Phone ${h.phone}`, h.email].filter(Boolean).join(" · ")}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs uppercase tracking-wider text-slate-400">Payment slip</p>
+          <p className="font-mono text-base font-[650] text-[#00295c]">{s.number}</p>
+          <p className="text-slate-500">Date {fmtDate(s.issued_on)}</p>
+          <p className="mt-1"><SlipStatus s={s} /></p>
+        </div>
+      </header>
+
+      <section className="grid gap-1 border-b border-slate-200 py-4 sm:grid-cols-2">
+        <p><span className="text-slate-400">Patient </span><span className="font-[650] text-[#00295c]">{s.patient.name}</span></p>
+        <p><span className="text-slate-400">Patient ID </span><span className="font-mono">{s.patient.patient_id ?? "—"}</span></p>
+        {s.patient.phone && <p><span className="text-slate-400">Phone </span>{s.patient.phone}</p>}
+        {s.visit && <p><span className="text-slate-400">Visit </span>{fmtDateTime(s.visit.start)} · {s.visit.doctor_name}</p>}
+      </section>
+
+      <table className="mt-4 w-full text-left">
+        <thead className="text-xs uppercase tracking-wider text-slate-400">
+          <tr>
+            <th className="pb-2 font-medium">Description</th>
+            <th className="pb-2 text-right font-medium">Qty</th>
+            <th className="pb-2 text-right font-medium">Price</th>
+            <th className="pb-2 text-right font-medium">Amount</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {s.items.map((i, n) => (
+            <tr key={n}>
+              <td className="py-2">{i.description}</td>
+              <td className="py-2 text-right tabular-nums">{i.quantity}</td>
+              <td className="py-2 text-right tabular-nums">{fmtMoney(i.unit_price)}</td>
+              <td className="py-2 text-right tabular-nums">{fmtMoney(i.amount)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot className="tabular-nums">
+          <tr className="border-t border-slate-200"><td colSpan={3} className="pt-3 text-right text-slate-500">Subtotal</td><td className="pt-3 text-right">{fmtMoney(s.subtotal)}</td></tr>
+          {s.discount > 0 && <tr><td colSpan={3} className="text-right text-slate-500">Discount</td><td className="text-right">− {fmtMoney(s.discount)}</td></tr>}
+          <tr><td colSpan={3} className="pt-1 text-right font-[650] text-[#00295c]">Total</td><td className="pt-1 text-right text-base font-bold text-[#00295c]" data-testid="slip-total">{fmtMoney(s.total)}</td></tr>
+        </tfoot>
+      </table>
+
+      <section className="mt-5 rounded-xl bg-slate-50 p-4">
+        {s.status === "completed" ? (
+          <p><span className="font-[650] text-emerald-700">Paid</span> on {s.paid_on ? fmtDate(s.paid_on) : "—"} by {s.method_label}.</p>
+        ) : s.status === "pending" ? (
+          <p><span className="font-[650] text-amber-800">Payment pending.</span> Amount due: <span className="font-[650]">{fmtMoney(s.total)}</span></p>
+        ) : (
+          <p><span className="font-[650] text-slate-600">Cancelled</span>{s.cancel_reason && `: ${s.cancel_reason}`}</p>
+        )}
+        {s.reopen_reason && s.status === "pending" && <p className="mt-1 text-xs text-slate-500">Set back to pending: {s.reopen_reason}</p>}
+        {s.notes && <p className="mt-1 text-slate-500">Note: {s.notes}</p>}
+      </section>
+      <p className="mt-6 text-center text-xs text-slate-400">Generated by MediConnect</p>
+    </article>
+  );
+}
