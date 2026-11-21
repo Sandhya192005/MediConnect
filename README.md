@@ -278,7 +278,7 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
 
 ### Duty schedule with AM/PM (2026-11-21)
 
-The doctor's **Duty schedule** used the browser's time box, which shows AM/PM only on some computers (it follows the system clock setting), so the owner saw 24-hour times. Each time is now three dropdowns, **hour (1–12) : minutes (5-minute steps) AM/PM** (`components/TimeSelect.tsx`), the same on every computer and phone. The API still stores 24-hour "HH:MM", so nothing else changed. The doctor dashboard's "Duty today" shows times as "6:00 AM – 10:00 PM". e2e `duty-schedule.spec.ts` (changes a time, checks it after a reload, puts it back).
+The doctor's **Duty schedule** used the browser's time box, which shows AM/PM only on some computers (it follows the system clock setting), so the owner saw 24-hour times. Each time is now three dropdowns, **hour (1–12) : minutes (5-minute steps) AM/PM** (`components/TimeSelect.tsx`), the same on every computer and phone. The API still stores 24-hour "HH:MM", so nothing else changed. The doctor dashboard's "Today's duty" panel (renamed from "Duty today") shows times as "6:00 AM – 10:00 PM". e2e `duty-schedule.spec.ts` (changes a time, checks it after a reload, puts it back).
 
 ### Small menu and search changes (2026-11-21)
 

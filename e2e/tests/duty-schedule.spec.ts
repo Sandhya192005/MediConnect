@@ -6,7 +6,7 @@ import { e2e, login } from "./helpers";
 // day and other tests book inside those hours, so this test puts the time back at the end.
 test("the doctor sets working hours with AM/PM", async ({ page }) => {
   await login(page, e2e().doctor.email);
-  await expect(page.getByText(/6:00 AM – 10:00 PM/)).toBeVisible(); // Duty today on the dashboard
+  await expect(page.getByRole("region", { name: "Today's duty" })).toContainText("6:00 AM – 10:00 PM"); // dashboard panel
 
   await page.getByRole("navigation", { name: "Main menu" }).getByRole("link", { name: "Duty schedule" }).click();
   const to = page.getByRole("group", { name: "To, block 1" });

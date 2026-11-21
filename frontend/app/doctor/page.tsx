@@ -128,7 +128,7 @@ export default function DoctorDashboard() {
         </Panel>
 
         <div className="space-y-6 lg:col-span-2">
-          <Panel title="Duty today" action={{ href: "/doctor/availability", label: "Edit schedule" }}>
+          <Panel title="Today's duty" action={{ href: "/doctor/availability", label: "Edit schedule" }}>
             {me === null ? (
               <SkeletonRows rows={2} />
             ) : (
