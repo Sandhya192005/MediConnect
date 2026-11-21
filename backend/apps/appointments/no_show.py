@@ -34,7 +34,7 @@ def _came(a: Appointment) -> bool:
 
 
 def can_mark(a: Appointment, user) -> bool:
-    return (user.role in WHO_MAY_MARK and a.status in MARKABLE_FROM and not a.awaiting_hospital
+    return (user.role in WHO_MAY_MARK and a.status in MARKABLE_FROM and not a.is_pending
             and _in_window(a) and not _came(a))
 
 
@@ -48,7 +48,7 @@ def mark_no_show(a: Appointment, user) -> Appointment:
         raise PermissionDenied("Only the doctor or the hospital can mark a missed visit.")
     if a.status == Appointment.Status.NO_SHOW:
         raise ValidationError({"status": "This visit is already marked as missed."})
-    if a.status not in MARKABLE_FROM or a.awaiting_hospital:
+    if a.status not in MARKABLE_FROM or a.is_pending:
         raise ValidationError({"status": f"A {a.status} appointment can't be marked as missed."})
     if a.start > timezone.now():
         raise ValidationError({"status": "You can mark a visit as missed once its time has come."})

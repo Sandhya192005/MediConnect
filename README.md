@@ -276,6 +276,24 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### New booking flow: hospital assigns, doctor accepts or rejects (2026-11-21) — Phase 1 of 2 (backend)
+
+Owner decisions: **how the patient booked decides who approves.**
+
+```
+HOSPITAL request (patient booked through the hospital's page):
+  patient books → hospital: Accept & assign (the chosen doctor, or another free doctor of theirs) / Decline (reason)
+                → doctor:   Accept → "confirmed"  /  Reject (reason) → back to the hospital: reassign or decline
+PERSONAL request (patient found the doctor directly), or a hospital without a hospital account:
+  patient books → doctor:   Accept → "confirmed"  /  Reject (reason) → declined, the patient is told why
+```
+- New fields `appointments.source` (personal / hospital) and `awaiting_doctor`; new table `doctor_rejection` (every rejection is kept, also after the hospital reassigns). Rules in `appointments/flow.py`. Migration `appointments 0008` marks bookings already waiting for a hospital as hospital requests.
+- The hospital's switch **"Confirm bookings before they reach doctors" is removed** (column `all_hospitals.confirm_bookings` dropped, migration `hospitals 0018`; database backed up first). The kind of request decides the flow instead.
+- The slot stays held until the request is declined or cancelled, so there's no double booking. Only accepted appointments get reminders, the queue, treatment notes, no-show and auto-complete. Requests nobody answered before their time are cancelled by a new hourly job ("Booking not confirmed", `expire_unanswered_requests`).
+- API: `POST /api/appointments/` takes `source`; `hospital-confirm/ {doctor?}` = Accept & assign; `GET assignable-doctors/` (the hospital's doctors: free at that time? already rejected it?); `doctor-accept/`; `doctor-reject/ {reason}`; `?awaiting=doctor` lists requests waiting for the doctor; `GET /api/hospital-admin/doctors/<id>/appointments/` (one doctor's waiting / accepted / rejected, for Doctor management). `booking-settings/` is gone.
+- Notifications: the patient is emailed for "Booking received", "Appointment confirmed" (doctor accepted), declines (with the reason) and expiry; doctors and the hospital get in-app notifications ("New appointment request", "New appointment to accept", "Doctor rejected an appointment").
+- Tests: `appointments/test_booking_flow.py` (9) replaces `test_hospital_confirmation.py`; 285 backend tests pass. **Until Phase 2 (screens)**, the web pages still show the old buttons: patient bookings arrive as personal requests and the doctor's "Confirm" button means Accept; some e2e tests will fail until then.
+
 ### Doctor's "My hospital & profile" redesigned (2026-11-21)
 
 Owner request: a professional look after editing. The page (`/doctor/profile`) used to be only an open form. Now:

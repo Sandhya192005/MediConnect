@@ -27,6 +27,10 @@ def create_notification(user, kind, title, message, link="", appointment=None) -
     return n
 
 
+# Events that go to the hospital's account too (in-app only).
+HOSPITAL_EVENTS = ("requested", "request_cancelled", "doctor_rejected", "doctor_accepted")
+
+
 def notify_appointment_in_app(appointment, event: str) -> int:
     patient = appointment.patient
     doctor_user = appointment.doctor.user
@@ -39,7 +43,8 @@ def notify_appointment_in_app(appointment, event: str) -> int:
     # The hospital's managers, only for the events that go to them (one query, not on every event).
     hospital_admins = (
         [a.user for a in hospital.admins.select_related("user") if a.user.is_active]
-        if hospital and event in ("requested", "request_cancelled") else []
+        if hospital and event in HOSPITAL_EVENTS and (event != "doctor_accepted" or appointment.source == "hospital")
+        else []
     )
 
     # event -> list of (user, title, message, link)
@@ -78,6 +83,35 @@ def notify_appointment_in_app(appointment, event: str) -> int:
         "no_show": [(patient, "Missed appointment", f"You missed your visit with {doctor} on {when}. You can book a new one any time.", p_link)],
         "no_show_undone": [(patient, "Visit no longer marked as missed", f"Your visit with {doctor} on {when} counts as attended.", p_link)],
     }
+    rejection = appointment.rejections.first() if event == "doctor_rejected" else None  # the newest one
+    messages.update({
+        # Booking flow (owner decisions 2026-11-21, appointments/flow.py)
+        "doctor_requested": [
+            (patient, "Booking received", f"{doctor} · {when}. Waiting for the doctor to accept.", p_link),
+            (doctor_user, "New appointment request", f"{patient_name} · {when}. Accept or reject it.", d_link),
+        ],
+        "hospital_assigned": [
+            (patient, "Hospital accepted your booking", f"{hospital_name} gave your visit on {when} to {doctor}. "
+             "Waiting for the doctor to accept.", p_link),
+            (doctor_user, "New appointment to accept", f"{patient_name} · {when}, from {hospital_name}. Accept or reject it.", d_link),
+        ],
+        "doctor_accepted": [
+            (patient, "Appointment confirmed", f"{doctor} accepted your visit on {when}", p_link),
+            *[(a, "Doctor accepted", f"{doctor} accepted {patient_name} · {when}", h_link) for a in hospital_admins],
+        ],
+        "doctor_rejected": [
+            (a, "Doctor rejected an appointment",
+             f"{doctor} can't take {patient_name} · {when}"
+             f"{f': {rejection.reason}' if rejection else ''}. Assign another doctor or decline.", h_link)
+            for a in hospital_admins
+        ],
+        "doctor_declined": [
+            (patient, "Appointment declined", f"{doctor} couldn't take your visit on {when}: {appointment.cancel_reason}", p_link),
+        ],
+        "expired": [
+            (patient, "Booking not confirmed", f"Your visit with {doctor} on {when} wasn't confirmed in time, so it was cancelled.", p_link),
+        ],
+    })
     items = messages.get(event, [])
     for user, title, message, link in items:
         create_notification(user, event, title, message, link, appointment)

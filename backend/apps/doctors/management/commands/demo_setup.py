@@ -234,6 +234,7 @@ class Command(BaseCommand):
         def book(doc, patient, start: datetime, status="booked", reason="", created_days_before=2, awaiting=False):
             nonlocal made
             a = Appointment.objects.create(doctor=doc, patient=patient, start=start, awaiting_hospital=awaiting,
+                                           source="hospital" if awaiting else "personal",
                                            end=start + timedelta(minutes=doc.slot_minutes), status=status, reason=reason)
             # Booked a couple of days before the visit, like a real booking (created_at is set automatically).
             Appointment.objects.filter(pk=a.pk).update(created_at=min(start, timezone.now()) - timedelta(days=created_days_before))

@@ -38,6 +38,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
     # No-show (2026-11-20): whether this viewer may mark the visit missed, or undo that (rules in no_show.py).
     can_mark_no_show = serializers.SerializerMethodField()
     can_undo_no_show = serializers.SerializerMethodField()
+    # Booking flow (2026-11-21): the newest doctor rejection, so the hospital sees who said no and why.
+    last_rejection = serializers.SerializerMethodField()
 
     class Meta:
         model = Appointment
@@ -47,8 +49,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "cancelled_by", "cancel_reason", "awaiting_hospital", "created_at",
             "queue_status", "token", "checked_in_at", "consultation_started_at", "people_ahead",
             "no_show_by", "can_mark_no_show", "can_undo_no_show",
+            "source", "awaiting_doctor", "last_rejection",
         ]
-        read_only_fields = ["end", "status", "cancelled_by", "cancel_reason", "awaiting_hospital", "created_at", "token", "checked_in_at", "consultation_started_at", "no_show_by"]
+        read_only_fields = ["end", "status", "cancelled_by", "cancel_reason", "awaiting_hospital", "created_at", "token", "checked_in_at", "consultation_started_at", "no_show_by", "source", "awaiting_doctor"]
         # The view checks slot availability itself and returns a friendly message,
         # so skip DRF's auto-generated "unique set" validator.
         validators = []
@@ -93,3 +96,10 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
         user = self._viewer()
         return bool(user) and can_undo(obj, user)
+
+    def get_last_rejection(self, obj):
+        rejections = list(obj.rejections.all())  # prefetched by the view, newest first
+        if not rejections:
+            return None
+        r = rejections[0]
+        return {"doctor_name": str(r.doctor), "reason": r.reason, "at": r.created_at}

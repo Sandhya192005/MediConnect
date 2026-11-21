@@ -42,8 +42,9 @@ def test_booking_creates_bell_notifications(doctor, django_capture_on_commit_cal
     with django_capture_on_commit_callbacks(execute=True):
         c.post("/api/appointments/", {"doctor": doctor.id, "start": slot}, format="json")
 
-    assert Notification.objects.get(user=patient).title == "Appointment booked"
-    assert Notification.objects.get(user=doctor.user).title == "New booking"
+    # Booking flow (2026-11-21): a personal request waits for the doctor's Accept.
+    assert Notification.objects.get(user=patient).title == "Booking received"
+    assert Notification.objects.get(user=doctor.user).title == "New appointment request"
 
     # REST: list, mark one read, mark all read
     res = c.get("/api/notifications/")
