@@ -89,8 +89,8 @@ function HospitalDashboard() {
           value={n(o?.counts.appointments_today)}
           trend={o?.trends.appointments_today.change_pct}
           trendLabel={o ? `vs ${o.trends.appointments_today.before} last ${new Date().toLocaleDateString("en-IN", { weekday: "long" })}` : ""}
-          detail={o ? `${o.counts.waiting_now} waiting right now${o.counts.to_confirm ? ` · ${o.counts.to_confirm} booking${o.counts.to_confirm === 1 ? "" : "s"} to confirm` : ""}` : undefined}
-          link={{ href: "/admin/appointments", label: o?.counts.to_confirm ? "Confirm bookings" : "View appointments" }}
+          detail={o ? `${o.counts.waiting_now} waiting right now${o.counts.to_confirm ? ` · ${o.counts.to_confirm} booking${o.counts.to_confirm === 1 ? "" : "s"} to assign` : ""}${o.counts.waiting_for_doctors ? ` · ${o.counts.waiting_for_doctors} waiting for doctors` : ""}` : undefined}
+          link={{ href: "/admin/appointments", label: o?.counts.to_confirm ? "Assign bookings" : "View appointments" }}
         />
       </div>
 

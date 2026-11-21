@@ -84,14 +84,37 @@ export async function cancelPatientBookings(request: APIRequestContext) {
   }
 }
 
-/** Books the E2E doctor for the E2E patient through the API (first free slot on `day`); returns the appointment id. */
-export async function bookAsPatient(request: APIRequestContext, day = tomorrow(), reason = "Booked by an e2e test") {
+/**
+ * Books the E2E doctor for the E2E patient through the API (first free slot on `day`); returns the appointment id.
+ * Booking flow (2026-11-21): a booking is a request until it's accepted, so by default the E2E doctor accepts
+ * it straight away (most tests need a confirmed visit). `{ accept: false }` leaves it waiting;
+ * `{ source: "hospital" }` makes it a hospital request (it then waits for the hospital, never auto-accepted).
+ */
+export async function bookAsPatient(request: APIRequestContext, day = tomorrow(), reason = "Booked by an e2e test",
+                                    { accept = true, source = "personal" }: { accept?: boolean; source?: "personal" | "hospital" } = {}) {
   const res = await request.post(`${API}/api/appointments/`, {
     headers: { Authorization: `Bearer ${await patientToken(request)}` },
-    data: { doctor: e2e().doctor.id, start: await firstFreeSlot(request, day), reason },
+    data: { doctor: e2e().doctor.id, start: await firstFreeSlot(request, day), reason, source },
   });
   expect(res.status()).toBe(201);
-  return (await res.json()).id as number;
+  const id = (await res.json()).id as number;
+  if (accept && source === "personal") await acceptAsDoctor(request, id);
+  return id;
+}
+
+/** An API access token for any E2E account. */
+export async function tokenFor(request: APIRequestContext, email: string) {
+  const auth = await request.post(`${API}/api/auth/login/`, { data: { email, password: e2e().password } });
+  expect(auth.ok()).toBeTruthy();
+  return (await auth.json()).access as string;
+}
+
+/** The E2E doctor accepts a request given to them (booking flow, 2026-11-21). */
+export async function acceptAsDoctor(request: APIRequestContext, id: number) {
+  const res = await request.post(`${API}/api/appointments/${id}/doctor-accept/`, {
+    headers: { Authorization: `Bearer ${await tokenFor(request, e2e().doctor.email)}` },
+  });
+  expect(res.ok()).toBeTruthy();
 }
 
 /** First free slot of the E2E doctor on a day, straight from the API. */

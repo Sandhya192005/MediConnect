@@ -14,7 +14,7 @@ import TodayVisit from "@/components/TodayVisit";
 function BookedBanner() {
   const booked = useSearchParams().get("booked");
   return booked ? (
-    <p className="mb-4 flex items-start gap-2 rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm text-teal-900"><Icon name="check" className="mt-0.5 h-4 w-4 shrink-0" />Your appointment is booked. Your slot is held and we&apos;ve emailed you. If the hospital confirms bookings first, we&apos;ll tell you when it does. We remind you 24 hours and 1 hour before.</p>
+    <p className="mb-4 flex items-start gap-2 rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm text-teal-900"><Icon name="check" className="mt-0.5 h-4 w-4 shrink-0" />Your booking is received and your time is held. We&apos;ll tell you as soon as it&apos;s confirmed, and remind you 24 hours and 1 hour before.</p>
   ) : null;
 }
 

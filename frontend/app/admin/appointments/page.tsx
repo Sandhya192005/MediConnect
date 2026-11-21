@@ -1,16 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EmptyState, Panel, pillFor, SkeletonRows, StatusPill } from "@/components/DashboardShell";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { NOTIFICATION_EVENT } from "@/lib/notifications";
-import { fmtDateTime, isoDate, timeAgo, type Appointment } from "@/lib/types";
+import { fmtDateTime, isoDate, timeAgo, type Appointment, type AssignableDoctor } from "@/lib/types";
 
-type Tab = "to_confirm" | "today" | "upcoming" | "past" | "cancelled";
+type Tab = "to_confirm" | "waiting_doctor" | "today" | "upcoming" | "past" | "cancelled";
 const TABS: { key: Tab; label: string; query: string }[] = [
-  { key: "to_confirm", label: "To confirm", query: "awaiting=1" },
+  { key: "to_confirm", label: "To assign", query: "awaiting=1" },
+  { key: "waiting_doctor", label: "Waiting for doctors", query: "awaiting=doctor" },
   { key: "today", label: "Today", query: `date=${isoDate(new Date())}` },
   { key: "upcoming", label: "Upcoming", query: "when=upcoming" },
   { key: "past", label: "Past", query: "when=past" },
@@ -18,18 +20,18 @@ const TABS: { key: Tab; label: string; query: string }[] = [
 ];
 
 /**
- * The hospital's appointments (owner request 2026-11-18). With "Confirm bookings first" on, a new booking
- * holds the slot and waits here: Confirm sends it to the doctor and tells the patient; Decline (with a
- * reason) frees the slot and tells the patient why.
+ * The hospital's appointments. Booking flow (owner decisions 2026-11-21): a patient who books through the
+ * hospital's page sends a hospital request. It waits here ("To assign"): Accept & assign gives it to the
+ * doctor the patient chose or another free doctor, who then accepts or rejects it; a rejection comes back
+ * here to reassign or decline. Personal requests (the patient found the doctor directly) go straight to the
+ * doctor and are listed here for information.
  */
 export default function HospitalAppointmentsPage() {
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>("to_confirm");
   const [items, setItems] = useState<Appointment[] | null>(null);
   const [doctor, setDoctor] = useState("");
-  const [toConfirm, setToConfirm] = useState<number | null>(null);
-  const [confirmFirst, setConfirmFirst] = useState<boolean | null>(null);
-  const [reasons, setReasons] = useState<Record<number, string>>({});
+  const [counts, setCounts] = useState<{ assign: number; doctor: number }>({ assign: 0, doctor: 0 });
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState("");
 
@@ -45,21 +47,21 @@ export default function HospitalAppointmentsPage() {
         setItems(tab === "upcoming" || tab === "today" ? list.filter((a) => a.status !== "cancelled") : list);
       })
       .catch((e) => setError(errorMessage(e)));
-    api<Appointment[]>("/api/appointments/?awaiting=1").then((l) => setToConfirm(l.length)).catch(() => {});
+    Promise.all([api<Appointment[]>("/api/appointments/?awaiting=1"), api<Appointment[]>("/api/appointments/?awaiting=doctor")])
+      .then(([a, d]) => setCounts({ assign: a.length, doctor: d.length }))
+      .catch(() => {});
   }, [tab]);
 
+  // Depend on the hospital's id, not the object: the user is re-fetched when notifications arrive, and a new
+  // object would wipe the list (and a doctor just picked in an Assign box) for no reason.
+  const hospitalId = user?.admin_hospital?.id;
   useEffect(() => {
-    if (!user?.admin_hospital) return;
+    if (!hospitalId) return;
     setItems(null);
     load();
-  }, [load, user?.admin_hospital]);
+  }, [load, hospitalId]);
 
-  useEffect(() => {
-    if (!user?.admin_hospital) return;
-    api<{ confirm_bookings: boolean }>("/api/hospital-admin/booking-settings/").then((s) => setConfirmFirst(s.confirm_bookings)).catch(() => {});
-  }, [user?.admin_hospital]);
-
-  // A new booking arrives as a live notification: refresh the list.
+  // A new booking or a doctor's answer arrives as a live notification: refresh the list.
   useEffect(() => {
     window.addEventListener(NOTIFICATION_EVENT, load);
     return () => window.removeEventListener(NOTIFICATION_EVENT, load);
@@ -67,19 +69,6 @@ export default function HospitalAppointmentsPage() {
 
   const doctors = useMemo(() => [...new Set((items ?? []).map((a) => a.doctor_name))].sort(), [items]);
   const shown = (items ?? []).filter((a) => !doctor || a.doctor_name === doctor);
-
-  async function decide(a: Appointment, action: "hospital-confirm" | "hospital-decline") {
-    setBusy(a.id);
-    setError("");
-    try {
-      await api(`/api/appointments/${a.id}/${action}/`, { method: "POST", body: JSON.stringify({ reason: reasons[a.id] ?? "" }) });
-      load();
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setBusy(null);
-    }
-  }
 
   /** No-show (2026-11-20): "Didn't come", or Undo for a wrong click. The server checks the rules. */
   async function markMissed(a: Appointment, action: "no-show" | "undo-no-show") {
@@ -95,18 +84,6 @@ export default function HospitalAppointmentsPage() {
     }
   }
 
-  async function toggle() {
-    if (confirmFirst === null) return;
-    try {
-      const s = await api<{ confirm_bookings: boolean }>("/api/hospital-admin/booking-settings/", {
-        method: "PATCH", body: JSON.stringify({ confirm_bookings: !confirmFirst }),
-      });
-      setConfirmFirst(s.confirm_bookings);
-    } catch (e) {
-      setError(errorMessage(e));
-    }
-  }
-
   return (
     <RoleGuard role="hospital">
       {!user?.admin_hospital ? (
@@ -115,43 +92,32 @@ export default function HospitalAppointmentsPage() {
         <>
           <div className="mb-6">
             <h1 className="page-title">Appointments</h1>
-            <p className="page-subtitle text-sm">Every booking with your hospital&apos;s doctors. New bookings wait here for your Confirm.</p>
+            <p className="page-subtitle text-sm">Every booking with your hospital&apos;s doctors.</p>
           </div>
           {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
 
-          <section aria-label="Booking settings" className="dash-card mb-6 flex flex-wrap items-center gap-4 p-5">
-            <div className="min-w-0 flex-1">
-              <p className="font-[650] text-[#00295c]">Confirm bookings before they reach doctors</p>
-              <p className="text-sm text-slate-500">
-                {confirmFirst === false
-                  ? "Off: new bookings go straight to the doctor, as confirmed slots."
-                  : "On: a new booking holds the slot and waits for your Confirm. The doctor sees it after you confirm."}
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={!!confirmFirst}
-              aria-label="Confirm bookings before they reach doctors"
-              onClick={toggle}
-              disabled={confirmFirst === null}
-              className={`relative h-7 w-12 shrink-0 rounded-full transition ${confirmFirst ? "bg-teal-600" : "bg-slate-300"}`}
-            >
-              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${confirmFirst ? "left-6" : "left-1"}`} />
-            </button>
+          <section aria-label="How bookings work" className="dash-card mb-6 p-5 text-sm text-slate-600">
+            <p className="font-[650] text-[#00295c]">How bookings reach your doctors</p>
+            <ul className="mt-2 space-y-1">
+              <li><span className="font-[650] text-[#00295c]">Booked through your hospital&apos;s page:</span> it waits in <b>To assign</b>. Accept it and choose the doctor, then the doctor accepts or rejects it. A rejection comes back here.</li>
+              <li><span className="font-[650] text-[#00295c]">Booked with a doctor directly:</span> a personal request; the doctor answers it. You see it here for information.</li>
+            </ul>
           </section>
 
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div role="tablist" aria-label="Appointments" className="inline-flex flex-wrap rounded-xl bg-white p-1 shadow-sm ring-1 ring-slate-200">
-              {TABS.map((t) => (
-                <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
-                        className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm ${tab === t.key ? "bg-teal-600 font-[650] text-white" : "text-slate-600 hover:bg-slate-100"}`}>
-                  {t.label}
-                  {t.key === "to_confirm" && !!toConfirm && (
-                    <span className={`rounded-full px-1.5 text-xs font-[650] ${tab === t.key ? "bg-white text-teal-700" : "bg-orange-100 text-orange-800"}`}>{toConfirm}</span>
-                  )}
-                </button>
-              ))}
+              {TABS.map((t) => {
+                const n = t.key === "to_confirm" ? counts.assign : t.key === "waiting_doctor" ? counts.doctor : 0;
+                return (
+                  <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => setTab(t.key)}
+                          className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm ${tab === t.key ? "bg-teal-600 font-[650] text-white" : "text-slate-600 hover:bg-slate-100"}`}>
+                    {t.label}
+                    {n > 0 && (
+                      <span className={`rounded-full px-1.5 text-xs font-[650] ${tab === t.key ? "bg-white text-teal-700" : "bg-orange-100 text-orange-800"}`}>{n}</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
             <select className="input w-auto rounded-xl py-2" aria-label="Doctor" value={doctor} onChange={(e) => setDoctor(e.target.value)}>
               <option value="">All doctors</option>
@@ -163,8 +129,8 @@ export default function HospitalAppointmentsPage() {
             {items === null ? (
               <SkeletonRows rows={4} />
             ) : shown.length === 0 ? (
-              <EmptyState icon="calendar" title={tab === "to_confirm" ? "Nothing to confirm" : "No appointments here"}
-                          text={tab === "to_confirm" ? "New bookings appear here as soon as patients book." : undefined} />
+              <EmptyState icon="calendar" title={tab === "to_confirm" ? "Nothing to assign" : "No appointments here"}
+                          text={tab === "to_confirm" ? "Bookings made through your hospital's page appear here." : undefined} />
             ) : (
               <ul className="divide-y divide-slate-100">
                 {shown.map((a) => (
@@ -175,12 +141,18 @@ export default function HospitalAppointmentsPage() {
                           {a.patient_name}
                           {a.patient_id && <span className="font-mono text-xs font-normal text-slate-500">{a.patient_id}</span>}
                           <StatusPill status={pillFor(a)} />
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-normal text-slate-600">
+                            {a.source === "hospital" ? "Through your hospital" : "Personal request"}
+                          </span>
                         </p>
-                        <p className="text-sm text-slate-600">{a.doctor_name} · {a.specialization} · {fmtDateTime(a.start)}</p>
+                        <p className="text-sm text-slate-600">
+                          <Link href={`/admin/doctors/${a.doctor}`} className="hover:underline">{a.doctor_name}</Link>
+                          {" · "}{a.specialization} · {fmtDateTime(a.start)}
+                        </p>
                         <p className="text-xs text-slate-500">
                           {a.reason ? `Reason: ${a.reason} · ` : ""}booked {timeAgo(a.created_at)}
-                          {a.cancelled_by && ` · cancelled by the ${a.cancelled_by}`}
-                          {a.cancel_reason && `: ${a.cancel_reason}`}
+                          {a.cancelled_by && ` · ${a.cancelled_by === "system" ? "not confirmed in time" : `cancelled by the ${a.cancelled_by}`}`}
+                          {a.cancel_reason && a.cancelled_by !== "system" && `: ${a.cancel_reason}`}
                           {a.status === "no_show" && ` · didn't come${a.no_show_by ? ` (marked by the ${a.no_show_by})` : ""}`}
                         </p>
                       </div>
@@ -196,16 +168,7 @@ export default function HospitalAppointmentsPage() {
                         </button>
                       )}
                     </div>
-                    {a.awaiting_hospital && a.status === "booked" && (
-                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <input className="input flex-1" maxLength={300} aria-label={`Reason if declining ${a.patient_name}`}
-                               placeholder="Reason, if you decline (the patient sees it)"
-                               value={reasons[a.id] ?? ""} onChange={(e) => setReasons({ ...reasons, [a.id]: e.target.value })} />
-                        <button onClick={() => decide(a, "hospital-confirm")} disabled={busy === a.id} className="btn-solid px-4 py-2">Confirm</button>
-                        <button onClick={() => decide(a, "hospital-decline")} disabled={busy === a.id}
-                                className="btn border border-red-200 bg-white px-4 py-2 text-red-700 hover:bg-red-50">Decline</button>
-                      </div>
-                    )}
+                    {a.awaiting_hospital && a.status === "booked" && <AssignBox a={a} onDone={load} onError={setError} />}
                   </li>
                 ))}
               </ul>
@@ -214,5 +177,77 @@ export default function HospitalAppointmentsPage() {
         </>
       )}
     </RoleGuard>
+  );
+}
+
+/** Accept & assign (choose the doctor) or Decline with a reason, for one request waiting for the hospital. */
+function AssignBox({ a, onDone, onError }: { a: Appointment; onDone: () => void; onError: (e: string) => void }) {
+  const [options, setOptions] = useState<AssignableDoctor[] | null>(null);
+  const [pick, setPick] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let current = true; // a late answer from an older load must not touch the box (React runs this twice in dev)
+    api<AssignableDoctor[]>(`/api/appointments/${a.id}/assignable-doctors/`)
+      .then((list) => {
+        if (!current) return;
+        setOptions(list);
+        // Default: the doctor the patient chose, unless they rejected it; otherwise the first free doctor.
+        // Never replace a doctor the hospital has already picked.
+        const first = list.find((d) => d.chosen_by_patient && d.free) ?? list.find((d) => d.free && !d.rejected);
+        setPick((p) => p || (first ? String(first.id) : ""));
+      })
+      .catch((e) => { if (current) onError(errorMessage(e)); });
+    return () => { current = false; };
+  }, [a.id, onError]);
+
+  async function send(action: "hospital-confirm" | "hospital-decline") {
+    setBusy(true);
+    onError("");
+    try {
+      const body = action === "hospital-confirm" ? { doctor: Number(pick) } : { reason };
+      await api(`/api/appointments/${a.id}/${action}/`, { method: "POST", body: JSON.stringify(body) });
+      onDone();
+    } catch (e) {
+      onError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const label = (d: AssignableDoctor) =>
+    `${d.name}${d.specialization ? ` · ${d.specialization}` : ""}${d.chosen_by_patient ? " (patient's choice)" : ""}`
+    + (d.rejected ? " — rejected it" : !d.free ? " — not free then" : "");
+
+  return (
+    <div className="mt-3 space-y-2 rounded-xl bg-slate-50 p-3">
+      {a.last_rejection && (
+        <p className="text-sm text-rose-700">
+          {a.last_rejection.doctor_name} rejected it: {a.last_rejection.reason}. Assign another doctor or decline.
+        </p>
+      )}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <select className="input flex-1 py-2" aria-label={`Doctor for ${a.patient_name}`} value={pick} onChange={(e) => setPick(e.target.value)}
+                disabled={options === null}>
+          {options === null && <option value="">Loading doctors…</option>}
+          {options?.length === 0 && <option value="">No doctors yet</option>}
+          {/* Nothing picked yet (e.g. after a rejection): say so, instead of showing a doctor who isn't selected. */}
+          {!!options?.length && <option value="" disabled>Choose a doctor…</option>}
+          {options?.map((d) => (
+            <option key={d.id} value={d.id} disabled={!d.free}>{label(d)}</option>
+          ))}
+        </select>
+        <button onClick={() => send("hospital-confirm")} disabled={busy || !pick} className="btn-solid px-4 py-2">
+          {a.last_rejection ? "Reassign" : "Accept & assign"}
+        </button>
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input className="input flex-1 py-2" maxLength={300} aria-label={`Reason if declining ${a.patient_name}`}
+               placeholder="Reason, if you decline (the patient sees it)" value={reason} onChange={(e) => setReason(e.target.value)} />
+        <button onClick={() => send("hospital-decline")} disabled={busy}
+                className="btn border border-red-200 bg-white px-4 py-2 text-red-700 hover:bg-red-50">Decline</button>
+      </div>
+    </div>
   );
 }

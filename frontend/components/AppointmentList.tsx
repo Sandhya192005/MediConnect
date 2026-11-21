@@ -24,6 +24,8 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
   const [items, setItems] = useState<Appointment[] | null>(null);
   const [error, setError] = useState("");
   const [noteFor, setNoteFor] = useState<number | null>(null); // the visit whose note form is open
+  const [rejectFor, setRejectFor] = useState<number | null>(null); // the request whose Reject form is open
+  const [rejectReason, setRejectReason] = useState("");
 
   // Only the newest request may fill the list: several reloads can overlap (a tab switch plus live
   // notifications), and an older "upcoming" answer arriving last must not replace the "past" list.
@@ -44,10 +46,13 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
     return () => window.removeEventListener(NOTIFICATION_EVENT, load);
   }, [load]);
 
-  async function act(id: number, action: "cancel" | "confirm" | "complete" | "no-show" | "undo-no-show") {
+  type Action = "cancel" | "confirm" | "complete" | "no-show" | "undo-no-show" | "doctor-accept" | "doctor-reject";
+  async function act(id: number, action: Action, body: object = {}) {
     if (action === "cancel" && !window.confirm("Cancel this appointment?")) return;
+    setError("");
     try {
-      await api(`/api/appointments/${id}/${action}/`, { method: "POST" });
+      await api(`/api/appointments/${id}/${action}/`, { method: "POST", body: JSON.stringify(body) });
+      if (action === "doctor-reject") { setRejectFor(null); setRejectReason(""); }
       load();
     } catch (e) {
       setError(errorMessage(e));
@@ -80,10 +85,13 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
         <ul className="space-y-3">
           {items.map((a) => {
             const active = a.status === "booked" || a.status === "confirmed";
+            const pending = a.status === "booked" && (a.awaiting_hospital || a.awaiting_doctor); // not accepted yet
+            const toAnswer = viewer === "doctor" && a.status === "booked" && a.awaiting_doctor;
             const d = new Date(a.start);
             const who = viewer === "patient" ? a.doctor_name : a.patient_name;
             return (
-              <li key={a.id} className={`card flex flex-wrap items-center gap-4 p-4 ${a.status === "cancelled" ? "opacity-70" : ""}`}>
+              <li key={a.id} aria-label={`${who}, ${fmtDateTime(a.start)}`}
+                  className={`card flex flex-wrap items-center gap-4 p-4 ${a.status === "cancelled" ? "opacity-70" : ""} ${toAnswer ? "ring-2 ring-amber-200" : ""}`}>
                 <div className="flex w-14 shrink-0 flex-col items-center rounded-xl bg-teal-50 py-2 text-teal-800">
                   <span className="text-[10px] font-semibold uppercase">{d.toLocaleDateString(undefined, { month: "short" })}</span>
                   <span className="text-xl font-bold leading-none">{d.getDate()}</span>
@@ -93,7 +101,7 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
                   <Avatar name={who} />
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2 font-semibold text-navy-800">
-                      {who} <StatusBadge status={a.status} awaiting={a.awaiting_hospital} />
+                      {who} <StatusBadge status={a.status} awaiting={a.awaiting_hospital} awaitingDoctor={a.awaiting_doctor} />
                     </p>
                     <p className="text-sm text-slate-600">
                       {fmtDateTime(a.start)}
@@ -101,7 +109,20 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
                     </p>
                     {a.reason && <p className="text-sm text-slate-500">Reason: {a.reason}</p>}
                     {a.awaiting_hospital && a.status === "booked" && (
-                      <p className="text-sm text-orange-800">Your slot is held. The hospital will confirm it soon.</p>
+                      <p className="text-sm text-orange-800">Your time is held. The hospital will accept it and assign a doctor.</p>
+                    )}
+                    {a.awaiting_doctor && a.status === "booked" && (
+                      <p className="text-sm text-amber-800">
+                        {viewer === "doctor"
+                          ? `${a.source === "hospital" ? `Assigned to you by ${a.hospital_name}` : "Personal request to you"}: accept or reject it.`
+                          : "Your time is held. Waiting for the doctor to accept."}
+                      </p>
+                    )}
+                    {a.cancelled_by === "doctor" && a.cancel_reason && (
+                      <p className="text-sm text-slate-600">Declined by the doctor: {a.cancel_reason}</p>
+                    )}
+                    {a.cancelled_by === "system" && (
+                      <p className="text-sm text-slate-600">Not confirmed before the appointment time.</p>
                     )}
                     {a.status === "no_show" && (
                       <p className="text-sm text-rose-700">
@@ -117,14 +138,35 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
                     )}
                   </div>
                 </div>
-                {active && when === "upcoming" && (
+                {/* Booking flow (2026-11-21): the doctor accepts or rejects (with a reason) a request given to them. */}
+                {toAnswer && rejectFor !== a.id && (
                   <div className="flex gap-2 text-sm">
-                    {viewer === "doctor" && a.status === "booked" && (
+                    <button onClick={() => act(a.id, "doctor-accept")} className="btn-solid px-3 py-1.5">
+                      Accept<span className="sr-only"> {a.patient_name}</span>
+                    </button>
+                    <button onClick={() => { setRejectFor(a.id); setRejectReason(""); }}
+                            className="btn border border-red-200 bg-white px-3 py-1.5 text-red-700 hover:bg-red-50">
+                      Reject<span className="sr-only"> {a.patient_name}</span>
+                    </button>
+                  </div>
+                )}
+                {toAnswer && rejectFor === a.id && (
+                  <form className="flex w-full flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); act(a.id, "doctor-reject", { reason: rejectReason }); }}>
+                    <input className="input flex-1" maxLength={300} required autoFocus value={rejectReason} onChange={(e) => setRejectReason(e.target.value)}
+                           aria-label={`Reason for rejecting ${a.patient_name}`}
+                           placeholder={a.source === "hospital" ? "Reason (the hospital sees it, e.g. \"On leave that day\")" : "Reason (the patient sees it)"} />
+                    <button className="btn border border-red-200 bg-white px-4 py-2 text-sm text-red-700 hover:bg-red-50">Reject</button>
+                    <button type="button" onClick={() => setRejectFor(null)} className="btn-ghost px-4 py-2 text-sm">Cancel</button>
+                  </form>
+                )}
+                {active && !toAnswer && when === "upcoming" && (
+                  <div className="flex gap-2 text-sm">
+                    {viewer === "doctor" && !pending && a.status === "booked" && (
                       <button onClick={() => act(a.id, "confirm")} className="btn-solid px-3 py-1.5">
                         Confirm
                       </button>
                     )}
-                    {viewer === "doctor" && (
+                    {viewer === "doctor" && !pending && (
                       <button onClick={() => act(a.id, "complete")} className="btn-outline px-3 py-1.5">
                         Mark done
                       </button>
@@ -146,7 +188,7 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
                   </button>
                 )}
                 {/* Treatment note (reference design, Part 3): on the day of the visit or after it. */}
-                {viewer === "doctor" && a.status !== "cancelled" && a.status !== "no_show" && new Date(a.start) <= endOfToday() && noteFor !== a.id && (
+                {viewer === "doctor" && a.status !== "cancelled" && a.status !== "no_show" && !pending && new Date(a.start) <= endOfToday() && noteFor !== a.id && (
                   <button onClick={() => setNoteFor(a.id)} className={`${a.treatment_note ? "btn-ghost" : "btn-outline"} px-3 py-1.5 text-sm`}>
                     <Icon name="file" className="h-4 w-4" /> {a.treatment_note ? "Edit note" : "Write note"}
                   </button>

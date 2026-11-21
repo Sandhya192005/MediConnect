@@ -276,6 +276,19 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### New booking flow — Phase 2 of 2 (screens) (2026-11-21)
+
+- **Booking page** (`/doctors/<id>`): reached from a hospital's specialist list (`?via=hospital`) it sends a hospital request and says "Booking through <hospital>: the hospital accepts your request and assigns a doctor, then the doctor confirms"; reached directly it says "Personal request to Dr. …". The chatbot's booking is a personal request ("✓ Request sent! Your time is held until the doctor accepts").
+- **Statuses** everywhere: "Waiting for hospital", "Waiting for doctor", then Confirmed; the patient sees "Declined by the doctor/hospital: <reason>" or "Not confirmed before the appointment time".
+- **Doctor → Appointments:** requests given to the doctor are highlighted ("Assigned to you by <hospital>" / "Personal request to you") with **Accept** and **Reject** (a reason is required).
+- **Doctor → Duty schedule:** new **Duty assigned for you** list (accepted appointments still ahead, and from where) and a "N requests waiting for your answer" link; the weekly hours editor stays below.
+- **Hospital → Appointments:** the on/off switch is gone (a short "How bookings reach your doctors" note instead). Tabs **To assign** and **Waiting for doctors** with counts. Each request has an **Accept & assign** box: a doctor dropdown (the patient's choice first; doctors who aren't free then are greyed out; a doctor who rejected it is marked) and Decline with a reason. After a rejection it shows "Dr X rejected it: <reason>" with **Reassign**.
+- **Hospital → Doctor management:** an **Appointments** button on each doctor with a MediConnect account opens their page (`/admin/doctors/<id>`) with **Accepted / Rejected / Waiting for answer** tabs (a rejection shows the reason and "now with Dr Y" after a reassignment). A box lists doctors who chose the hospital in their profile but aren't on the staff list yet.
+- **Hospital dashboard:** "N bookings to assign · N waiting for doctors".
+- Fixed on the way: the hospital's Appointments page re-loaded (and lost a doctor just picked) whenever a notification refreshed the logged-in user; a late, repeated load of the doctor list could also undo a doctor just picked (it's now ignored, and a pick is never overwritten); the Assign dropdown says "Choose a doctor…" instead of showing an unselected doctor.
+- Results: all 37 Playwright tests pass in one full run; type check and lint clean.
+- e2e: `bookAsPatient` has the doctor accept by default (`{ accept: false }` / `{ source: "hospital" }` for requests); `booking.spec` (personal: doctor accepts live), `hospital-appointments.spec` rewritten (book through the hospital page → decline one → assign → doctor rejects → reassign → doctor accepts → Duty assigned → doctor page Accepted/Rejected); `chatbot` and `search` specs updated.
+
 ### New booking flow: hospital assigns, doctor accepts or rejects (2026-11-21) — Phase 1 of 2 (backend)
 
 Owner decisions: **how the patient booked decides who approves.**
@@ -292,7 +305,7 @@ PERSONAL request (patient found the doctor directly), or a hospital without a ho
 - The slot stays held until the request is declined or cancelled, so there's no double booking. Only accepted appointments get reminders, the queue, treatment notes, no-show and auto-complete. Requests nobody answered before their time are cancelled by a new hourly job ("Booking not confirmed", `expire_unanswered_requests`).
 - API: `POST /api/appointments/` takes `source`; `hospital-confirm/ {doctor?}` = Accept & assign; `GET assignable-doctors/` (the hospital's doctors: free at that time? already rejected it?); `doctor-accept/`; `doctor-reject/ {reason}`; `?awaiting=doctor` lists requests waiting for the doctor; `GET /api/hospital-admin/doctors/<id>/appointments/` (one doctor's waiting / accepted / rejected, for Doctor management). `booking-settings/` is gone.
 - Notifications: the patient is emailed for "Booking received", "Appointment confirmed" (doctor accepted), declines (with the reason) and expiry; doctors and the hospital get in-app notifications ("New appointment request", "New appointment to accept", "Doctor rejected an appointment").
-- Tests: `appointments/test_booking_flow.py` (9) replaces `test_hospital_confirmation.py`; 285 backend tests pass. **Until Phase 2 (screens)**, the web pages still show the old buttons: patient bookings arrive as personal requests and the doctor's "Confirm" button means Accept; some e2e tests will fail until then.
+- Tests: `appointments/test_booking_flow.py` (9) replaces `test_hospital_confirmation.py`; 285 backend tests pass. Phase 2 (below) added the screens.
 
 ### Doctor's "My hospital & profile" redesigned (2026-11-21)
 

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { fmtDate, fmtRupees, isoDate, OTHER_STAFF_KINDS, type Department, type DoctorAccount, type OtherStaffKind, type StaffKind, type StaffMember } from "@/lib/types";
@@ -80,6 +81,8 @@ export default function StaffManager({ kind }: { kind: StaffPage }) {
         />
       )}
 
+      {kind === "doctor" && <DoctorAccountsNotOnStaff />}
+
       <Panel title={`${w.many}${items ? ` (${items.length})` : ""}`}>
         <div className="mb-4 flex flex-col gap-2 sm:flex-row">
           <input className="input rounded-xl py-2" placeholder="Search by name, designation or email" aria-label={`Search ${w.many.toLowerCase()}`}
@@ -125,6 +128,12 @@ export default function StaffManager({ kind }: { kind: StaffPage }) {
                 </div>
                 <div className="flex items-center gap-3 md:justify-end">
                   <span className="text-sm font-[650] tabular-nums text-[#00295c]" title="Monthly salary">{fmtRupees(s.monthly_salary)}<span className="text-xs font-normal text-slate-400">/month</span></span>
+                  {s.doctor && (
+                    // Booking flow (2026-11-21): the doctor's accepted and rejected appointments.
+                    <Link href={`/admin/doctors/${s.doctor}`} className="btn-ghost px-3 py-1.5 text-xs" aria-label={`Appointments of ${s.full_name}`}>
+                      Appointments
+                    </Link>
+                  )}
                   <button onClick={() => setEditing(s)} className="btn-outline px-3 py-1.5 text-xs" aria-label={`Edit ${s.full_name}`}>Edit</button>
                   <button onClick={() => remove(s)} className="btn border border-red-200 bg-white px-3 py-1.5 text-xs text-red-700 hover:bg-red-50" aria-label={`Delete ${s.full_name}`}>
                     Delete
@@ -260,6 +269,32 @@ function StaffForm({ kind, member, onClose, onSaved }: { kind: StaffPage; member
           <button type="button" onClick={onClose} className="btn-ghost px-4 py-2.5">Cancel</button>
         </div>
       </form>
+    </section>
+  );
+}
+
+/**
+ * Doctors who chose this hospital in their MediConnect profile but aren't in the staff list yet (owner
+ * question 2026-11-21: "where can I see the doctor?"). Their appointments page works already.
+ */
+function DoctorAccountsNotOnStaff() {
+  const [accounts, setAccounts] = useState<DoctorAccount[]>([]);
+  useEffect(() => {
+    api<DoctorAccount[]>("/api/hospital-admin/doctor-accounts/").then(setAccounts).catch(() => {});
+  }, []);
+  if (accounts.length === 0) return null;
+  return (
+    <section aria-label="Doctor accounts not on your staff list" className="dash-card mb-6 border-l-4 border-l-amber-400 p-5">
+      <p className="font-[650] text-[#00295c]">Doctors on MediConnect at your hospital, not on your staff list yet</p>
+      <p className="text-sm text-slate-500">They chose your hospital in their profile. Use &quot;Add doctor&quot; and pick their MediConnect account to add them.</p>
+      <ul className="mt-3 divide-y divide-slate-100">
+        {accounts.map((d) => (
+          <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+            <span><span className="font-[650] text-[#00295c]">{d.name}</span> <span className="text-slate-500">· {d.specialization || "No specialization"} · {d.email}</span></span>
+            <Link href={`/admin/doctors/${d.id}`} className="btn-ghost px-3 py-1.5 text-xs" aria-label={`Appointments of ${d.name}`}>Appointments</Link>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

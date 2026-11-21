@@ -36,9 +36,9 @@ test("assistant proposes a slot and the patient confirms it", async ({ page, req
   await expect(panel.getByText("I need a heart doctor tomorrow")).toBeVisible();
   await expect(panel.getByText(/has a free slot tomorrow/)).toBeVisible();
   await panel.getByRole("button", { name: "Confirm booking" }).click();
-  await expect(panel.getByText("✓ Booked!")).toBeVisible();
+  await expect(panel.getByText(/✓ Request sent!/)).toBeVisible();
 
-  // It's a real appointment now.
+  // It's a real booking now: a personal request waiting for the doctor (booking flow, 2026-11-21).
   await page.goto("/patient/appointments");
-  await expect(page.locator("li", { hasText: reason })).toContainText("booked");
+  await expect(page.locator("li", { hasText: reason })).toContainText("Waiting for doctor");
 });

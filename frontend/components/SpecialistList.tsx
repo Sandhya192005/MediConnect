@@ -55,7 +55,8 @@ export default function SpecialistList({ doctors, searching }: { doctors: Doctor
             <h3 className="text-xs font-semibold uppercase tracking-wide text-teal-700">{n}</h3>
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
               {groups.get(n)!.map((d) => (
-                <Link key={d.id} href={`/doctors/${d.id}`} className="card-hover flex gap-3 p-4">
+                // Booking flow (2026-11-21): picked from the hospital's page → a hospital request (the hospital assigns).
+                <Link key={d.id} href={`/doctors/${d.id}?via=hospital`} className="card-hover flex gap-3 p-4">
                   <Avatar name={d.name} />
                   <div className="min-w-0 flex-1">
                   <p className="font-semibold text-navy-800">Dr. {d.name}</p>

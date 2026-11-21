@@ -3,9 +3,10 @@ import { clearNotifications, e2e, login, tomorrow } from "./helpers";
 
 /**
  * The main flow, with two browsers at once: the doctor is logged in and watching,
- * the patient books → the doctor's bell updates live (WebSocket) → the patient cancels.
+ * the patient books (a personal request, 2026-11-21) → the doctor's bell updates live (WebSocket) →
+ * the doctor accepts → the patient sees it confirmed → the patient cancels.
  */
-test("patient books and cancels; the doctor is notified live", async ({ browser, request }) => {
+test("patient books, the doctor accepts, the patient cancels; both are notified live", async ({ browser, request }) => {
   const { doctor, patient } = e2e();
   const reason = `E2E booking test ${Date.now()}`;
   await clearNotifications(request, doctor.email); // earlier tests' bookings also notify this doctor
@@ -36,24 +37,33 @@ test("patient books and cancels; the doctor is notified live", async ({ browser,
   const slotTime = (await slot.innerText()).trim();
   await slot.click();
   await page.getByPlaceholder("Reason for visit (optional)").fill(reason);
+  await expect(page.getByTestId("booking-route")).toContainText("Personal request to Dr. Eshwar Testdoctor");
   await page.getByRole("button", { name: "Confirm booking" }).click();
 
   await expect(page).toHaveURL(/\/patient\/appointments\?booked=1/);
-  await expect(page.getByText("Your appointment is booked.")).toBeVisible();
+  await expect(page.getByText("Your booking is received")).toBeVisible();
   const mine = page.locator("li", { hasText: reason });
   await expect(mine).toContainText("Eshwar Testdoctor");
-  await expect(mine).toContainText("booked");
+  await expect(mine).toContainText("Waiting for doctor");
 
-  // The doctor's open tab gets the "New booking" notification without reloading.
+  // The doctor's open tab gets the "New appointment request" notification without reloading.
   await expect(doctorPage.getByTestId("unread-count")).toHaveText("1", { timeout: 20_000 });
-  await expect(doctorPage.locator("li", { hasText: reason })).toContainText("Esha Patient");
+  const request_ = doctorPage.locator("li", { hasText: reason });
+  await expect(request_).toContainText("Esha Patient");
+  await expect(request_).toContainText("Personal request to you");
   await doctorPage.getByRole("button", { name: /^Notifications/ }).click();
-  await expect(doctorPage.getByRole("button", { name: /New booking.*Esha Patient/ })).toBeVisible();
+  await expect(doctorPage.getByRole("button", { name: /New appointment request.*Esha Patient/ })).toBeVisible();
 
   // The doctor deletes it from the bell (✕ on the notification).
-  await doctorPage.getByRole("button", { name: "Delete notification: New booking" }).click();
-  await expect(doctorPage.getByRole("button", { name: /New booking.*Esha Patient/ })).toHaveCount(0);
+  await doctorPage.getByRole("button", { name: "Delete notification: New appointment request" }).click();
+  await expect(doctorPage.getByRole("button", { name: /New appointment request.*Esha Patient/ })).toHaveCount(0);
   await expect(doctorPage.getByTestId("unread-count")).toHaveCount(0);
+  await doctorPage.keyboard.press("Escape");
+
+  // The doctor accepts: the patient's list shows it confirmed (live).
+  await request_.getByRole("button", { name: /^Accept/ }).click();
+  await expect(request_).toContainText("confirmed");
+  await expect(mine).toContainText("confirmed", { timeout: 20_000 });
 
   // The slot is now taken: shown crossed out and disabled for everyone.
   await page.goto(`/doctors/${doctor.id}`);
@@ -68,8 +78,8 @@ test("patient books and cancels; the doctor is notified live", async ({ browser,
   await expect(mine.getByRole("button", { name: "Cancel" })).toHaveCount(0);
 
   // The doctor is told about the cancellation live, then clears all notifications.
-  // (The bell menu is still open from before: the new notification appears in it live.)
   await expect(doctorPage.getByTestId("unread-count")).toHaveText("1", { timeout: 20_000 });
+  await doctorPage.getByRole("button", { name: /^Notifications/ }).click(); // open the bell again
   await expect(doctorPage.getByRole("button", { name: /^Appointment cancelled/ })).toBeVisible();
   doctorPage.once("dialog", (d) => d.accept()); // "Delete all your notifications?"
   await doctorPage.getByRole("button", { name: "Clear all" }).click();
