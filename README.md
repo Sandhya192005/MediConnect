@@ -276,6 +276,15 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Payment slips in Patient management (2026-11-21) — Phase 1 of 2 (backend)
+
+Owner decisions: an **itemised** slip, status **Pending / Completed**, the **patient sees** their slips, a **printable** slip page, and **completed slips are locked**.
+- New app `billing`: tables `payment_slip` and `payment_item`. A slip has a number per hospital and year from the hospital's initials (`EPH-2026-0001`), a date, an optional visit, lines (description × quantity × price), an optional discount, notes, and the **total worked out by the server** (a total sent by the browser is ignored). Database checks: no negative amounts, one number per hospital, a completed slip always has a method and paid date.
+- **Pending** slips can be edited or **cancelled** (optional reason). **Completed** = paid with **Cash, Card, UPI, Insurance or Other** and a paid date (today by default); it's locked and can only go **back to Pending with a reason**, which stays on the slip. A slip can also be created already paid.
+- The patient gets in-app notifications: "New payment slip" and "Payment received".
+- API: hospital `GET/POST /api/hospital-admin/payments/` (`?patient=`, `?status=`; totals pending/completed), `GET/PATCH …/<id>/`, `POST …/<id>/complete/`, `…/reopen/`, `…/cancel/` (only patients in its list, only its own slips); patient `GET /api/payments/` and `/api/payments/<id>/` (read-only). Each slip includes the hospital's name, address and phone, and the patient's name and ID, for the printed slip. Read-only in Django admin.
+- Tests: `billing/tests.py` (6); 297 backend tests pass.
+
 ### Hospital Patient management — Phase 2 of 2 (screens) (2026-11-21)
 
 - **Patient management** (`/admin/patients`): an **Add patient** box with two tabs, **Has a patient ID** and **New patient** (first and last name, phone; email, date of birth, gender optional; the page explains that no password is needed). The list shows every patient added or with a visit, with phone, email (or "No email"), visits, records and "Added by you", and an **Open** button. Search also finds phone numbers.

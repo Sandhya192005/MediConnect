@@ -6,6 +6,7 @@ from rest_framework.routers import DefaultRouter
 from apps.appointments.external_api import ExternalAppointmentViewSet
 from apps.appointments.requests_api import AppointmentRequestViewSet
 from apps.appointments.views import AppointmentViewSet
+from apps.billing import urls as billing_urls
 from apps.hospitals.views import DepartmentViewSet, HospitalViewSet
 
 
@@ -30,7 +31,10 @@ urlpatterns = [
     path("api/chat/", include("apps.chatbot.urls")),
     path("api/scraper/", include("apps.scraper.urls")),
     path("api/records/", include("apps.records.urls")),
+    # Payment slips (2026-11-21): before the other hospital-admin URLs.
+    path("api/hospital-admin/payments/", include(billing_urls.hospital_urlpatterns)),
     path("api/hospital-admin/", include("apps.staff.urls")),
+    path("api/payments/", include(billing_urls.patient_urlpatterns)),
     path("api/support/", include("apps.support.urls")),
     path("api/platform/", include("apps.analytics.urls")),
     path("api/", include(router.urls)),
