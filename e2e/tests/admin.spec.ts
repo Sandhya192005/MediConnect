@@ -76,17 +76,16 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   await page.getByRole("button", { name: "6 months" }).click();
   await expect(page.getByRole("img", { name: /New and returning patients per month, last 6 months/ })).toBeVisible();
 
-  // Patients: the booked patient is listed; their records open (and the view is logged for them).
+  // Patients: the booked patient is listed; their page opens (and the view is logged for them).
   await menu.getByRole("link", { name: "Patient management" }).click();
-  await page.getByRole("link", { name: "Records of Esha Patient" }).click();
-  await expect(page).toHaveURL(new RegExp(`/admin/patients/records\\?id=${e2e().patient.patient_id}$`));
+  await page.getByRole("link", { name: "Open Esha Patient" }).click();
+  await expect(page).toHaveURL(new RegExp(`/admin/patients/${e2e().patient.patient_id}$`));
   await expect(page.getByRole("region", { name: "Patient" }).getByText("Esha Patient")).toBeVisible();
 
-  // Patient records by ID is its own menu item (2026-11-21), and the top bar has no ID search.
+  // Records live inside Patient management (2026-11-21): no separate "Patient records" item, no top-bar ID search;
+  // an old records link opens the patient's page.
+  await expect(menu.getByRole("link", { name: "Patient records" })).toHaveCount(0);
   await expect(page.getByLabel("Search patient by ID")).toHaveCount(0);
-  await menu.getByRole("link", { name: "Patient records" }).click();
-  await expect(page).toHaveURL(/\/admin\/patients\/records$/);
-  await page.getByLabel("Patient ID").fill(e2e().patient.patient_id);
-  await page.getByRole("button", { name: "Open records" }).click();
-  await expect(page.getByRole("region", { name: "Patient" }).getByText("Esha Patient")).toBeVisible();
+  await page.goto(`/admin/patients/records?id=${e2e().patient.patient_id}`);
+  await expect(page).toHaveURL(new RegExp(`/admin/patients/${e2e().patient.patient_id}$`));
 });

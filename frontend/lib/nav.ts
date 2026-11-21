@@ -34,8 +34,7 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Nurse management", icon: "nurse", href: "/admin/nurses" },
     { label: "Staff management", icon: "user", href: "/admin/staff" },
     { label: "Patient management", icon: "users", href: "/admin/patients" },
-    // Patient records by patient ID: its own menu item (owner request 2026-11-21), not on the dashboard or top bar.
-    { label: "Patient records", icon: "file", href: "/admin/patients/records" },
+    // Patient records live inside Patient management since 2026-11-21 (owner request): no separate menu item.
     { label: "Appointments", icon: "calendar", href: "/admin/appointments" },
     { label: "Staff & salary", icon: "rupee", href: "/admin/salary" },
     { label: "Reports", icon: "chart", href: "/admin/reports" },

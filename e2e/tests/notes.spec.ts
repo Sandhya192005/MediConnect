@@ -46,12 +46,12 @@ test("the doctor writes a treatment note during the visit; the patient and the h
     await expect(notes).toContainText("Rest and plenty of fluids.");
     await patientCtx.close();
 
-    // The hospital admin: on the patient's records, opened by patient ID.
+    // The hospital: on the patient's page in Patient management (an old records link still leads there).
     const adminCtx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     const admin = await adminCtx.newPage();
     await login(admin, e2e().admin.email);
     await admin.goto(`/admin/patients/records?id=${e2e().patient.patient_id}`);
-    await expect(admin.getByRole("region", { name: /^Visit notes/ })).toContainText("Viral fever");
+    await expect(admin.getByRole("region", { name: /^Treatment notes/ })).toContainText("Viral fever");
     await adminCtx.close();
   } finally {
     await request.post(`${API}/api/appointments/${id}/complete/`, { headers: doctor }); // free the consultation room

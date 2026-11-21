@@ -276,6 +276,15 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Hospital Patient management — Phase 2 of 2 (screens) (2026-11-21)
+
+- **Patient management** (`/admin/patients`): an **Add patient** box with two tabs, **Has a patient ID** and **New patient** (first and last name, phone; email, date of birth, gender optional; the page explains that no password is needed). The list shows every patient added or with a visit, with phone, email (or "No email"), visits, records and "Added by you", and an **Open** button. Search also finds phone numbers.
+- **A patient's page** (`/admin/patients/<patient_id>`): name, ID, age, gender, phone, email, whether they use the app; **Edit details** (name, phone, email if they have none, and the same health details form the patient uses); **Medical records** (all of them, "Uploaded by <hospital>" on yours, Delete only on your uploads: "The patient keeps their copy") with an **Upload a record** form; **Visits at your hospital**; **Treatment notes**; **Add to my patients** / **Remove from my patients**. Opening it is logged for the patient.
+- The separate **Patient records** menu item is gone for hospitals (doctors keep theirs); old `/admin/patients/records?id=` links open the patient's page.
+- **Patient side:** My medical records shows "Uploaded by <hospital>"; deleting one says "<hospital> keeps its copy".
+- Shared pieces: `components/RecordUploadForm.tsx` (moved out of the patient's page, `endpoint` prop), `HealthDetailsForm` takes `load`/`save` (patient's own API by default), `RecordList` shows the uploader and asks the right delete question.
+- e2e: new `patient-management.spec.ts` (new patient without email → edit details → upload; add the E2E patient by ID → upload → the patient sees and removes it → the hospital still has it and deletes its copy); `admin` and `notes` specs updated.
+
 ### Hospital Patient management: add patients, details and records in one place (2026-11-21) — Phase 1 of 2 (backend)
 
 Owner decisions: the hospital adds **every patient who visits**, whether or not they have a MediConnect account, and manages their details and medical records inside Patient management (the separate "Patient records" menu item goes in Phase 2).

@@ -254,6 +254,10 @@ export type MedicalRecord = {
   content_type: string;
   size: number;
   created_at: string;
+  /** Uploaded by a hospital (2026-11-21); null = the patient uploaded it. */
+  uploaded_by_hospital_name: string | null;
+  /** Hospital's patient page only: whether this hospital may delete it (its own upload). */
+  can_delete?: boolean;
 };
 
 export type RecordAccess = {
@@ -446,8 +450,11 @@ export type HospitalOverview = {
 export type HospitalPatient = {
   patient_id: string | null;
   name: string;
-  email: string;
+  /** null = the patient has no email (added by a hospital without one). */
+  email: string | null;
   phone: string;
+  added_by_you: boolean;
+  created_by_you: boolean;
   visits: number;
   last_visit: string | null;
   next_visit: string | null;
@@ -581,4 +588,16 @@ export type SupportInboxItem = {
   sender_name: string;
   sender_email: string;
   sender_role: string;
+};
+
+/** A patient's page in the hospital's Patient management (GET /api/hospital-admin/patients/<id>/, 2026-11-21). */
+export type HospitalPatientPage = {
+  patient: {
+    patient_id: string; name: string; first_name: string; last_name: string; email: string | null; phone: string;
+    has_login: boolean; in_list: boolean; added_by_you: boolean; created_by_you: boolean;
+  };
+  details: PatientDetails;
+  records: MedicalRecord[];
+  notes: TreatmentNote[];
+  visits: { id: number; start: string; doctor_name: string; status: AppointmentStatus; reason: string }[];
 };
