@@ -276,6 +276,64 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### New booking flow — Phase 2 of 2 (screens) (2026-11-21)
+
+- **Booking page** (`/doctors/<id>`): reached from a hospital's specialist list (`?via=hospital`) it sends a hospital request and says "Booking through <hospital>: the hospital accepts your request and assigns a doctor, then the doctor confirms"; reached directly it says "Personal request to Dr. …". The chatbot's booking is a personal request ("✓ Request sent! Your time is held until the doctor accepts").
+- **Statuses** everywhere: "Waiting for hospital", "Waiting for doctor", then Confirmed; the patient sees "Declined by the doctor/hospital: <reason>" or "Not confirmed before the appointment time".
+- **Doctor → Appointments:** requests given to the doctor are highlighted ("Assigned to you by <hospital>" / "Personal request to you") with **Accept** and **Reject** (a reason is required).
+- **Doctor → Duty schedule:** new **Duty assigned for you** list (accepted appointments still ahead, and from where) and a "N requests waiting for your answer" link; the weekly hours editor stays below.
+- **Hospital → Appointments:** the on/off switch is gone (a short "How bookings reach your doctors" note instead). Tabs **To assign** and **Waiting for doctors** with counts. Each request has an **Accept & assign** box: a doctor dropdown (the patient's choice first; doctors who aren't free then are greyed out; a doctor who rejected it is marked) and Decline with a reason. After a rejection it shows "Dr X rejected it: <reason>" with **Reassign**.
+- **Hospital → Doctor management:** an **Appointments** button on each doctor with a MediConnect account opens their page (`/admin/doctors/<id>`) with **Accepted / Rejected / Waiting for answer** tabs (a rejection shows the reason and "now with Dr Y" after a reassignment). A box lists doctors who chose the hospital in their profile but aren't on the staff list yet.
+- **Hospital dashboard:** "N bookings to assign · N waiting for doctors".
+- Fixed on the way: the hospital's Appointments page re-loaded (and lost a doctor just picked) whenever a notification refreshed the logged-in user; a late, repeated load of the doctor list could also undo a doctor just picked (it's now ignored, and a pick is never overwritten); the Assign dropdown says "Choose a doctor…" instead of showing an unselected doctor.
+- Results: all 37 Playwright tests pass in one full run; type check and lint clean.
+- e2e: `bookAsPatient` has the doctor accept by default (`{ accept: false }` / `{ source: "hospital" }` for requests); `booking.spec` (personal: doctor accepts live), `hospital-appointments.spec` rewritten (book through the hospital page → decline one → assign → doctor rejects → reassign → doctor accepts → Duty assigned → doctor page Accepted/Rejected); `chatbot` and `search` specs updated.
+
+### New booking flow: hospital assigns, doctor accepts or rejects (2026-11-21) — Phase 1 of 2 (backend)
+
+Owner decisions: **how the patient booked decides who approves.**
+
+```
+HOSPITAL request (patient booked through the hospital's page):
+  patient books → hospital: Accept & assign (the chosen doctor, or another free doctor of theirs) / Decline (reason)
+                → doctor:   Accept → "confirmed"  /  Reject (reason) → back to the hospital: reassign or decline
+PERSONAL request (patient found the doctor directly), or a hospital without a hospital account:
+  patient books → doctor:   Accept → "confirmed"  /  Reject (reason) → declined, the patient is told why
+```
+- New fields `appointments.source` (personal / hospital) and `awaiting_doctor`; new table `doctor_rejection` (every rejection is kept, also after the hospital reassigns). Rules in `appointments/flow.py`. Migration `appointments 0008` marks bookings already waiting for a hospital as hospital requests.
+- The hospital's switch **"Confirm bookings before they reach doctors" is removed** (column `all_hospitals.confirm_bookings` dropped, migration `hospitals 0018`; database backed up first). The kind of request decides the flow instead.
+- The slot stays held until the request is declined or cancelled, so there's no double booking. Only accepted appointments get reminders, the queue, treatment notes, no-show and auto-complete. Requests nobody answered before their time are cancelled by a new hourly job ("Booking not confirmed", `expire_unanswered_requests`).
+- API: `POST /api/appointments/` takes `source`; `hospital-confirm/ {doctor?}` = Accept & assign; `GET assignable-doctors/` (the hospital's doctors: free at that time? already rejected it?); `doctor-accept/`; `doctor-reject/ {reason}`; `?awaiting=doctor` lists requests waiting for the doctor; `GET /api/hospital-admin/doctors/<id>/appointments/` (one doctor's waiting / accepted / rejected, for Doctor management). `booking-settings/` is gone.
+- Notifications: the patient is emailed for "Booking received", "Appointment confirmed" (doctor accepted), declines (with the reason) and expiry; doctors and the hospital get in-app notifications ("New appointment request", "New appointment to accept", "Doctor rejected an appointment").
+- Tests: `appointments/test_booking_flow.py` (9) replaces `test_hospital_confirmation.py`; 285 backend tests pass. Phase 2 (below) added the screens.
+
+### Doctor's "My hospital & profile" redesigned (2026-11-21)
+
+Owner request: a professional look after editing. The page (`/doctor/profile`) used to be only an open form. Now:
+- It opens as a **read-only profile**: avatar, "Dr. name", specialization · qualification, hospital, an **Accepting bookings / Not bookable yet** badge, and three key facts (experience, consultation fee as "₹700", slot length). Below: **Hospital**, **Practice details** and **About you** sections. **View public page** opens what patients see.
+- If patients can't book the doctor yet, a box says why: choose a hospital, set working hours (link to Duty schedule), or the hospital isn't connected yet.
+- **Edit profile** opens the form, grouped into the same sections, with **Save changes** and **Cancel**; saving returns to the profile with "Profile saved.". The page heading matches the menu ("My hospital & profile").
+- No backend change. e2e `doctor-profile.spec.ts` (view, cancel, save, puts the bio back).
+
+### Duty schedule with AM/PM (2026-11-21)
+
+The doctor's **Duty schedule** used the browser's time box, which shows AM/PM only on some computers (it follows the system clock setting), so the owner saw 24-hour times. Each time is now three dropdowns, **hour (1–12) : minutes (5-minute steps) AM/PM** (`components/TimeSelect.tsx`), the same on every computer and phone. The API still stores 24-hour "HH:MM", so nothing else changed. The doctor dashboard's "Today's duty" panel (renamed from "Duty today") shows times as "6:00 AM – 10:00 PM". e2e `duty-schedule.spec.ts` (changes a time, checks it after a reload, puts it back).
+
+### Small menu and search changes (2026-11-21)
+
+- The "Emergency? Call 112 or ambulance 108" line under Need help? is now shown to **patients only** (removed from the doctor, hospital and platform admin menus).
+- Patients no longer get the top-bar "Search doctors, hospitals…" box on **My appointments**, **My medical records** and **Profile & settings** (it stays on their dashboard; Book appointment has its own search). On those pages and on Book appointment, the top bar shows "MediConnect is your Better Partner" instead. Doctors and hospitals (no top-bar search at all) see that line in the top bar on every page.
+- e2e `admin`, `settings` and `no-show` specs check both.
+
+### % trends on the hospital dashboard (2026-11-21)
+
+The five cards on the hospital dashboard now show a change in percent (green ↑, red ↓, grey → for no change), counted from real data (`GET /api/hospital-admin/overview/` → `trends`, each `{now, before, change_pct}`):
+- **Doctors, nurses, other staff:** on staff today vs on the last day of last month (from join and leave dates).
+- **Patients:** the hospital's patients now vs at the start of this month (by when their booking was made).
+- **Today's appointments:** vs the same weekday last week ("vs 2 last Saturday"), because weekdays differ.
+- When there's nothing earlier (e.g. a new hospital, or 0 before), the card says "No earlier data to compare" instead of a made-up %.
+- Tests: `staff/test_trends.py` (3, clock frozen on 2026-11-21); e2e `admin.spec.ts` checks the empty case.
+
 ### Patient ID shown, locked, on the patient's profile (2026-11-21)
 
 - **Profile & settings → Personal information** has a **Patient ID** row with a "Can't be changed" badge (the header already showed it with Copy ID).

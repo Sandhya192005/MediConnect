@@ -37,7 +37,22 @@ test("doctor and hospital mark a missed visit; the patient is told; reports coun
   // The patient sees it, with a notification.
   await page.getByRole("button", { name: "Log out" }).click();
   await login(page, email);
+  await page.goto("/patient");
+  await expect(page.getByLabel("Quick search")).toBeVisible();
+  await expect(page.getByText("MediConnect is your Better Partner")).toHaveCount(0); // the dashboard keeps the search
+  await expect(page.getByText("Emergency? Call")).toBeVisible(); // patients keep the emergency numbers
+  await page.goto("/patient/records");
+  await expect(page.getByRole("heading", { name: /medical records/i })).toBeVisible();
+  await expect(page.getByLabel("Quick search")).toHaveCount(0); // no top-bar search here (2026-11-21)…
+  await expect(page.getByText("MediConnect is your Better Partner")).toBeVisible(); // …a brand line instead
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "Profile & settings" })).toBeVisible();
+  await expect(page.getByLabel("Quick search")).toHaveCount(0);
+  await expect(page.getByText("MediConnect is your Better Partner")).toBeVisible();
+  await page.goto("/doctors"); // Book appointment: its own search box, the brand line in the top bar
+  await expect(page.getByText("MediConnect is your Better Partner")).toBeVisible();
   await page.goto("/patient/appointments");
+  await expect(page.getByLabel("Quick search")).toHaveCount(0);
   await page.getByRole("button", { name: "past" }).click();
   await expect(page.getByRole("listitem").filter({ hasText: "You didn't come to this visit" })).toContainText("Missed");
   await page.getByRole("button", { name: /Notifications/ }).click();

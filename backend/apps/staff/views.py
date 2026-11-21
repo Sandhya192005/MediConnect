@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import IsHospitalAdmin
+from apps.analytics.services import aware, pct_change
 from apps.appointments.models import ACTIVE_STATUSES, Appointment
 from apps.appointments.queue import day_bounds
 from apps.doctors.models import DoctorProfile
@@ -137,26 +138,49 @@ class ReportsView(APIView):
         return Response(hospital_reports(request.admin_hospital, months))
 
 
-class BookingSettingsView(APIView):
+class DoctorAppointmentsView(APIView):
     """
-    GET/PATCH /api/hospital-admin/booking-settings/ {confirm_bookings}: whether new bookings wait for the
-    hospital's Confirm before they reach the doctor (owner request 2026-11-18). Bookings already waiting
-    stay waiting when it's turned off; they still need a Confirm or Decline.
+    GET /api/hospital-admin/doctors/<doctor_profile_id>/appointments/ — one doctor's appointments at this
+    hospital for Doctor management (booking flow, owner decision 2026-11-21): waiting for their answer,
+    accepted (confirmed or done) and rejected (every DoctorRejection, also after the hospital reassigned it).
     """
 
     permission_classes = [IsHospitalAdmin]
 
-    def get(self, request):
-        return Response({"confirm_bookings": request.admin_hospital.confirm_bookings})
+    def get(self, request, pk):
+        from apps.appointments.models import DoctorRejection
+        from apps.appointments.serializers import AppointmentSerializer
 
-    def patch(self, request):
-        value = request.data.get("confirm_bookings")
-        if not isinstance(value, bool):
-            return Response({"confirm_bookings": "Send true or false."}, status=400)
-        h = request.admin_hospital
-        h.confirm_bookings = value
-        h.save(update_fields=["confirm_bookings"])
-        return Response({"confirm_bookings": h.confirm_bookings})
+        hospital = request.admin_hospital
+        doctor = DoctorProfile.objects.select_related("user", "department").filter(pk=pk, hospital=hospital).first()
+        if doctor is None:
+            return Response({"detail": "Not one of your hospital's doctors."}, status=404)
+        here = (Appointment.objects.filter(doctor=doctor, doctor__hospital=hospital)
+                .select_related("patient__patient_profile", "doctor__user", "doctor__hospital", "treatment_note")
+                .prefetch_related("rejections__doctor__user"))
+        ctx = {"request": request}
+        waiting = here.filter(status=Appointment.Status.BOOKED, awaiting_doctor=True).order_by("start")
+        accepted = here.filter(status__in=["confirmed", "completed", "no_show"]).order_by("-start")[:100]
+        rejected = (DoctorRejection.objects.filter(doctor=doctor, appointment__doctor__hospital=hospital)
+                    .select_related("appointment__patient__patient_profile")[:100])
+        # The appointment may have moved on to another doctor: rejections are listed by what this doctor saw.
+        rejected_rows = [{
+            "id": r.id, "reason": r.reason, "at": r.created_at, "appointment": r.appointment_id,
+            "start": r.appointment.start, "patient_name": r.appointment.patient.get_full_name() or r.appointment.patient.email,
+            "patient_id": getattr(getattr(r.appointment.patient, "patient_profile", None), "patient_id", None),
+            "now_with": str(r.appointment.doctor) if r.appointment.doctor_id != doctor.id else "",
+            "status": r.appointment.status,
+        } for r in rejected]
+        return Response({
+            "doctor": {"id": doctor.id, "name": str(doctor), "specialization": doctor.specialization,
+                       "department": doctor.department.name if doctor.department else "", "email": doctor.user.email,
+                       "is_bookable": doctor.is_bookable},
+            "counts": {"waiting": waiting.count(), "accepted": here.filter(status__in=["confirmed", "completed", "no_show"]).count(),
+                       "rejected": DoctorRejection.objects.filter(doctor=doctor, appointment__doctor__hospital=hospital).count()},
+            "waiting": AppointmentSerializer(waiting, many=True, context=ctx).data,
+            "accepted": AppointmentSerializer(accepted, many=True, context=ctx).data,
+            "rejected": rejected_rows,
+        })
 
 
 class PayrollView(APIView):
@@ -238,8 +262,7 @@ class OverviewView(APIView):
 
         return Response({
             # connected = approved by the platform admin: patients can find and book it.
-            "hospital": {"id": hospital.id, "name": hospital.name, "city": hospital.city, "connected": hospital.is_approved,
-                         "confirm_bookings": hospital.confirm_bookings},
+            "hospital": {"id": hospital.id, "name": hospital.name, "city": hospital.city, "connected": hospital.is_approved},
             "counts": {
                 "doctors": active.filter(kind="doctor").count(),
                 "nurses": active.filter(kind="nurse").count(),
@@ -248,6 +271,8 @@ class OverviewView(APIView):
                 "appointments_today": todays.exclude(status="cancelled").count(),
                 "to_confirm": Appointment.objects.filter(doctor__hospital=hospital, awaiting_hospital=True,
                                                          status=Appointment.Status.BOOKED).count(),
+                "waiting_for_doctors": Appointment.objects.filter(doctor__hospital=hospital, awaiting_doctor=True,
+                                                                  status=Appointment.Status.BOOKED).count(),
                 "waiting_now": todays.filter(status__in=ACTIVE_STATUSES, checked_in_at__isnull=False,
                                              consultation_started_at__isnull=True).count(),
                 "doctor_accounts_without_record": DoctorProfile.objects.filter(
@@ -260,8 +285,42 @@ class OverviewView(APIView):
                 "other_staff": active.filter(kind__in=OTHER_STAFF_KINDS).aggregate(t=Sum("monthly_salary"))["t"] or 0,
             },
             "staff_chart": chart,
+            "trends": self._trends(hospital, staff, today),
             "recent_activity": self._recent(hospital, staff),
         })
+
+    def _trends(self, hospital, staff, today):
+        """
+        % change for the dashboard cards (owner request 2026-11-21), counted from real data only. Each card
+        has "now", "before" and "change_pct" (None when "before" is 0: nothing to compare with).
+        - staff (doctors / nurses / other staff): on staff today vs on the last day of last month;
+        - patients: the hospital's patients now vs at the start of this month (by when the booking was made);
+        - today's appointments: vs the same weekday last week (weekdays differ: Sundays are quieter).
+        """
+        month_start = today.replace(day=1)
+        last_month_end = month_start - timedelta(days=1)
+
+        def trend(now, before):
+            return {"now": now, "before": before, "change_pct": pct_change(now, before)}
+
+        def on_staff(kinds, on=None):
+            return staff.active(on=on).filter(kind__in=kinds).count()
+
+        patients_before = User.objects.filter(
+            role="patient", appointments__doctor__hospital=hospital, appointments__status__in=RELATED_STATUSES,
+            appointments__created_at__lt=aware(month_start),
+        ).distinct().count()
+        week_ago_start, week_ago_end = day_bounds(today - timedelta(days=7))
+        start, end = day_bounds(today)
+        visits = Appointment.objects.filter(doctor__hospital=hospital).exclude(status="cancelled")
+        return {
+            "doctors": trend(on_staff(["doctor"]), on_staff(["doctor"], last_month_end)),
+            "nurses": trend(on_staff(["nurse"]), on_staff(["nurse"], last_month_end)),
+            "other_staff": trend(on_staff(OTHER_STAFF_KINDS), on_staff(OTHER_STAFF_KINDS, last_month_end)),
+            "patients": trend(hospital_patients(hospital).count(), patients_before),
+            "appointments_today": trend(visits.filter(start__gte=start, start__lt=end).count(),
+                                        visits.filter(start__gte=week_ago_start, start__lt=week_ago_end).count()),
+        }
 
     def _recent(self, hospital, staff, limit=6):
         """Newest staff records and bookings at the hospital, merged by time."""

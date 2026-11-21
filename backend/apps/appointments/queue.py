@@ -36,8 +36,9 @@ def day_bounds(day=None):
 
 def appointments_on(doctor_id: int, day=None):
     start, end = day_bounds(day)
-    # Bookings still waiting for the hospital aren't in the doctor's day yet.
-    return Appointment.objects.filter(doctor_id=doctor_id, start__gte=start, start__lt=end, awaiting_hospital=False)
+    # Requests not accepted yet (by the hospital or the doctor) aren't in the doctor's day.
+    return Appointment.objects.filter(doctor_id=doctor_id, start__gte=start, start__lt=end,
+                                      awaiting_hospital=False, awaiting_doctor=False)
 
 
 def _locked(appointment: Appointment) -> Appointment:
@@ -51,6 +52,8 @@ def _require_today_and_active(a: Appointment):
         raise ValidationError({"status": f"This appointment is {a.status}."})
     if a.awaiting_hospital:
         raise ValidationError({"status": "The hospital hasn't confirmed this appointment yet."})
+    if a.awaiting_doctor:
+        raise ValidationError({"status": "The doctor hasn't accepted this appointment yet."})
     if timezone.localtime(a.start).date() != timezone.localdate():
         raise ValidationError({"start": "The queue is only open on the day of the appointment."})
 

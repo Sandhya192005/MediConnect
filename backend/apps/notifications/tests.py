@@ -49,8 +49,9 @@ def test_booking_emails_patient_and_doctor(doctor, patient, django_capture_on_co
         res = c.post("/api/appointments/", {"doctor": doctor.id, "start": slot}, format="json")
     assert res.status_code == 201
 
-    assert sorted(m.to[0] for m in mail.outbox) == ["doc@example.com", "pat@example.com"]
-    assert "Appointment booked" in mail.outbox[0].subject
+    # Booking flow (2026-11-21): the patient gets "Booking received"; the doctor answers in the app.
+    assert [m.to[0] for m in mail.outbox] == ["pat@example.com"]
+    assert "Booking received" in mail.outbox[0].subject
     assert mail.outbox[0].alternatives  # has an HTML version too
 
     # Cancelling sends another pair

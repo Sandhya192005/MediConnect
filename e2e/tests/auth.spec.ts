@@ -129,6 +129,8 @@ test("each role gets its own dashboard and menu", async ({ page }) => {
   await expect(menu.getByRole("link", { name: "Duty schedule" })).toHaveAttribute("href", "/doctor/availability");
   await expect(menu.getByRole("link", { name: "Patient queue" })).toHaveAttribute("href", "/doctor/queue");
   await expect(menu.getByRole("link", { name: "Patient records" })).toHaveAttribute("href", "/doctor/records");
+  await expect(page.getByText("Emergency? Call")).toHaveCount(0); // patients only (2026-11-21)
+  await expect(page.getByText("MediConnect is your Better Partner")).toBeVisible(); // top bar (2026-11-21)
 
   // The greeting uses the first name (a last name is often just an initial, e.g. "Jeevitha D").
   await expect(page.getByText(/^Good (morning|afternoon|evening), Dr\. Eshwar!/)).toBeVisible(); // (a wave emoji follows)

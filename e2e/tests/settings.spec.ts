@@ -198,6 +198,7 @@ test("contact support from the sidebar", async ({ page }) => {
   await page.getByRole("button", { name: "Log out" }).click();
   await login(page, e2e().platform.email);
   await expect(page.getByRole("link", { name: /Need help\?/ })).toHaveCount(0);
+  await expect(page.getByText("Emergency? Call")).toHaveCount(0); // not on the platform admin's menu (2026-11-21)
   await expect(page.getByRole("link", { name: /Support inbox .*open message/ })).toBeVisible();
   await page.getByRole("navigation", { name: "Main menu" }).getByRole("link", { name: "Support inbox" }).click();
   const msg = page.getByRole("listitem", { name: subject });

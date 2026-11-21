@@ -62,7 +62,9 @@ function BookingCard({ p, canBook }: { p: Proposal; canBook: boolean }) {
       {p.reason && <p className="text-slate-500">Reason: {p.reason}</p>}
       {state === "done" ? (
         <p className="mt-2 font-medium text-teal-800">
-          ✓ Booked! <Link href="/patient/appointments" className="underline">View appointments</Link>
+          {/* Booking flow (2026-11-21): a chat booking is a personal request; the doctor still has to accept it. */}
+          ✓ Request sent! Your time is held until the doctor accepts.{" "}
+          <Link href="/patient/appointments" className="underline">View appointments</Link>
         </p>
       ) : canBook ? (
         <button onClick={confirm} disabled={state === "busy"} className="btn-primary mt-2 py-2">

@@ -16,6 +16,9 @@ import { fmtRupees, timeAgo, type AppointmentRequest, type ConnectionRequest, ty
 type Counts = { connections: ConnectionRequest[]; support: SupportInboxItem[] };
 
 /** Hospital admins see their hospital; the platform admin (Django superuser) sees approvals and requests. */
+/** Staff cards compare today with the last day of last month (2026-11-21). */
+const STAFF_TREND = "since the end of last month";
+
 export default function AdminDashboard() {
   return (
     <RoleGuard role={["hospital", "admin"]}>
@@ -69,19 +72,25 @@ function HospitalDashboard() {
           label="Total doctors"
           value={n(o?.counts.doctors)}
           detail={o?.counts.doctor_accounts_without_record ? `${o.counts.doctor_accounts_without_record} doctor account(s) without a staff record` : "On staff today"}
+          trend={o?.trends.doctors.change_pct} trendLabel={STAFF_TREND}
           link={{ href: "/admin/doctors", label: "Manage doctors" }}
         />
-        <StatCard icon="nurse" tone="rose" label="Total nurses" value={n(o?.counts.nurses)} detail="On staff today" link={{ href: "/admin/nurses", label: "Manage nurses" }} />
+        <StatCard icon="nurse" tone="rose" label="Total nurses" value={n(o?.counts.nurses)} detail="On staff today"
+                  trend={o?.trends.nurses.change_pct} trendLabel={STAFF_TREND} link={{ href: "/admin/nurses", label: "Manage nurses" }} />
         <StatCard icon="user" tone="orange" label="Other staff" value={n(o?.counts.other_staff)} detail="Lab, pharmacy, front desk and more"
+                  trend={o?.trends.other_staff.change_pct} trendLabel={STAFF_TREND}
                   link={{ href: "/admin/staff", label: "Manage staff" }} />
-        <StatCard icon="users" tone="teal" label="Total patients" value={n(o?.counts.patients)} detail="With a visit booked or done here" link={{ href: "/admin/patients", label: "View patients" }} />
+        <StatCard icon="users" tone="teal" label="Total patients" value={n(o?.counts.patients)} detail="With a visit booked or done here"
+                  trend={o?.trends.patients.change_pct} trendLabel="since the start of the month" link={{ href: "/admin/patients", label: "View patients" }} />
         <StatCard
           icon="calendar"
           tone="indigo"
           label="Today's appointments"
           value={n(o?.counts.appointments_today)}
-          detail={o ? `${o.counts.waiting_now} waiting right now${o.counts.to_confirm ? ` · ${o.counts.to_confirm} booking${o.counts.to_confirm === 1 ? "" : "s"} to confirm` : ""}` : undefined}
-          link={{ href: "/admin/appointments", label: o?.counts.to_confirm ? "Confirm bookings" : "View appointments" }}
+          trend={o?.trends.appointments_today.change_pct}
+          trendLabel={o ? `vs ${o.trends.appointments_today.before} last ${new Date().toLocaleDateString("en-IN", { weekday: "long" })}` : ""}
+          detail={o ? `${o.counts.waiting_now} waiting right now${o.counts.to_confirm ? ` · ${o.counts.to_confirm} booking${o.counts.to_confirm === 1 ? "" : "s"} to assign` : ""}${o.counts.waiting_for_doctors ? ` · ${o.counts.waiting_for_doctors} waiting for doctors` : ""}` : undefined}
+          link={{ href: "/admin/appointments", label: o?.counts.to_confirm ? "Assign bookings" : "View appointments" }}
         />
       </div>
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import DashboardShell, { EmptyState, IconTile, Panel, pillFor, SkeletonRows, StatCard, StatusPill } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
+import { fmt12 } from "@/components/TimeSelect";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { greetingFor } from "@/lib/greeting";
@@ -12,7 +13,6 @@ import { fmtTime, isoDate, type Appointment, type Doctor } from "@/lib/types";
 
 /** Python's Monday=0 weekday, as used by WeeklyAvailability. */
 const todayWeekday = () => (new Date().getDay() + 6) % 7;
-const hhmm = (t: string) => t.slice(0, 5);
 
 /** "+2 from yesterday", "−1 from yesterday" or "Same as yesterday". */
 function vsYesterday(today: number, yesterday: number): string {
@@ -128,7 +128,7 @@ export default function DoctorDashboard() {
         </Panel>
 
         <div className="space-y-6 lg:col-span-2">
-          <Panel title="Duty today" action={{ href: "/doctor/availability", label: "Edit schedule" }}>
+          <Panel title="Today's duty" action={{ href: "/doctor/availability", label: "Edit schedule" }}>
             {me === null ? (
               <SkeletonRows rows={2} />
             ) : (
@@ -145,7 +145,7 @@ export default function DoctorDashboard() {
                 <div className="flex items-center gap-3">
                   <IconTile icon="clock" tone="blue" size="sm" />
                   <p className="text-sm text-[#00295c]">
-                    {hours.length > 0 ? hours.map((h) => `${hhmm(h.start_time)}–${hhmm(h.end_time)}`).join(", ") : "Not on duty today"}
+                    {hours.length > 0 ? hours.map((h) => `${fmt12(h.start_time)} – ${fmt12(h.end_time)}`).join(", ") : "Not on duty today"}
                   </p>
                 </div>
                 {!me.hospital_name && (

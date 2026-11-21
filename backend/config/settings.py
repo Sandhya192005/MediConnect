@@ -175,6 +175,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.notifications.tasks.complete_past_appointments",
         "schedule": 60 * 60,  # every hour
     },
+    "expire-unanswered-requests": {
+        "task": "apps.notifications.tasks.expire_unanswered_requests",
+        "schedule": 60 * 60,  # every hour
+    },
 }
 
 # --- AI chatbot (OpenAI) ---

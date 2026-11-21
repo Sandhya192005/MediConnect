@@ -55,7 +55,7 @@ class TreatmentNoteSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         if appt.doctor.user_id != user.id:
             raise serializers.ValidationError("You can only write notes for your own patients' visits.")
-        if appt.status == Appointment.Status.CANCELLED or appt.awaiting_hospital:
+        if appt.status == Appointment.Status.CANCELLED or appt.is_pending:
             raise serializers.ValidationError("This visit was cancelled or isn't confirmed yet.")
         if timezone.localtime(appt.start).date() > timezone.localdate():
             raise serializers.ValidationError("You can write the note on the day of the visit or after it.")

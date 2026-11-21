@@ -52,7 +52,8 @@ def send_appointment_email_task(self, appointment_id: int, event: str):
 def send_due_reminders():
     """Runs every 5 minutes (Celery Beat). Sends 24-hour and 1-hour reminders exactly once."""
     now = timezone.now()
-    active = Appointment.objects.active().filter(start__gt=now, awaiting_hospital=False)  # unconfirmed: no reminders
+    # Not accepted yet (by the hospital or the doctor): no reminders.
+    active = Appointment.objects.active().filter(start__gt=now, awaiting_hospital=False, awaiting_doctor=False)
     queued = 0
 
     windows = [
@@ -121,7 +122,15 @@ def complete_past_appointments():
     still_in_queue = Q(checked_in_at__isnull=False, start__gte=start_of_today)
     return (
         Appointment.objects.active()
-        .filter(end__lt=cutoff, awaiting_hospital=False)  # never confirmed: never "completed"
+        .filter(end__lt=cutoff, awaiting_hospital=False, awaiting_doctor=False)  # never accepted: never "completed"
         .exclude(still_in_queue)
         .update(status=Appointment.Status.COMPLETED)
     )
+
+
+@shared_task
+def expire_unanswered_requests():
+    """Hourly: booking requests nobody accepted before their time are cancelled (booking flow, 2026-11-21)."""
+    from apps.appointments.flow import expire_unanswered
+
+    return expire_unanswered()

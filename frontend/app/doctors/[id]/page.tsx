@@ -20,6 +20,10 @@ export default function DoctorDetailPage() {
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // Booking flow (owner decisions 2026-11-21): reached from a hospital's page (?via=hospital) = a hospital
+  // request (the hospital accepts and assigns, then the doctor); otherwise a personal request to the doctor.
+  const [viaHospital, setViaHospital] = useState(false);
+  useEffect(() => setViaHospital(new URLSearchParams(window.location.search).get("via") === "hospital"), []);
 
   useEffect(() => {
     api<Doctor>(`/api/doctors/${id}/`).then(setDoctor).catch((e) => setError(errorMessage(e)));
@@ -39,7 +43,7 @@ export default function DoctorDetailPage() {
     try {
       await api("/api/appointments/", {
         method: "POST",
-        body: JSON.stringify({ doctor: Number(id), start: picked.start, reason }),
+        body: JSON.stringify({ doctor: Number(id), start: picked.start, reason, source: viaHospital ? "hospital" : "personal" }),
       });
       router.push("/patient/appointments?booked=1");
     } catch (e) {
@@ -110,6 +114,12 @@ export default function DoctorDetailPage() {
         <section className="card p-5 sm:p-6 lg:col-span-2">
           <h2 className="section-title flex items-center gap-2"><Icon name="calendar" className="h-5 w-5 text-teal-700" />Book an appointment</h2>
           <p className="text-sm text-slate-500">Choose a day, then a free time.</p>
+          <p className="mt-2 rounded-xl bg-teal-50 px-3 py-2 text-sm text-teal-900" data-testid="booking-route">
+            {viaHospital
+              ? `Booking through ${doctor.hospital_name ?? "the hospital"}: the hospital accepts your request and assigns a doctor, then the doctor confirms.`
+              : `Personal request to Dr. ${doctor.name}: the doctor accepts or declines it.`}{" "}
+            Your time is held meanwhile.
+          </p>
 
           <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
             {days.map((d, i) => {

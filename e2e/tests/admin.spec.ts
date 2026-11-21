@@ -11,6 +11,10 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   const menu = page.getByRole("navigation", { name: "Main menu" });
   // Hospital admins don't get the platform pages (hospital approvals, requests to other hospitals).
   await expect(menu.getByRole("link", { name: "Connected hospitals" })).toHaveCount(0);
+  // % trends (2026-11-21): the test hospital's staff is wiped every run, so there's nothing earlier to compare with.
+  await expect(page.getByText("No earlier data to compare").first()).toBeVisible();
+  await expect(page.getByText("Emergency? Call")).toHaveCount(0); // not on the hospital menu (2026-11-21)
+  await expect(page.getByText("MediConnect is your Better Partner")).toBeVisible(); // top bar (2026-11-21)
 
   // Doctors: link the doctor's MediConnect account; the name comes from the account.
   await menu.getByRole("link", { name: "Doctor management" }).click();

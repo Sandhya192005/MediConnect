@@ -29,7 +29,7 @@ test("search shows MediConnect hospitals with their matching specialists", async
   const cardiology = page.getByRole("region", { name: "Cardiology" });
   await expect(cardiology.getByText("Dr. Eshwar Testdoctor")).toBeVisible();
   await cardiology.getByRole("link", { name: /Dr\. Eshwar Testdoctor/ }).click();
-  await expect(page).toHaveURL(new RegExp(`/doctors/${doctor.id}$`));
+  await expect(page).toHaveURL(new RegExp(`/doctors/${doctor.id}\\?via=hospital$`)); // a hospital request (2026-11-21)
 });
 
 test("a hospital name search lists it with its specialties", async ({ page }) => {
