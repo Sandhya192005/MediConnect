@@ -3,6 +3,7 @@
 import PageHeader from "@/components/PageHeader";
 import { useEffect, useState } from "react";
 import RoleGuard from "@/components/RoleGuard";
+import TimeSelect from "@/components/TimeSelect";
 import { api, errorMessage } from "@/lib/api";
 import { WEEKDAYS, type Availability } from "@/lib/types";
 
@@ -36,16 +37,16 @@ function AvailabilityEditor() {
   }
 
   return (
-    <div className="max-w-2xl space-y-3 card p-6">
+    <div className="max-w-3xl space-y-3 card p-6">
       {rows.length === 0 && <p className="text-sm text-slate-500">No working hours yet. Add a time block below.</p>}
       {rows.map((r, i) => (
         <div key={i} className="flex flex-wrap items-center gap-2">
-          <select className="input w-40" value={r.weekday} onChange={(e) => update(i, { weekday: Number(e.target.value) })}>
+          <select className="input w-40" aria-label={`Day, block ${i + 1}`} value={r.weekday} onChange={(e) => update(i, { weekday: Number(e.target.value) })}>
             {WEEKDAYS.map((d, n) => <option key={d} value={n}>{d}</option>)}
           </select>
-          <input className="input w-32" type="time" value={r.start_time} onChange={(e) => update(i, { start_time: e.target.value })} />
+          <TimeSelect label={`From, block ${i + 1}`} value={r.start_time} onChange={(v) => update(i, { start_time: v })} />
           <span>to</span>
-          <input className="input w-32" type="time" value={r.end_time} onChange={(e) => update(i, { end_time: e.target.value })} />
+          <TimeSelect label={`To, block ${i + 1}`} value={r.end_time} onChange={(v) => update(i, { end_time: v })} />
           <button onClick={() => setRows(rows.filter((_, j) => j !== i))} className="text-sm text-red-600">Remove</button>
         </div>
       ))}
