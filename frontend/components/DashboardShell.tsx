@@ -219,6 +219,7 @@ const PILL: Record<PillStatus, { label: string; cls: string }> = {
   in_consultation: { label: "In progress", cls: "bg-sky-50 text-sky-700 ring-sky-200" },
   completed: { label: "Completed", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
   cancelled: { label: "Cancelled", cls: "bg-slate-100 text-slate-500 ring-slate-200" },
+  no_show: { label: "Missed", cls: "bg-rose-50 text-rose-700 ring-rose-200" },
   awaiting_hospital: { label: "Waiting for hospital", cls: "bg-orange-50 text-orange-800 ring-orange-200" },
 };
 

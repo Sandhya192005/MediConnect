@@ -159,7 +159,8 @@ export type Doctor = {
 
 export type Slot = { start: string; end: string; available: boolean };
 
-export type AppointmentStatus = "booked" | "confirmed" | "cancelled" | "completed";
+/** no_show = the patient didn't come, marked by the doctor or hospital (2026-11-20). */
+export type AppointmentStatus = "booked" | "confirmed" | "cancelled" | "completed" | "no_show";
 
 export type Appointment = {
   id: number;
@@ -193,9 +194,13 @@ export type Appointment = {
   consultation_started_at: string | null;
   /** Waiting patients only: how many are ahead of them. */
   people_ahead: number | null;
+  // No-show (2026-11-20): who marked it, and whether this viewer may mark it / undo it (server rules).
+  no_show_by: string;
+  can_mark_no_show: boolean;
+  can_undo_no_show: boolean;
 };
 
-export type QueueStatus = "not_arrived" | "waiting" | "in_consultation" | "done" | "cancelled";
+export type QueueStatus = "not_arrived" | "waiting" | "in_consultation" | "done" | "cancelled" | "no_show";
 
 export type DoctorQueue = {
   date: string;
@@ -456,14 +461,14 @@ export type PlatformReports = {
 /** One hospital's reports (/api/hospital-admin/reports/, 2026-11-20). Visits are counted by visit date. */
 export type HospitalReports = {
   months: string[];
-  appointments: { booked: number[]; completed: number[] };
+  appointments: { booked: number[]; completed: number[]; no_show: number[] };
   totals: {
-    appointments: number; completed: number; upcoming: number;
+    appointments: number; completed: number; no_show: number; upcoming: number;
     cancelled_by_patient: number; cancelled_by_doctor: number; declined_by_hospital: number;
   };
   patients: { new: number[]; returning: number[]; unique: number; new_total: number };
-  doctors: { id: number; name: string; specialization: string; department: string; appointments: number; completed: number; cancelled: number; patients: number }[];
-  departments: { name: string; doctors: number; appointments: number; completed: number; cancelled: number; patients: number }[];
+  doctors: { id: number; name: string; specialization: string; department: string; appointments: number; completed: number; cancelled: number; no_show: number; patients: number }[];
+  departments: { name: string; doctors: number; appointments: number; completed: number; cancelled: number; no_show: number; patients: number }[];
 };
 
 /** ₹ in Indian grouping, no paise: 1250000 → "₹12,50,000". */

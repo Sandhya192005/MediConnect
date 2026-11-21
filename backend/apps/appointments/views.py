@@ -12,6 +12,7 @@ from apps.doctors.models import DoctorProfile
 from apps.doctors.services import invalidate_slots, is_slot_available
 from apps.notifications.services import notify_appointment
 
+from . import no_show
 from . import queue as patient_queue
 from .models import Appointment
 from .serializers import AppointmentSerializer
@@ -146,6 +147,20 @@ class AppointmentViewSet(
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
         appointment = self._doctor_set_status(Appointment.Status.COMPLETED, allowed_from=("booked", "confirmed"))
+        return Response(self.get_serializer(appointment).data)
+
+    # ---- No-show (owner request 2026-11-20): see no_show.py ----
+
+    @action(detail=True, methods=["post"], url_path="no-show")
+    def no_show(self, request, pk=None):
+        """POST /api/appointments/<id>/no-show/ — the doctor or hospital: the patient didn't come."""
+        appointment = no_show.mark_no_show(self.get_object(), request.user)
+        return Response(self.get_serializer(appointment).data)
+
+    @action(detail=True, methods=["post"], url_path="undo-no-show")
+    def undo_no_show(self, request, pk=None):
+        """POST /api/appointments/<id>/undo-no-show/ — a wrong click: the visit counts as completed again."""
+        appointment = no_show.undo_no_show(self.get_object(), request.user)
         return Response(self.get_serializer(appointment).data)
 
     # ---- Patient queue (Step 3): see queue.py ----

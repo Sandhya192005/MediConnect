@@ -74,6 +74,9 @@ def notify_appointment_in_app(appointment, event: str) -> int:
         # Patient queue (Step 3)
         "checked_in": [(doctor_user, "Patient checked in", f"{patient_name} · token {appointment.token}", "/doctor/queue")],
         "called_in": [(patient, "It's your turn", f"{doctor} is ready to see you now (token {appointment.token})", p_link)],
+        # No-show (2026-11-20): marked by the doctor or hospital; in-app only
+        "no_show": [(patient, "Missed appointment", f"You missed your visit with {doctor} on {when}. You can book a new one any time.", p_link)],
+        "no_show_undone": [(patient, "Visit no longer marked as missed", f"Your visit with {doctor} on {when} counts as attended.", p_link)],
     }
     items = messages.get(event, [])
     for user, title, message, link in items:

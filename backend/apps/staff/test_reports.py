@@ -78,8 +78,8 @@ def test_reports_count_only_this_hospitals_visits_by_month(world):
     assert r.status_code == 200
     data = r.json()
     assert data["months"] == ["Sep 2026", "Oct 2026", "Nov 2026"]
-    assert data["appointments"] == {"booked": [1, 1, 2], "completed": [1, 1, 1]}
-    assert data["totals"] == {"appointments": 4, "completed": 3, "upcoming": 1, "cancelled_by_patient": 1,
+    assert data["appointments"] == {"booked": [1, 1, 2], "completed": [1, 1, 1], "no_show": [0, 0, 0]}
+    assert data["totals"] == {"appointments": 4, "completed": 3, "no_show": 0, "upcoming": 1, "cancelled_by_patient": 1,
                               "cancelled_by_doctor": 1, "declined_by_hospital": 1}
     # P2 new in Sep, P1 returning in Oct (first visit in Aug), P4 new and P2 returning in Nov; P3 only cancelled.
     assert data["patients"] == {"new": [1, 0, 1], "returning": [0, 1, 1], "unique": 3, "new_total": 2}
@@ -95,8 +95,8 @@ def test_reports_per_doctor_and_department(world):
     assert {k: doctors["Bala Raman"][k] for k in ("department", "appointments", "completed", "cancelled", "patients")} == \
         {"department": "", "appointments": 2, "completed": 1, "cancelled": 2, "patients": 2}
     assert data["departments"] == [
-        {"name": "Cardiology", "doctors": 1, "appointments": 2, "completed": 2, "cancelled": 1, "patients": 2},
-        {"name": "", "doctors": 1, "appointments": 2, "completed": 1, "cancelled": 2, "patients": 2},
+        {"name": "Cardiology", "doctors": 1, "appointments": 2, "completed": 2, "cancelled": 1, "no_show": 0, "patients": 2},
+        {"name": "", "doctors": 1, "appointments": 2, "completed": 1, "cancelled": 2, "no_show": 0, "patients": 2},
     ]
 
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EmptyState, Panel, pillFor, SkeletonRows, StatusPill } from "@/components/DashboardShell";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
@@ -33,10 +33,14 @@ export default function HospitalAppointmentsPage() {
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState("");
 
+  // Only the newest request may fill the list (a tab switch and live notifications can overlap).
+  const latest = useRef(0);
   const load = useCallback(() => {
+    const mine = ++latest.current;
     const q = TABS.find((t) => t.key === tab)!.query;
     api<Appointment[]>(`/api/appointments/?${q}`)
       .then((list) => {
+        if (mine !== latest.current) return;
         // Upcoming and Today show active visits; Cancelled has its own tab.
         setItems(tab === "upcoming" || tab === "today" ? list.filter((a) => a.status !== "cancelled") : list);
       })
@@ -69,6 +73,20 @@ export default function HospitalAppointmentsPage() {
     setError("");
     try {
       await api(`/api/appointments/${a.id}/${action}/`, { method: "POST", body: JSON.stringify({ reason: reasons[a.id] ?? "" }) });
+      load();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  /** No-show (2026-11-20): "Didn't come", or Undo for a wrong click. The server checks the rules. */
+  async function markMissed(a: Appointment, action: "no-show" | "undo-no-show") {
+    setBusy(a.id);
+    setError("");
+    try {
+      await api(`/api/appointments/${a.id}/${action}/`, { method: "POST" });
       load();
     } catch (e) {
       setError(errorMessage(e));
@@ -163,8 +181,20 @@ export default function HospitalAppointmentsPage() {
                           {a.reason ? `Reason: ${a.reason} · ` : ""}booked {timeAgo(a.created_at)}
                           {a.cancelled_by && ` · cancelled by the ${a.cancelled_by}`}
                           {a.cancel_reason && `: ${a.cancel_reason}`}
+                          {a.status === "no_show" && ` · didn't come${a.no_show_by ? ` (marked by the ${a.no_show_by})` : ""}`}
                         </p>
                       </div>
+                      {a.can_mark_no_show && (
+                        <button onClick={() => markMissed(a, "no-show")} disabled={busy === a.id}
+                                className="btn border border-rose-200 bg-white px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-50">
+                          Didn&apos;t come<span className="sr-only"> for {a.patient_name}</span>
+                        </button>
+                      )}
+                      {a.can_undo_no_show && (
+                        <button onClick={() => markMissed(a, "undo-no-show")} disabled={busy === a.id} className="btn-ghost px-3 py-1.5 text-sm">
+                          Undo missed<span className="sr-only"> for {a.patient_name}</span>
+                        </button>
+                      )}
                     </div>
                     {a.awaiting_hospital && a.status === "booked" && (
                       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">

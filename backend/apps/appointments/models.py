@@ -16,6 +16,7 @@ class Appointment(models.Model):
         CONFIRMED = "confirmed", "Confirmed"
         CANCELLED = "cancelled", "Cancelled"
         COMPLETED = "completed", "Completed"
+        NO_SHOW = "no_show", "No-show"  # the patient didn't come, marked by hand (see no_show.py)
 
     patient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="appointments")
     doctor = models.ForeignKey("doctors.DoctorProfile", on_delete=models.CASCADE, related_name="appointments")
@@ -31,6 +32,7 @@ class Appointment(models.Model):
     # never appears in their list. Only the hospital's Confirm sets it to False.
     awaiting_hospital = models.BooleanField(default=False, db_index=True)
     cancel_reason = models.CharField(max_length=300, blank=True)
+    no_show_by = models.CharField(max_length=10, blank=True, help_text="Who marked it missed: doctor or hospital")
     # Set by the reminder task so each reminder is sent only once.
     reminder_24h_sent_at = models.DateTimeField(null=True, blank=True)
     reminder_1h_sent_at = models.DateTimeField(null=True, blank=True)
@@ -70,6 +72,8 @@ class Appointment(models.Model):
             return "cancelled"
         if self.status == self.Status.COMPLETED:
             return "done"
+        if self.status == self.Status.NO_SHOW:
+            return "no_show"
         if self.consultation_started_at:
             return "in_consultation"
         if self.checked_in_at:

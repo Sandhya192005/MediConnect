@@ -35,6 +35,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
     queue_status = serializers.CharField(read_only=True)
     people_ahead = serializers.SerializerMethodField()
     patient_id = serializers.SerializerMethodField()
+    # No-show (2026-11-20): whether this viewer may mark the visit missed, or undo that (rules in no_show.py).
+    can_mark_no_show = serializers.SerializerMethodField()
+    can_undo_no_show = serializers.SerializerMethodField()
 
     class Meta:
         model = Appointment
@@ -43,8 +46,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "patient_name", "patient_email", "patient_id", "start", "end", "status", "reason",
             "cancelled_by", "cancel_reason", "awaiting_hospital", "created_at",
             "queue_status", "token", "checked_in_at", "consultation_started_at", "people_ahead",
+            "no_show_by", "can_mark_no_show", "can_undo_no_show",
         ]
-        read_only_fields = ["end", "status", "cancelled_by", "cancel_reason", "awaiting_hospital", "created_at", "token", "checked_in_at", "consultation_started_at"]
+        read_only_fields = ["end", "status", "cancelled_by", "cancel_reason", "awaiting_hospital", "created_at", "token", "checked_in_at", "consultation_started_at", "no_show_by"]
         # The view checks slot availability itself and returns a friendly message,
         # so skip DRF's auto-generated "unique set" validator.
         validators = []
@@ -73,3 +77,19 @@ class AppointmentSerializer(serializers.ModelSerializer):
         """The patient's ID, so the doctor can open their records from the queue."""
         profile = getattr(obj.patient, "patient_profile", None)
         return profile.patient_id if profile else None
+
+    def _viewer(self):
+        request = self.context.get("request")
+        return request.user if request and request.user.is_authenticated else None
+
+    def get_can_mark_no_show(self, obj):
+        from .no_show import can_mark
+
+        user = self._viewer()
+        return bool(user) and can_mark(obj, user)
+
+    def get_can_undo_no_show(self, obj):
+        from .no_show import can_undo
+
+        user = self._viewer()
+        return bool(user) and can_undo(obj, user)

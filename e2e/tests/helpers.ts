@@ -16,6 +16,8 @@ export type E2EData = {
   partner_hospital: { id: number; name: string };
   mock_hospital: { id: number; name: string };
   location: { lat: number; lng: number };
+  /** A patient with one visit two days ago (auto-completed), for the no-show test. */
+  no_show: { email: string; name: string; appointment: number };
 };
 
 let cached: E2EData | null = null;

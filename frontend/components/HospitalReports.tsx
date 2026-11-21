@@ -13,7 +13,7 @@ const pct = (part: number, whole: number) => (whole ? `${Math.round((part * 100)
 /**
  * The hospital account's Reports page (owner request 2026-11-20): its own appointments, patients, doctors and
  * departments over 6 / 12 / 24 months, all counted from real appointments (/api/hospital-admin/reports/).
- * There is no "no-show" status in MediConnect, so no-shows are not shown.
+ * No-shows ("Missed") are visits the doctor or hospital marked "Didn't come" (since 2026-11-20).
  */
 export default function HospitalReports() {
   const [months, setMonths] = useState(12);
@@ -66,7 +66,7 @@ function Body({ r, months }: { r: Reports; months: number }) {
     <div className="space-y-8">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon="calendar" tone="teal" label="Appointments" value={t.appointments} detail={`${t.upcoming} still upcoming · ${period}`} />
-        <StatCard icon="check" tone="blue" label="Completed visits" value={t.completed} detail={`${pct(t.completed, t.appointments)} of appointments`} />
+        <StatCard icon="check" tone="blue" label="Completed visits" value={t.completed} detail={`${pct(t.completed, t.appointments)} of appointments · ${t.no_show} missed (no-show)`} />
         <StatCard icon="users" tone="indigo" label="Patients" value={r.patients.unique} detail={`with an appointment · ${r.patients.new_total} new to your hospital`} />
         <StatCard icon="close" tone="rose" label="Cancelled" value={cancelled}
                   detail={`${t.cancelled_by_patient} by patients · ${t.cancelled_by_doctor} by doctors · ${t.declined_by_hospital} declined by you`} />
@@ -116,13 +116,14 @@ function Body({ r, months }: { r: Reports; months: number }) {
         />
       </Panel>
       <p className="text-xs text-slate-500">
-        Counted from your hospital&apos;s appointments on MediConnect. No-shows aren&apos;t recorded in MediConnect yet, so they aren&apos;t shown.
+        Counted from your hospital&apos;s appointments on MediConnect. Missed = marked &quot;Didn&apos;t come&quot; by the doctor or your
+        hospital (since 20 Nov 2026); earlier missed visits were counted as completed.
       </p>
     </div>
   );
 }
 
-type Row = { key: string; name: React.ReactNode; extra: string; appointments: number; completed: number; cancelled: number; patients: number };
+type Row = { key: string; name: React.ReactNode; extra: string; appointments: number; completed: number; cancelled: number; no_show: number; patients: number };
 
 function Table({ label, first, rows, extraHead, extraRight = false, empty }: {
   label: string; first: string; rows: Row[]; extraHead: string; extraRight?: boolean; empty: string;
@@ -131,13 +132,14 @@ function Table({ label, first, rows, extraHead, extraRight = false, empty }: {
   const num = "py-2.5 text-right tabular-nums";
   return (
     <div className="overflow-x-auto">
-      <table aria-label={label} className="w-full min-w-[640px] text-left text-sm">
+      <table aria-label={label} className="w-full min-w-[700px] text-left text-sm">
         <thead className="text-xs uppercase tracking-wider text-slate-400">
           <tr>
             <th className="pb-2 font-medium">{first}</th>
             <th className={`pb-2 font-medium ${extraRight ? "text-right" : ""}`}>{extraHead}</th>
             <th className="pb-2 text-right font-medium">Appointments</th>
             <th className="pb-2 text-right font-medium">Completed</th>
+            <th className="pb-2 text-right font-medium">Missed</th>
             <th className="pb-2 text-right font-medium">Cancelled</th>
             <th className="pb-2 text-right font-medium">Patients</th>
           </tr>
@@ -149,6 +151,7 @@ function Table({ label, first, rows, extraHead, extraRight = false, empty }: {
               <td className={`py-2.5 text-slate-600 ${extraRight ? "text-right tabular-nums" : ""}`}>{x.extra}</td>
               <td className={num}>{x.appointments}</td>
               <td className={num}>{x.completed}</td>
+              <td className={num}>{x.no_show}</td>
               <td className={num}>{x.cancelled}</td>
               <td className={num}>{x.patients}</td>
             </tr>

@@ -276,6 +276,17 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### No-show: "Didn't come" (2026-11-21)
+
+Owner decisions: a no-show is marked **by hand** (never automatically: hospitals that don't use check-in would see real visits counted as missed), by the **doctor or the hospital**, and the patient gets an **in-app notification**.
+- New appointment status `no_show`, shown as **Missed** (red), plus `no_show_by` (doctor / hospital); migration `appointments 0007`. Rules in `appointments/no_show.py`.
+- **Didn't come** (`POST /api/appointments/<id>/no-show/`): only once the visit time has started, for up to 7 days, and only if nothing shows the patient came (not checked in, never called in, no treatment note). A visit the hourly job already auto-completed can still be marked (the job can't know). **Undo missed** (`undo-no-show/`) turns it back into a completed visit within the same 7 days.
+- The API tells each viewer whether they may use the buttons (`can_mark_no_show`, `can_undo_no_show`), so the page doesn't repeat the rules.
+- Buttons: the doctor's **Appointments → Past** and the hospital's **Appointments** (Today / Past). A missed visit gets no "Write note" button. The patient sees "You didn't come to this visit" and a "Missed appointment" notification (no email); Undo sends "Visit no longer marked as missed".
+- **Hospital Reports** count no-shows: "N missed (no-show)" under Completed visits and a **Missed** column for doctors and departments. A no-show isn't a visit, so it doesn't make someone a new or returning patient. Earlier missed visits were auto-completed and can't be told apart.
+- Fixed: the appointment lists (patient, doctor, hospital) could show an old answer when reloads overlapped (switching to Past while live notifications arrive showed "No past appointments"). Only the newest request fills the list now.
+- Tests: `appointments/test_no_show.py` (12), report tests updated; e2e `no-show.spec.ts` (doctor marks + undoes, hospital marks, reports count it, the patient sees it). `e2e_setup` adds the patient "Mani Noshow" with a visit two days ago.
+
 ### Support inbox for the platform admin (2026-11-20)
 
 "Need help?" messages from patients, doctors and hospitals used to be answered only in Django admin, and the platform admin got no notification. Now:
@@ -310,7 +321,7 @@ The hospital menu's **Reports** item (was "Soon") now opens the hospital's own r
 - **Appointments per month:** booked vs completed, by visit date.
 - **Patients per month:** new (first visit at this hospital that month) vs returning.
 - **Doctors** and **Departments** tables: appointments, completed, cancelled and patients in the period.
-- Not shown: no-shows (MediConnect has no "no-show" status yet). Staff and payroll stay on Staff & salary.
+- No-shows were added on 2026-11-21 (see above). Staff and payroll stay on Staff & salary.
 
 ### Hospital accounts get their own role (2026-11-19)
 

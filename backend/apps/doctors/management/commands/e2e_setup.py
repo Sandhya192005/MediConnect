@@ -8,7 +8,7 @@ It never touches other data, and refuses to run unless DEBUG is on (so never on 
 """
 
 import json
-from datetime import time
+from datetime import datetime, time, timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -16,6 +16,7 @@ from django.contrib.gis.geos import Point
 from django.core.cache import cache
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
 
 from apps.accounts.models import PatientProfile
 from apps.appointments.models import Appointment, AppointmentRequest, ExternalAppointment
@@ -27,6 +28,7 @@ from apps.hospitals.models import Department, Hospital
 User = get_user_model()
 PASSWORD = "E2e@12345"
 PATIENT_EMAIL = "e2e.patient@mediconnect.dev"
+NO_SHOW_PATIENT_EMAIL = "e2e.noshow@mediconnect.dev"
 DOCTOR_EMAIL = "e2e.doctor@mediconnect.dev"
 ADMIN_EMAIL = "e2e.admin@mediconnect.dev"  # hospital admin of "E2E Partner Hospital"
 PLATFORM_EMAIL = "e2e.platform@mediconnect.dev"  # platform admin (superuser)
@@ -81,6 +83,15 @@ class Command(BaseCommand):
             [WeeklyAvailability(doctor=doctor, weekday=d, start_time=time(6), end_time=time(22)) for d in range(7)]
         )
         Appointment.objects.filter(doctor=doctor).delete()  # fresh calendar every run
+        # No-show test (2026-11-20): a visit two days ago that the hourly job already auto-completed, for its
+        # own patient (so the "Didn't come" button is the only one with that name).
+        missed_patient = self._user(NO_SHOW_PATIENT_EMAIL, "patient", "Mani", "Noshow")
+        missed_patient.notifications.all().delete()
+        two_days_ago = timezone.make_aware(datetime.combine(timezone.localdate() - timedelta(days=2), time(10)))
+        missed = Appointment.objects.create(
+            patient=missed_patient, doctor=doctor, start=two_days_ago, end=two_days_ago + timedelta(minutes=30),
+            status=Appointment.Status.COMPLETED, reason="E2E missed visit",
+        )
 
         # Not a partner: its "website" is our mock hospital site (the only site tests may read).
         mock, _ = Hospital.objects.update_or_create(
@@ -116,6 +127,7 @@ class Command(BaseCommand):
             "partner_hospital": {"id": partner.id, "name": partner.name},
             "mock_hospital": {"id": mock.id, "name": mock.name},
             "location": {"lat": LAT, "lng": LNG},
+            "no_show": {"email": NO_SHOW_PATIENT_EMAIL, "name": "Mani Noshow", "appointment": missed.id},
         }))
 
     def _user(self, email, role, first, last):
