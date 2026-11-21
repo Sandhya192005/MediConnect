@@ -276,6 +276,14 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Patient records: its own menu item (2026-11-21)
+
+Owner request: opening a patient's records by patient ID is a separate feature in the left menu, not on the dashboard.
+- **Hospital:** new sidebar item **Patient records** (`/admin/patients/records`, after Patient management). It was only reachable through Patient management → "Open by patient ID" (that button is removed; each patient in the list still has its own Records link).
+- **Doctor:** already had **Patient records** in the sidebar; the "Quick access to patient records" box is removed from the doctor dashboard.
+- **Top bar:** doctors and hospitals no longer get a "Search patient by ID" box there (owner choice); patients keep their "Search doctors, hospitals…" box.
+- Nothing changed in the backend; every records view is still logged for the patient. e2e `auth`, `records` and `admin` specs now open records through the menu item.
+
 ### No-show: "Didn't come" (2026-11-21)
 
 Owner decisions: a no-show is marked **by hand** (never automatically: hospitals that don't use check-in would see real visits counted as missed), by the **doctor or the hospital**, and the patient gets an **in-app notification**.

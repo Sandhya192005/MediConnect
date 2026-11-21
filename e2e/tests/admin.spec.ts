@@ -77,4 +77,12 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   await page.getByRole("link", { name: "Records of Esha Patient" }).click();
   await expect(page).toHaveURL(new RegExp(`/admin/patients/records\\?id=${e2e().patient.patient_id}$`));
   await expect(page.getByRole("region", { name: "Patient" }).getByText("Esha Patient")).toBeVisible();
+
+  // Patient records by ID is its own menu item (2026-11-21), and the top bar has no ID search.
+  await expect(page.getByLabel("Search patient by ID")).toHaveCount(0);
+  await menu.getByRole("link", { name: "Patient records" }).click();
+  await expect(page).toHaveURL(/\/admin\/patients\/records$/);
+  await page.getByLabel("Patient ID").fill(e2e().patient.patient_id);
+  await page.getByRole("button", { name: "Open records" }).click();
+  await expect(page.getByRole("region", { name: "Patient" }).getByText("Esha Patient")).toBeVisible();
 });

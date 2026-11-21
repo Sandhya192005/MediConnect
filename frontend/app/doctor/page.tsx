@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import DashboardShell, { EmptyState, IconTile, Panel, pillFor, SkeletonRows, StatCard, StatusPill } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
@@ -155,45 +154,8 @@ export default function DoctorDashboard() {
               </div>
             )}
           </Panel>
-
-          <RecordsQuickAccess />
         </div>
       </div>
     </DashboardShell>
-  );
-}
-
-/** Patient ID box: opens the Patient records page for that ID. */
-function RecordsQuickAccess() {
-  const router = useRouter();
-  const [id, setId] = useState("");
-  return (
-    <section className="dash-card p-5" aria-label="Patient records quick access">
-      <div className="flex items-center gap-3">
-        <IconTile icon="file" tone="orange" size="sm" />
-        <p className="text-sm font-[650] text-[#00295c]">Quick access to patient records</p>
-      </div>
-      <p className="mt-2 text-xs text-slate-500">Any patient&apos;s medical history, with their patient ID. Each view is logged for the patient.</p>
-      <form
-        className="mt-3 flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const v = id.trim().toUpperCase();
-          if (v) router.push(`/doctor/records?id=${encodeURIComponent(v)}`);
-        }}
-      >
-        <input
-          aria-label="Patient ID"
-          className="input rounded-xl py-2 font-mono uppercase"
-          placeholder="Enter patient ID…"
-          maxLength={12}
-          value={id}
-          onChange={(e) => setId(e.target.value)}
-        />
-        <button className="btn-solid shrink-0 rounded-xl px-3 py-2" aria-label="Open patient records">
-          <Icon name="search" className="h-4 w-4" />
-        </button>
-      </form>
-    </section>
   );
 }

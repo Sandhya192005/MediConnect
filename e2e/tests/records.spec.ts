@@ -46,10 +46,11 @@ test("patient uploads a record, a doctor opens it with the general patient ID, a
   await doctorPage.goto(`/doctor/records?id=${neverBooked}`);
   await expect(doctorPage.getByRole("region", { name: "Patient" }).getByText("Never Booked")).toBeVisible();
 
-  // The doctor opens and downloads the E2E patient's record from the dashboard's quick access.
+  // The doctor opens and downloads the E2E patient's record from the Patient records menu item.
   await doctorPage.goto("/doctor");
+  await doctorPage.getByRole("navigation", { name: "Main menu" }).getByRole("link", { name: "Patient records" }).click();
   await doctorPage.getByLabel("Patient ID").fill(patientId.toLowerCase());
-  await doctorPage.getByRole("button", { name: "Open patient records" }).click();
+  await doctorPage.getByRole("button", { name: "Open records" }).click();
   await expect(doctorPage).toHaveURL(new RegExp(`/doctor/records\\?id=${patientId}$`));
   await expect(doctorPage.getByText("Esha Patient")).toBeVisible();
   const [download] = await Promise.all([

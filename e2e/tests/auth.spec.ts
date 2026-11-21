@@ -136,8 +136,11 @@ test("each role gets its own dashboard and menu", async ({ page }) => {
   // Today's appointments compared with yesterday (reference design, Part 3).
   await expect(page.getByText(/from yesterday$|^Same as yesterday$/).first()).toBeVisible();
 
-  // The top bar searches a patient by ID and opens their records.
-  const search = page.getByLabel("Search patient by ID");
+  // Patient records by ID is its own menu item (2026-11-21): no ID box on the dashboard or in the top bar.
+  await expect(page.getByLabel("Search patient by ID")).toHaveCount(0);
+  await expect(page.getByLabel("Patient ID")).toHaveCount(0);
+  await menu.getByRole("link", { name: "Patient records" }).click();
+  const search = page.getByLabel("Patient ID");
   await search.fill(e2e().patient.patient_id.toLowerCase());
   await search.press("Enter");
   await expect(page).toHaveURL(new RegExp(`/doctor/records\\?id=${e2e().patient.patient_id}$`));
