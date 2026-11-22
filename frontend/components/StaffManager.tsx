@@ -112,11 +112,14 @@ export default function StaffManager({ kind }: { kind: StaffPage }) {
         ) : (
           <ul className="divide-y divide-slate-100">
             {items.map((s) => (
-              // Name, department and working status only (owner request 2026-11-22); everything else is inside Open.
+              // Name, role, department and working status only (owner requests 2026-11-22); everything else is inside Open.
               <li key={s.id} aria-label={s.full_name} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                 <IconTile icon={w.icon} tone={kind === "doctor" ? "blue" : kind === "nurse" ? "rose" : "indigo"} size="sm" />
                 <p className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm font-[650] text-[#00295c]">
                   {s.full_name}
+                  <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-[650] text-indigo-700" data-testid="staff-role">
+                    {s.kind === "other" && s.designation ? s.designation : s.kind_label}
+                  </span>
                   <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-[650] text-teal-700">{s.department_name ?? "No department"}</span>
                   <span className={`rounded-full px-2 py-0.5 text-[11px] font-[650] ring-1 ${s.is_active ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-500 ring-slate-200"}`}>
                     {s.is_active ? "Working here" : s.left_on ? `Left ${fmtDate(s.left_on)}` : "Not started yet"}

@@ -49,7 +49,7 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   await staffForm.getByRole("button", { name: "Add staff member" }).click();
   const others = page.getByRole("region", { name: /^Other staff/ });
   await expect(others.getByText("Ravi P")).toBeVisible();
-  await expect(others).toContainText("Pharmacist");
+  await expect(others.getByRole("listitem", { name: "Ravi P" }).getByTestId("staff-role")).toHaveText("Pharmacist");
   await page.getByLabel("Role", { exact: true }).selectOption("receptionist"); // the list's role filter
   await expect(others.getByText("No other staff match")).toBeVisible();
   await page.getByLabel("Role", { exact: true }).selectOption("");

@@ -21,6 +21,7 @@ test("a nurse's page: details, edit and delete", async ({ page }) => {
   const row = page.getByRole("listitem", { name: "Kavya Staffpage" });
   await expect(row).toContainText("Cardiology");
   await expect(row).toContainText("Working here");
+  await expect(row.getByTestId("staff-role")).toHaveText("Nurse"); // the role in front (2026-11-22)
   await expect(row).not.toContainText("98400 22222"); // no contact number or joined date in the list (2026-11-22)
   await expect(row).not.toContainText("joined");
   await expect(row.getByRole("button", { name: /Edit/ })).toHaveCount(0); // edit/delete moved to the person's page
