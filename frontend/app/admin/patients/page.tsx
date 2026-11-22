@@ -75,15 +75,11 @@ export default function AdminPatientsPage() {
                   <div><dt className="text-slate-400">Pending</dt>
                     <dd className={`font-[650] tabular-nums ${p.pending_amount > 0 ? "text-amber-800" : "text-[#00295c]"}`}>{p.pending_amount > 0 ? fmtMoney(p.pending_amount) : "—"}</dd></div>
                 </dl>
+                {/* Only Open here: editing is inside the patient's page (owner request 2026-11-22). */}
                 {p.patient_id && (
-                  <div className="flex shrink-0 gap-2">
-                    <Link href={`/admin/patients/${p.patient_id}?edit=1`} className="btn-ghost px-3 py-1.5 text-xs" aria-label={`Edit ${p.name}`}>
-                      <Icon name="pencil" className="h-3.5 w-3.5" /> Edit
-                    </Link>
-                    <Link href={`/admin/patients/${p.patient_id}`} className="btn-outline px-3 py-1.5 text-xs" aria-label={`Open ${p.name}`}>
-                      Open
-                    </Link>
-                  </div>
+                  <Link href={`/admin/patients/${p.patient_id}`} className="btn-outline shrink-0 px-3 py-1.5 text-xs" aria-label={`Open ${p.name}`}>
+                    Open
+                  </Link>
                 )}
               </li>
             ))}

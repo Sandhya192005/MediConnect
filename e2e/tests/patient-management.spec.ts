@@ -47,9 +47,11 @@ test("the hospital adds a new patient (no email, no password), edits details and
   const row = page.getByRole("listitem").filter({ hasText: "Ravi Walkin" });
   await expect(row).toContainText("Added by you");
 
-  // The list's Edit opens the patient's page in edit mode (2026-11-22). The hospital created this patient and
-  // they don't use the app, so it can add and later fix their email.
-  await row.getByRole("link", { name: "Edit Ravi Walkin" }).click();
+  // Only Open in the list; editing is inside the page (2026-11-22). The hospital created this patient and they
+  // don't use the app, so it can add and later fix their email.
+  await expect(row.getByRole("link", { name: "Edit Ravi Walkin" })).toHaveCount(0);
+  await row.getByRole("link", { name: "Open Ravi Walkin" }).click();
+  await page.getByRole("button", { name: "Edit details" }).click();
   await page.getByLabel(/^Email/).fill("e2e.ravi.walkn@mediconnect.dev");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByRole("status")).toHaveText("Details saved.");

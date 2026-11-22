@@ -276,11 +276,11 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
-### Patient management: Edit from the list, and fixing an email (2026-11-22)
+### Patient management: fixing an email (2026-11-22)
 
-- Each patient row has an **Edit** button next to Open; it opens the patient's page straight in edit mode (`?edit=1`).
+- The list keeps only **Open** (owner request: editing stays inside the patient's page, **Edit details**). An Edit button in the list was tried and removed the same day.
 - The hospital can now **set or change the email** of a patient it created, as long as the patient hasn't started using the app (no password): it's what the hospital's staff typed, so they can fix it. A patient who logs in themselves (or one the hospital didn't create) keeps their own email (`staff/patients.may_edit_email`, `can_edit_email` on the patient page).
-- Tests: `staff/test_patients.py` covers both cases; e2e `patient-management.spec.ts` uses the list's Edit and fixes an email typo.
+- Tests: `staff/test_patients.py` covers both cases; e2e `patient-management.spec.ts` opens the patient, edits and fixes an email typo.
 
 ### Doctor, nurse and staff pages, like Patient management (2026-11-22)
 

@@ -41,9 +41,7 @@ export default function HospitalPatientPageView() {
 
   useEffect(() => {
     load();
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("added")) setFlash("Patient added to your patients.");
-    if (params.get("edit")) setEditing(true); // the list's "Edit" button (2026-11-22)
+    if (new URLSearchParams(window.location.search).get("added")) setFlash("Patient added to your patients.");
   }, [load]);
 
   async function addToList() {
