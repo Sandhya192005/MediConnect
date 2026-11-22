@@ -112,20 +112,24 @@ export default function StaffManager({ kind }: { kind: StaffPage }) {
         ) : (
           <ul className="divide-y divide-slate-100">
             {items.map((s) => (
-              // Name, role, department and working status only (owner requests 2026-11-22); everything else is inside Open.
-              <li key={s.id} aria-label={s.full_name} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                <IconTile icon={w.icon} tone={kind === "doctor" ? "blue" : kind === "nurse" ? "rose" : "indigo"} size="sm" />
-                <p className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm font-[650] text-[#00295c]">
-                  {s.full_name}
-                  <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-[650] text-indigo-700" data-testid="staff-role">
-                    {s.kind === "other" && s.designation ? s.designation : s.kind_label}
-                  </span>
-                  <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-[650] text-teal-700">{s.department_name ?? "No department"}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-[650] ring-1 ${s.is_active ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-500 ring-slate-200"}`}>
-                    {s.is_active ? "Working here" : s.left_on ? `Left ${fmtDate(s.left_on)}` : "Not started yet"}
-                  </span>
-                </p>
-                <Link href={staffHref(kind, s.id)} className="btn-outline shrink-0 px-3 py-1.5 text-xs" aria-label={`Open ${s.full_name}`}>Open</Link>
+              // Name, role, department and working status only (owner requests 2026-11-22), laid out in columns like
+              // Patient management; everything else is inside Open.
+              <li key={s.id} aria-label={s.full_name} className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 md:flex-row md:items-center">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <IconTile icon={w.icon} tone={kind === "doctor" ? "blue" : kind === "nurse" ? "rose" : "indigo"} size="sm" />
+                  <p className="truncate text-sm font-[650] text-[#00295c]">{s.full_name}</p>
+                </div>
+                <dl className="grid grid-cols-3 gap-4 text-xs md:w-[30rem]">
+                  <div><dt className="text-slate-400">Role</dt>
+                    <dd className="font-[650] text-[#00295c]" data-testid="staff-role">{s.kind === "other" && s.designation ? s.designation : s.kind_label}</dd></div>
+                  <div><dt className="text-slate-400">Department</dt>
+                    <dd className={s.department_name ? "text-[#00295c]" : "text-slate-400"}>{s.department_name ?? "None"}</dd></div>
+                  <div><dt className="text-slate-400">Status</dt>
+                    <dd><span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-[650] ring-1 ${s.is_active ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-500 ring-slate-200"}`}>
+                      {s.is_active ? "Working here" : s.left_on ? `Left ${fmtDate(s.left_on)}` : "Not started yet"}
+                    </span></dd></div>
+                </dl>
+                <Link href={staffHref(kind, s.id)} className="btn-outline shrink-0 self-start px-3 py-1.5 text-xs md:self-auto" aria-label={`Open ${s.full_name}`}>Open</Link>
               </li>
             ))}
           </ul>
