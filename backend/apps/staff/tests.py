@@ -314,3 +314,27 @@ def test_payroll_per_month_counts_who_worked_each_month(world):
 
     assert client_for(world["other_admin"]).get("/api/hospital-admin/payroll/").json()["months"][-1]["total"] == 0
     assert client_for(world["patient"]).get("/api/hospital-admin/payroll/").status_code == 403
+
+
+@pytest.mark.django_db
+def test_a_staff_members_page_has_specialization_qualification_and_the_linked_doctor(world):
+    """Staff pages (owner request 2026-11-22): open one person and see all their details."""
+    c = client_for(world["admin"])
+    nurse = add_staff(c, department=world["cardio"].id, specialization="ICU nursing", qualification="B.Sc Nursing",
+                      phone="98400 11111").json()
+    page = c.get(f"/api/hospital-admin/staff/{nurse['id']}/").json()
+    assert (page["specialization"], page["qualification"], page["department_name"]) == ("ICU nursing", "B.Sc Nursing", "Cardiology")
+    assert page["doctor_profile"] is None
+
+    world["doc"].specialization, world["doc"].qualification = "Cardiologist", "MBBS, MD"
+    world["doc"].save()
+    doc = add_staff(c, kind="doctor", full_name="", doctor=world["doc"].id, monthly_salary="150000").json()
+    profile = c.get(f"/api/hospital-admin/staff/{doc['id']}/").json()["doctor_profile"]
+    assert (profile["id"], profile["specialization"], profile["qualification"]) == (world["doc"].id, "Cardiologist", "MBBS, MD")
+
+    # The list search also finds specialization, department and phone.
+    assert [s["id"] for s in c.get("/api/hospital-admin/staff/?q=icu").json()] == [nurse["id"]]
+    assert nurse["id"] in [s["id"] for s in c.get("/api/hospital-admin/staff/?q=cardiology").json()]
+    assert [s["id"] for s in c.get("/api/hospital-admin/staff/?q=98400").json()] == [nurse["id"]]
+    # Another hospital can't open it.
+    assert client_for(world["other_admin"]).get(f"/api/hospital-admin/staff/{nurse['id']}/").status_code == 404

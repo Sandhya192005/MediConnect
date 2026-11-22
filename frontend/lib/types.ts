@@ -381,12 +381,19 @@ export type StaffMember = {
   department: number | null;
   department_name: string | null;
   designation: string;
+  /** e.g. "Cardiology", "ICU nursing" (2026-11-22). */
+  specialization: string;
+  /** e.g. "MBBS, MD", "B.Sc Nursing". */
+  qualification: string;
   phone: string;
   email: string;
   join_date: string;
   left_on: string | null;
   monthly_salary: string;
   is_active: boolean;
+  /** A linked doctor's MediConnect profile (null without an account). */
+  doctor_profile: { id: number; specialization: string; qualification: string; experience_years: number; fee: number | string;
+                    slot_minutes: number; is_bookable: boolean } | null;
   created_at: string;
 };
 

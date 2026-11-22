@@ -84,6 +84,10 @@ class StaffMember(models.Model):
     )
     department = models.ForeignKey("hospitals.Department", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     designation = models.CharField(max_length=100, blank=True, help_text="e.g. Senior Consultant, Staff Nurse")
+    # Staff pages (owner request 2026-11-22): shown on the person's page. For a doctor with a MediConnect
+    # account, the account's specialization is shown when this is empty.
+    specialization = models.CharField(max_length=120, blank=True, help_text="e.g. Cardiology, ICU nursing")
+    qualification = models.CharField(max_length=200, blank=True, help_text="e.g. MBBS, MD · B.Sc Nursing")
     phone = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
     join_date = models.DateField()

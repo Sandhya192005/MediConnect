@@ -43,13 +43,15 @@ class StaffViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "patch", "delete"]
 
     def get_queryset(self):
-        qs = StaffMember.objects.filter(hospital=self.request.admin_hospital).select_related("department", "doctor__user")
+        qs = (StaffMember.objects.filter(hospital=self.request.admin_hospital)
+              .select_related("department", "doctor__user", "doctor__hospital"))
         p = self.request.query_params
         if kind := p.get("kind"):
             kinds = OTHER_STAFF_KINDS if kind == "other_staff" else kind.split(",")
             qs = qs.filter(kind__in=kinds)
         if q := p.get("q", "").strip():
-            qs = qs.filter(Q(full_name__icontains=q) | Q(designation__icontains=q) | Q(email__icontains=q))
+            qs = qs.filter(Q(full_name__icontains=q) | Q(designation__icontains=q) | Q(email__icontains=q)
+                           | Q(phone__icontains=q) | Q(specialization__icontains=q) | Q(department__name__icontains=q))
         if p.get("status") == "active":
             qs = qs.active()
         elif p.get("status") == "left":

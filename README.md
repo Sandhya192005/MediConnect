@@ -276,6 +276,14 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Doctor, nurse and staff pages, like Patient management (2026-11-22)
+
+Owner request: the lists show each person with their department up front, and **Open** shows all their details.
+- **Lists** (Doctor, Nurse and Staff management): name with a **department** badge (and "MediConnect account" / "Left …" badges), then role, designation, specialization, phone and join date, the monthly salary, and **Open**. Edit and Delete moved to the person's page. Search also finds department, specialization and phone.
+- **A person's page** (`/admin/doctors/staff/<id>`, `/admin/nurses/<id>`, `/admin/staff/<id>`; `components/StaffMemberPage.tsx`): status (Working here / Left), **Work** (role, designation, department, specialization, qualification, joined, left on, time here) and **Contact and salary** (contact number, email, monthly and yearly salary, MediConnect account), with **Edit** (the same form) and **Delete**. A doctor with a MediConnect account also shows their **MediConnect doctor profile** (specialization, qualification, experience, fee, slot length, bookable) and their **Accepted / Rejected / Waiting** appointments (`components/DoctorAppointmentsPanel.tsx`, shared with `/admin/doctors/<doctor id>`).
+- New optional fields on staff records: **specialization** and **qualification** (migration `staff 0006`, columns only added). For a linked doctor, the account's values are shown when the record leaves them empty. The staff API also returns `doctor_profile`.
+- Tests: 1 new in `staff/tests.py`; 298 backend tests pass; all 42 Playwright tests pass in one run (incl. queue and notes). e2e `staff-pages.spec.ts` (a nurse: add, list with department, open, details, edit salary, delete; a doctor with an account: profile and appointments).
+
 ### Payment slips — Phase 2 of 2 (screens) (2026-11-21)
 
 - **Patient management → a patient's page → Payments:** Pending and Paid totals; **New payment slip** with lines (description, quantity, price; + Add line, remove), discount, slip date, optional visit, notes, a **live total**, and "Already paid" (with the method) for bills paid on the spot. Each slip shows its number, status badge, total and lines, with **Slip** (view/print), **Mark as paid** (method + date), **Edit** and **Cancel** while pending, and **Back to pending** (reason required) once paid.
