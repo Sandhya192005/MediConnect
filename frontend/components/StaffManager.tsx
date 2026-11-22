@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/api";
-import { fmtDate, fmtRupees, isoDate, OTHER_STAFF_KINDS, type Department, type DoctorAccount, type OtherStaffKind, type StaffKind, type StaffMember } from "@/lib/types";
+import { fmtDate, isoDate, OTHER_STAFF_KINDS, type Department, type DoctorAccount, type OtherStaffKind, type StaffKind, type StaffMember } from "@/lib/types";
 import { EmptyState, IconTile, Panel, SkeletonRows } from "./DashboardShell";
 import Icon from "./Icons";
 import RoleGuard from "./RoleGuard";
@@ -112,26 +112,17 @@ export default function StaffManager({ kind }: { kind: StaffPage }) {
         ) : (
           <ul className="divide-y divide-slate-100">
             {items.map((s) => (
-              <li key={s.id} aria-label={s.full_name} className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 md:flex-row md:items-center">
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <IconTile icon={w.icon} tone={kind === "doctor" ? "blue" : kind === "nurse" ? "rose" : "indigo"} size="sm" />
-                  <div className="min-w-0">
-                    <p className="flex flex-wrap items-center gap-2 text-sm font-[650] text-[#00295c]">
-                      {s.full_name}
-                      <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-[650] text-teal-700">{s.department_name ?? "No department"}</span>
-                      {s.doctor && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">MediConnect account</span>}
-                      {!s.is_active && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">{s.left_on ? `Left ${fmtDate(s.left_on)}` : "Not started yet"}</span>}
-                    </p>
-                    <p className="truncate text-xs text-slate-500">
-                      {roleLine(s, kind) || w.one[0].toUpperCase() + w.one.slice(1)}
-                      {s.phone && ` · ${s.phone}`} · joined {fmtDate(s.join_date)}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 md:justify-end">
-                  <span className="text-sm font-[650] tabular-nums text-[#00295c]" title="Monthly salary">{fmtRupees(s.monthly_salary)}<span className="text-xs font-normal text-slate-400">/month</span></span>
-                  <Link href={staffHref(kind, s.id)} className="btn-outline px-3 py-1.5 text-xs" aria-label={`Open ${s.full_name}`}>Open</Link>
-                </div>
+              // Name, department and working status only (owner request 2026-11-22); everything else is inside Open.
+              <li key={s.id} aria-label={s.full_name} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                <IconTile icon={w.icon} tone={kind === "doctor" ? "blue" : kind === "nurse" ? "rose" : "indigo"} size="sm" />
+                <p className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm font-[650] text-[#00295c]">
+                  {s.full_name}
+                  <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-[650] text-teal-700">{s.department_name ?? "No department"}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-[650] ring-1 ${s.is_active ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-500 ring-slate-200"}`}>
+                    {s.is_active ? "Working here" : s.left_on ? `Left ${fmtDate(s.left_on)}` : "Not started yet"}
+                  </span>
+                </p>
+                <Link href={staffHref(kind, s.id)} className="btn-outline shrink-0 px-3 py-1.5 text-xs" aria-label={`Open ${s.full_name}`}>Open</Link>
               </li>
             ))}
           </ul>

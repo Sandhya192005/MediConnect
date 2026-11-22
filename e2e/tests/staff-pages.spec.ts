@@ -20,7 +20,9 @@ test("a nurse's page: details, edit and delete", async ({ page }) => {
   // The list: name and department up front, and Open.
   const row = page.getByRole("listitem", { name: "Kavya Staffpage" });
   await expect(row).toContainText("Cardiology");
-  await expect(row).toContainText("ICU nursing · 98400 22222");
+  await expect(row).toContainText("Working here");
+  await expect(row).not.toContainText("98400 22222"); // no contact number or joined date in the list (2026-11-22)
+  await expect(row).not.toContainText("joined");
   await expect(row.getByRole("button", { name: /Edit/ })).toHaveCount(0); // edit/delete moved to the person's page
   await row.getByRole("link", { name: "Open Kavya Staffpage" }).click();
   await expect(page).toHaveURL(/\/admin\/nurses\/\d+$/);
@@ -64,8 +66,7 @@ test("a doctor with a MediConnect account: profile and appointments on their pag
   await login(page, admin.email);
   await page.goto("/admin/doctors");
   const row = page.getByRole("listitem", { name: "Eshwar Testdoctor" });
-  await expect(row).toContainText("Cardiology");
-  await expect(row).toContainText("Cardiologist"); // the account's specialization when the record has none
+  await expect(row).toContainText("Working here");
   await row.getByRole("link", { name: "Open Eshwar Testdoctor" }).click();
   await expect(page).toHaveURL(/\/admin\/doctors\/staff\/\d+$/);
   const profile = page.getByRole("region", { name: "MediConnect doctor profile" });

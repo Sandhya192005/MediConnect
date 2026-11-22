@@ -27,8 +27,8 @@ test("hospital admin adds a doctor and a nurse, sees the payroll and counts, and
   await form.getByRole("button", { name: "Add doctor" }).click();
   const doctors = page.getByRole("region", { name: /^Doctors/ });
   await expect(doctors.getByText("Eshwar Testdoctor")).toBeVisible();
-  await expect(doctors.getByText("MediConnect account")).toBeVisible();
-  await expect(doctors.getByText("₹1,50,000")).toBeVisible();
+  // The list shows only name, department and working status (2026-11-22); salary and account are inside Open.
+  await expect(doctors.getByRole("listitem", { name: "Eshwar Testdoctor" })).toContainText("Working here");
 
   // Nurses: staff records without a login.
   await menu.getByRole("link", { name: "Nurse management" }).click();
