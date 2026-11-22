@@ -59,8 +59,17 @@ test("the hospital adds a new patient (no email, no password), edits details and
   await page.getByRole("button", { name: "Edit details" }).click();
   await page.getByLabel(/^Email/).fill("e2e.ravi.walkin@mediconnect.dev"); // fix the typo
   await page.getByRole("group", { name: "Personal information" }).getByLabel("Phone").fill("98765 43211");
+  await page.getByLabel(/^Last visited/).fill("2026-11-20"); // the list's "Visited" date (2026-11-22)
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(who).toContainText("98765 43211 · e2e.ravi.walkin@mediconnect.dev");
+  await expect(who).toContainText("Last visited 20 Nov 2026");
+
+  // The list's simple columns: Visited, Records (uploaded by this hospital), Payment.
+  await page.getByRole("link", { name: "Patient management" }).first().click();
+  const listed = page.getByRole("listitem").filter({ hasText: "Ravi Walkin" });
+  await expect(listed).toContainText(/Visited\s*20 Nov 2026/);
+  await expect(listed).toContainText(/Records\s*1/);
+  await expect(listed).toContainText(/Payment\s*—/);
 });
 
 test("a record the hospital uploads shows in the patient's records; each side deletes its own copy", async ({ page, browser }) => {

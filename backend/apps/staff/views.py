@@ -99,44 +99,51 @@ class PatientsView(APIView):
     permission_classes = [IsHospitalAdmin]
 
     def get(self, request):
-        hospital, now = request.admin_hospital, timezone.now()
-        here = Q(appointments__doctor__hospital=hospital)
-        records = MedicalRecord.objects.filter(patient=OuterRef("pk")).values("patient").annotate(n=Count("id")).values("n")
-        # Payment slips (2026-11-21): what the patient still owes this hospital (pending slips).
+        """
+        Simple columns (owner request 2026-11-22): Visited (the date the hospital set, else the last completed
+        appointment here), Records (how many records THIS hospital uploaded for the patient) and Payment
+        (pending amount, or completed when every slip is paid).
+        """
         from apps.billing.models import PaymentSlip
 
-        owed = (PaymentSlip.objects.filter(patient=OuterRef("pk"), hospital=hospital, status=PaymentSlip.Status.PENDING)
-                .values("patient").annotate(t=Sum("total")).values("t"))
+        hospital = request.admin_hospital
+        here = Q(appointments__doctor__hospital=hospital)
+        ours = (MedicalRecord.objects.filter(patient=OuterRef("pk"), uploaded_by_hospital=hospital, hidden_for_hospital=False)
+                .values("patient").annotate(n=Count("id")).values("n"))
+        slips = PaymentSlip.objects.filter(patient=OuterRef("pk"), hospital=hospital)
+        owed = (slips.filter(status=PaymentSlip.Status.PENDING).values("patient").annotate(t=Sum("total")).values("t"))
+        paid = (slips.filter(status=PaymentSlip.Status.COMPLETED).values("patient").annotate(n=Count("id")).values("n"))
         qs = hospital_patients(hospital).select_related("patient_profile").annotate(
-            visits=Count("appointments", filter=here & Q(appointments__status="completed"), distinct=True),
             last_visit=Max("appointments__start", filter=here & Q(appointments__status="completed")),
-            next_visit=Min("appointments__start", filter=here & Q(appointments__status__in=ACTIVE_STATUSES,
-                                                                   appointments__start__gte=now)),
-            records=Coalesce(Subquery(records), 0),
+            records=Coalesce(Subquery(ours), 0),
             pending_amount=Coalesce(Subquery(owed), Decimal("0")),
+            paid_slips=Coalesce(Subquery(paid), 0),
         )
         if q := request.query_params.get("q", "").strip():
             qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(email__icontains=q)
                            | Q(phone__icontains=q) | Q(patient_profile__patient_id__iexact=q))
         rows = list(qs.order_by("first_name", "last_name")[:200])
-        added = dict(HospitalPatient.objects.filter(hospital=hospital, patient__in=rows)
-                     .values_list("patient_id", "created_account"))
-        return Response([
-            {
+        links = {l.patient_id: l for l in HospitalPatient.objects.filter(hospital=hospital, patient__in=rows)}
+        out = []
+        for p in rows:
+            link = links.get(p.id)
+            visited = link.visited_on if link and link.visited_on else (
+                timezone.localtime(p.last_visit).date() if p.last_visit else None)
+            payment = "pending" if p.pending_amount > 0 else "completed" if p.paid_slips else None
+            out.append({
                 "patient_id": getattr(getattr(p, "patient_profile", None), "patient_id", None),
                 "name": p.get_full_name() or p.email,
                 "email": p.email if p.has_real_email else None,
                 "phone": p.phone,
-                "added_by_you": p.id in added,
-                "created_by_you": added.get(p.id, False),
-                "visits": p.visits,
-                "last_visit": p.last_visit,
-                "next_visit": p.next_visit,
+                "added_by_you": link is not None,
+                "created_by_you": bool(link and link.created_account),
+                "visited_on": visited,
+                "visited_set_by_you": bool(link and link.visited_on),
                 "records": p.records,
+                "payment": payment,
                 "pending_amount": p.pending_amount,
-            }
-            for p in rows
-        ])
+            })
+        return Response(out)
 
 
 class ReportsView(APIView):

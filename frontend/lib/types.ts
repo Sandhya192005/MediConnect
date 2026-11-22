@@ -464,10 +464,14 @@ export type HospitalPatient = {
   created_by_you: boolean;
   /** What the patient still owes this hospital: pending payment slips (2026-11-21). */
   pending_amount: number;
-  visits: number;
-  last_visit: string | null;
-  next_visit: string | null;
+  // Simple columns (2026-11-22):
+  /** The date the hospital set, else the last completed appointment here. */
+  visited_on: string | null;
+  visited_set_by_you: boolean;
+  /** Records this hospital uploaded for the patient. */
   records: number;
+  /** "pending" while anything is unpaid, "completed" when every slip is paid, null without slips. */
+  payment: "pending" | "completed" | null;
 };
 
 // ---- Platform analytics (platform admin) ----
@@ -606,6 +610,8 @@ export type HospitalPatientPage = {
     has_login: boolean; in_list: boolean; added_by_you: boolean; created_by_you: boolean;
     /** The hospital may set or fix the email: none yet, or a patient it created who hasn't used the app (2026-11-22). */
     can_edit_email: boolean;
+    /** Last visited (set by the hospital, else the last completed appointment here). */
+    visited_on: string | null;
   };
   details: PatientDetails;
   records: MedicalRecord[];

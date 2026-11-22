@@ -67,13 +67,14 @@ export default function AdminPatientsPage() {
                     <p className="truncate text-xs text-slate-500">{[p.phone, p.email ?? "No email"].filter(Boolean).join(" · ")}</p>
                   </div>
                 </div>
-                <dl className="grid grid-cols-5 gap-4 text-xs md:w-[36rem]">
-                  <div><dt className="text-slate-400">Visits</dt><dd className="font-[650] text-[#00295c]">{p.visits}</dd></div>
-                  <div><dt className="text-slate-400">Last visit</dt><dd className="text-[#00295c]">{p.last_visit ? fmtDate(p.last_visit) : "—"}</dd></div>
-                  <div><dt className="text-slate-400">Next visit</dt><dd className="text-[#00295c]">{p.next_visit ? fmtDate(p.next_visit) : "—"}</dd></div>
+                {/* Simple columns (owner request 2026-11-22): Visited (editable inside), our Records, Payment. */}
+                <dl className="grid grid-cols-3 gap-4 text-xs md:w-[26rem]">
+                  <div><dt className="text-slate-400">Visited</dt><dd className="text-[#00295c]">{p.visited_on ? fmtDate(p.visited_on) : "—"}</dd></div>
                   <div><dt className="text-slate-400">Records</dt><dd className="font-[650] text-[#00295c]">{p.records}</dd></div>
-                  <div><dt className="text-slate-400">Pending</dt>
-                    <dd className={`font-[650] tabular-nums ${p.pending_amount > 0 ? "text-amber-800" : "text-[#00295c]"}`}>{p.pending_amount > 0 ? fmtMoney(p.pending_amount) : "—"}</dd></div>
+                  <div><dt className="text-slate-400">Payment</dt>
+                    <dd className={`font-[650] tabular-nums ${p.payment === "pending" ? "text-amber-800" : p.payment === "completed" ? "text-emerald-700" : "text-[#00295c]"}`}>
+                      {p.payment === "pending" ? `Pending ${fmtMoney(p.pending_amount)}` : p.payment === "completed" ? "Completed" : "—"}
+                    </dd></div>
                 </dl>
                 {/* Only Open here: editing is inside the patient's page (owner request 2026-11-22). */}
                 {p.patient_id && (

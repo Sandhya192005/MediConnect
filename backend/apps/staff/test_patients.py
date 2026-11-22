@@ -203,3 +203,36 @@ def test_hospital_delete_keeps_the_patients_copy_and_only_own_uploads(world):
     assert rec_id in [x["id"] for x in client_for(asha).get("/api/records/").json()]
     # Other viewers (doctors, other hospitals) see what the patient keeps.
     assert rec_id in [x["id"] for x in other.get(f"{BASE}{pid}/").json()["records"]]
+
+
+@pytest.mark.django_db
+def test_the_list_shows_visited_date_hospital_records_and_payment(world):
+    """Simple columns (owner request 2026-11-22): Visited (editable date), Records (ours), Payment."""
+    c, pid, asha = client_for(world["desk"]), world["asha_id"], world["asha"]
+    c.post(f"{BASE}add/", {"patient_id": pid}, format="json")
+    row = lambda: next(r for r in c.get(BASE).json() if r["patient_id"] == pid)  # noqa: E731
+    assert (row()["visited_on"], row()["records"], row()["payment"]) == (None, 0, None)
+
+    # The visited date is set and changed inside the patient's page.
+    r = c.patch(f"{BASE}{pid}/", {"visited_on": "2026-11-15"}, format="json")
+    assert r.status_code == 200 and r.json()["patient"]["visited_on"] == "2026-11-15"
+    assert (row()["visited_on"], row()["visited_set_by_you"]) == ("2026-11-15", True)
+    assert "future" in str(c.patch(f"{BASE}{pid}/", {"visited_on": "2999-01-01"}, format="json").json())
+    c.patch(f"{BASE}{pid}/", {"visited_on": None}, format="json")
+    assert row()["visited_on"] is None
+
+    # Records: only what this hospital uploaded (not the patient's own, not deleted ones).
+    client_for(asha).post("/api/records/", {"title": "Own", "record_type": "other",
+                                            "file": SimpleUploadedFile("o.pdf", PDF, content_type="application/pdf")}, format="multipart")
+    ours = upload(c, pid).json()["id"]
+    upload(c, pid, title="Second")
+    assert row()["records"] == 2
+    c.delete(f"{BASE}{pid}/records/{ours}/")
+    assert row()["records"] == 1
+
+    # Payment: pending while anything is unpaid, completed when every slip is paid.
+    items = [{"description": "Consultation", "unit_price": "500"}]
+    a = c.post("/api/hospital-admin/payments/", {"patient_id": pid, "items": items}, format="json").json()
+    assert (row()["payment"], row()["pending_amount"]) == ("pending", 500)
+    c.post(f"/api/hospital-admin/payments/{a['id']}/complete/", {"method": "cash"}, format="json")
+    assert (row()["payment"], row()["pending_amount"]) == ("completed", 0)

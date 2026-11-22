@@ -276,6 +276,14 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Patient management: simple list columns (2026-11-22)
+
+Owner request: the list shows only three things per patient (plus name, ID, phone, email and Open):
+- **Visited**: the date the patient last visited. The hospital sets or changes it inside the patient's page (**Edit details → Last visited**; stored on `hospital_patient.visited_on`, migration `staff 0007`, column only added). If it isn't set, the date of the patient's last completed appointment at the hospital is shown. Future dates are refused. The patient's page also shows "Last visited …".
+- **Records**: how many records **this hospital uploaded** for the patient (not the patient's own uploads, and not ones the hospital deleted).
+- **Payment**: **Pending ₹X** while any slip is unpaid, **Completed** when every slip is paid, "—" without slips.
+- The old Visits / Last visit / Next visit columns are gone. Tests: `staff/test_patients.py` (+1), `staff/tests.py` updated; e2e `patient-management.spec.ts` sets the date and checks the three columns.
+
 ### Patient management: fixing an email (2026-11-22)
 
 - The list keeps only **Open** (owner request: editing stays inside the patient's page, **Edit details**). An Edit button in the list was tried and removed the same day.

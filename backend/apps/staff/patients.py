@@ -109,11 +109,21 @@ def may_edit_email(hospital, p) -> bool:
     return created and not p.has_usable_password()
 
 
+def _visited_on(hospital, p, link):
+    """The date the hospital set, else the patient's last completed appointment here (owner request 2026-11-22)."""
+    if link and link.visited_on:
+        return link.visited_on
+    last = (Appointment.objects.filter(patient=p, doctor__hospital=hospital, status=Appointment.Status.COMPLETED)
+            .order_by("-start").values_list("start", flat=True).first())
+    return timezone.localtime(last).date() if last else None
+
+
 def patient_row(p, hospital) -> dict:
     """One patient in the detail view's header."""
     link = HospitalPatient.objects.filter(hospital=hospital, patient=p).first()
     return {
         "can_edit_email": may_edit_email(hospital, p),
+        "visited_on": _visited_on(hospital, p, link),
         "patient_id": p.patient_profile.patient_id,
         "name": p.get_full_name() or "Patient",
         "first_name": p.first_name, "last_name": p.last_name,
@@ -195,6 +205,19 @@ class PatientManageView(APIView):
                 changed.append("email")
             if changed:
                 p.save(update_fields=changed)
+            if "visited_on" in data:
+                visited = None
+                if data["visited_on"]:
+                    try:
+                        visited = timezone.datetime.fromisoformat(str(data["visited_on"])).date()
+                    except ValueError:
+                        raise ValidationError({"visited_on": "Use a date like 2026-11-22."})
+                    if visited > timezone.localdate():
+                        raise ValidationError({"visited_on": "The visit date can't be in the future."})
+                # A patient listed through a booking gets a link row to keep the date on.
+                link, _ = HospitalPatient.objects.get_or_create(hospital=hospital, patient=p, defaults={"added_by": request.user})
+                link.visited_on = visited
+                link.save(update_fields=["visited_on"])
             detail_fields = {k: v for k, v in data.items() if k in PatientDetailsSerializer.Meta.fields}
             if detail_fields:
                 s = PatientDetailsSerializer(profile, data=detail_fields, partial=True)

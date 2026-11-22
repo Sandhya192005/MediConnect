@@ -14,6 +14,9 @@ class HospitalPatient(models.Model):
     hospital = models.ForeignKey("hospitals.Hospital", on_delete=models.CASCADE, related_name="added_patients")
     patient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="hospital_links")
     created_account = models.BooleanField(default=False, help_text="The hospital created this patient's account")
+    # The date the patient last visited, set by the hospital (owner request 2026-11-22). Empty = the date of
+    # their last completed appointment here is shown instead.
+    visited_on = models.DateField(null=True, blank=True)
     added_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
 
