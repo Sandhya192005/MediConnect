@@ -59,11 +59,18 @@ test("the hospital adds a new patient (no email, no password), edits details and
   await page.getByRole("button", { name: "Edit details" }).click();
   await page.getByLabel(/^Email/).fill("e2e.ravi.walkin@mediconnect.dev"); // fix the typo
   await page.getByRole("group", { name: "Personal information" }).getByLabel("Phone").fill("98765 43211");
-  await page.getByLabel(/^Visit date/).fill("2030-01-15"); // the list's "Visit" date (2026-11-22): upcoming
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(who).toContainText("98765 43211 · e2e.ravi.walkin@mediconnect.dev");
-  await expect(who).toContainText("Visit 15 Jan 2030");
-  await expect(who).toContainText("Upcoming");
+
+  // The Visit box (2026-11-22): set the date right there; the status follows it.
+  const visit = page.getByRole("region", { name: "Visit", exact: true });
+  await expect(visit).toContainText("Not set");
+  await visit.getByRole("button", { name: "Set visit date" }).click();
+  await visit.getByLabel("Visit date").fill("2030-01-15");
+  await visit.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("status")).toHaveText("Visit date saved.");
+  await expect(visit).toContainText("15 Jan 2030");
+  await expect(visit).toContainText("Upcoming");
 
   // The list's simple columns: Visit, Visit status, Records (uploaded by this hospital), Payment.
   await page.getByRole("link", { name: "Patient management" }).first().click();

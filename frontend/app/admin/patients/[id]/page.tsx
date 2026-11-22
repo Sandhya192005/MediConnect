@@ -89,8 +89,6 @@ export default function HospitalPatientPageView() {
               </p>
               <p className="text-sm text-slate-500">
                 {p.phone || "No phone"} · {p.email ?? "No email"} · {p.has_login ? "Uses the MediConnect app" : "No app login yet"}
-                {" · "}Visit {p.visit_on ? fmtDate(p.visit_on) : "—"}
-                {p.visit_status && <span className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-[650] ring-1 ${VISIT_STATUS[p.visit_status].cls}`}>{VISIT_STATUS[p.visit_status].label}</span>}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -106,6 +104,9 @@ export default function HospitalPatientPageView() {
               <Icon name="eye" className="h-4 w-4" /> Opening this page is shown in the patient&apos;s access log.
             </p>
           </section>
+
+          {/* ---- Visit: easy to find and change (owner request 2026-11-22) ---- */}
+          <VisitBox p={p} base={base} canEdit={p.in_list} onSaved={(msg) => { setFlash(msg); load(); }} onError={setError} />
 
           {/* ---- Details ---- */}
           {editing ? (
@@ -172,7 +173,7 @@ export default function HospitalPatientPageView() {
 /** Name, phone, email (only if the patient has none) and the health details form, saved together. */
 function EditDetails({ data, base, onCancel, onSaved }: { data: HospitalPatientPage; base: string; onCancel: () => void; onSaved: () => void }) {
   const p = data.patient;
-  const [who, setWho] = useState({ first_name: p.first_name, last_name: p.last_name, phone: p.phone, email: p.email ?? "", visit_on: p.visit_set_by_you ? p.visit_on ?? "" : "" });
+  const [who, setWho] = useState({ first_name: p.first_name, last_name: p.last_name, phone: p.phone, email: p.email ?? "" });
   const set = (k: keyof typeof who) => (e: React.ChangeEvent<HTMLInputElement>) => setWho({ ...who, [k]: e.target.value });
   const label = "block text-sm font-medium text-slate-700";
 
@@ -183,9 +184,6 @@ function EditDetails({ data, base, onCancel, onSaved }: { data: HospitalPatientP
         <label className={label}>First name<input className="input mt-1" required maxLength={150} value={who.first_name} onChange={set("first_name")} /></label>
         <label className={label}>Last name<input className="input mt-1" maxLength={150} value={who.last_name} onChange={set("last_name")} /></label>
         <label className={label}>Phone<input className="input mt-1" type="tel" maxLength={20} value={who.phone} onChange={set("phone")} /></label>
-        <label className={label}>Visit date <span className="font-normal text-slate-400">(past, today or upcoming)</span>
-          <input className="input mt-1" type="date" value={who.visit_on} onChange={set("visit_on")} />
-        </label>
         {p.can_edit_email && (
           <label className={label}>Email <span className="font-normal text-slate-400">(optional)</span>
             <input className="input mt-1" type="email" value={who.email} onChange={set("email")} />
@@ -201,9 +199,7 @@ function EditDetails({ data, base, onCancel, onSaved }: { data: HospitalPatientP
       personal={personal}
       load={() => Promise.resolve(data.details)}
       beforeSave={async () => {
-        const body: Record<string, string | null> = { first_name: who.first_name, last_name: who.last_name, phone: who.phone };
-        // The list's "Visit" date; empty = use the patient's appointments here instead.
-        if (who.visit_on !== (p.visit_set_by_you ? p.visit_on ?? "" : "")) body.visit_on = who.visit_on || null;
+        const body: Record<string, string> = { first_name: who.first_name, last_name: who.last_name, phone: who.phone };
         if (p.can_edit_email && who.email.trim() && who.email.trim() !== (p.email ?? "")) body.email = who.email.trim();
         await api(base, { method: "PATCH", body: JSON.stringify(body) });
       }}
@@ -211,5 +207,60 @@ function EditDetails({ data, base, onCancel, onSaved }: { data: HospitalPatientP
       onDone={onSaved}
       onCancel={onCancel}
     />
+  );
+}
+
+/** The patient's visit date and status (past / current / upcoming), with Set / Change / Clear right here. */
+function VisitBox({ p, base, canEdit, onSaved, onError }: {
+  p: HospitalPatientPage["patient"]; base: string; canEdit: boolean; onSaved: (msg: string) => void; onError: (e: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState(p.visit_set_by_you ? p.visit_on ?? "" : "");
+  const [busy, setBusy] = useState(false);
+
+  async function save(value: string | null) {
+    setBusy(true);
+    onError("");
+    try {
+      await api(base, { method: "PATCH", body: JSON.stringify({ visit_on: value }) });
+      setOpen(false);
+      onSaved(value ? "Visit date saved." : "Visit date cleared.");
+    } catch (e) {
+      onError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const status = p.visit_status ? VISIT_STATUS[p.visit_status] : null;
+  return (
+    <section aria-label="Visit" className="dash-card flex flex-wrap items-center gap-4 p-5">
+      <IconTile icon="calendar" tone="blue" />
+      <div className="min-w-0 flex-1">
+        <p className="text-xs uppercase tracking-wider text-slate-400">Visit</p>
+        <p className="flex flex-wrap items-center gap-2 text-lg font-bold text-[#00295c]">
+          {p.visit_on ? fmtDate(p.visit_on) : "Not set"}
+          {status && <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-[650] ring-1 ${status.cls}`}>{status.label}</span>}
+        </p>
+        <p className="text-xs text-slate-500">
+          {p.visit_set_by_you ? "Set by your hospital." : p.visit_on ? "From the patient's appointment at your hospital." : "Set the date of the patient's visit: past, today or upcoming."}
+        </p>
+      </div>
+      {canEdit && !open && (
+        <div className="flex gap-2">
+          <button onClick={() => setOpen(true)} className="btn-solid rounded-xl px-4 py-2 text-sm">
+            <Icon name="calendar" className="h-4 w-4" /> {p.visit_on ? "Change visit date" : "Set visit date"}
+          </button>
+          {p.visit_set_by_you && <button onClick={() => save(null)} disabled={busy} className="btn-ghost px-3 py-2 text-sm">Clear</button>}
+        </div>
+      )}
+      {canEdit && open && (
+        <form className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center" onSubmit={(e) => { e.preventDefault(); save(date || null); }}>
+          <input className="input py-2" type="date" required aria-label="Visit date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <button className="btn-solid rounded-xl px-4 py-2 text-sm" disabled={busy}>{busy ? "Saving…" : "Save"}</button>
+          <button type="button" onClick={() => setOpen(false)} className="btn-ghost px-3 py-2 text-sm">Cancel</button>
+        </form>
+      )}
+    </section>
   );
 }

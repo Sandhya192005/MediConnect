@@ -279,7 +279,7 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
 ### Patient management: simple list columns (2026-11-22)
 
 Owner request: the list shows only three things per patient (plus name, ID, phone, email and Open):
-- **Visit**: the patient's visit date. The hospital sets or changes it inside the patient's page (**Edit details → Visit date**, past, today or upcoming; stored on `hospital_patient.visited_on`, migration `staff 0007`, column only added). If it isn't set, today's appointment at the hospital is used, else the next upcoming one, else the last completed one. The patient's page shows it too.
+- **Visit**: the patient's visit date. The hospital sets or changes it inside the patient's page in a **Visit** box under the patient's name (**Set visit date** / **Change visit date** / **Clear**; moved out of Edit details because it was hard to find; past, today or upcoming; stored on `hospital_patient.visited_on`, migration `staff 0007`, column only added). If it isn't set, today's appointment at the hospital is used, else the next upcoming one, else the last completed one. The list shows **Not set** when there's no date.
 - **Visit status** (added the same day, between Visit and Records): worked out from the visit date each day: before today **Past**, today **Current**, after today **Upcoming** (`staff/patients.pick_visit`).
 - **Records**: how many records **this hospital uploaded** for the patient (not the patient's own uploads, and not ones the hospital deleted).
 - **Payment**: **Pending ₹X** while any slip is unpaid, **Completed** when every slip is paid, "—" without slips.

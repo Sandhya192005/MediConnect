@@ -69,7 +69,7 @@ export default function AdminPatientsPage() {
                 </div>
                 {/* Simple columns (owner requests 2026-11-22): Visit (editable inside), Visit status, our Records, Payment. */}
                 <dl className="grid grid-cols-4 gap-4 text-xs md:w-[34rem]">
-                  <div><dt className="text-slate-400">Visit</dt><dd className="text-[#00295c]">{p.visit_on ? fmtDate(p.visit_on) : "—"}</dd></div>
+                  <div><dt className="text-slate-400">Visit</dt><dd className={p.visit_on ? "text-[#00295c]" : "text-slate-400"}>{p.visit_on ? fmtDate(p.visit_on) : "Not set"}</dd></div>
                   <div><dt className="text-slate-400">Visit status</dt>
                     <dd>{p.visit_status ? <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-[650] ring-1 ${VISIT_STATUS[p.visit_status].cls}`}>{VISIT_STATUS[p.visit_status].label}</span> : "—"}</dd></div>
                   <div><dt className="text-slate-400">Records</dt><dd className="font-[650] text-[#00295c]">{p.records}</dd></div>
