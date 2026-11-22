@@ -97,10 +97,23 @@ class NewPatientSerializer(serializers.Serializer):
         return v
 
 
+def may_edit_email(hospital, p) -> bool:
+    """
+    The hospital may set or change the email of a patient with none yet, or of a patient it created who hasn't
+    started using the app (no password): the email is just what its staff typed (owner request 2026-11-22).
+    Once the patient logs in themselves, the email is theirs.
+    """
+    if not p.has_real_email:
+        return True
+    created = HospitalPatient.objects.filter(hospital=hospital, patient=p, created_account=True).exists()
+    return created and not p.has_usable_password()
+
+
 def patient_row(p, hospital) -> dict:
     """One patient in the detail view's header."""
     link = HospitalPatient.objects.filter(hospital=hospital, patient=p).first()
     return {
+        "can_edit_email": may_edit_email(hospital, p),
         "patient_id": p.patient_profile.patient_id,
         "name": p.get_full_name() or "Patient",
         "first_name": p.first_name, "last_name": p.last_name,
@@ -171,8 +184,8 @@ class PatientManageView(APIView):
                 except serializers.ValidationError as e:
                     raise ValidationError({"phone": e.detail})
                 changed.append("phone")
-            if data.get("email"):
-                if p.has_real_email:
+            if data.get("email") and data["email"].strip().lower() != (p.email if p.has_real_email else ""):
+                if not may_edit_email(hospital, p):
                     raise ValidationError({"email": "The patient changes their own email in their account."})
                 email = User.objects.normalize_email(str(data["email"])).lower().strip()
                 serializers.EmailField().run_validation(email)

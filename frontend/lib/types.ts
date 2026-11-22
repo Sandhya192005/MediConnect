@@ -604,6 +604,8 @@ export type HospitalPatientPage = {
   patient: {
     patient_id: string; name: string; first_name: string; last_name: string; email: string | null; phone: string;
     has_login: boolean; in_list: boolean; added_by_you: boolean; created_by_you: boolean;
+    /** The hospital may set or fix the email: none yet, or a patient it created who hasn't used the app (2026-11-22). */
+    can_edit_email: boolean;
   };
   details: PatientDetails;
   records: MedicalRecord[];

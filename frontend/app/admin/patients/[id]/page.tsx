@@ -41,7 +41,9 @@ export default function HospitalPatientPageView() {
 
   useEffect(() => {
     load();
-    if (new URLSearchParams(window.location.search).get("added")) setFlash("Patient added to your patients.");
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("added")) setFlash("Patient added to your patients.");
+    if (params.get("edit")) setEditing(true); // the list's "Edit" button (2026-11-22)
   }, [load]);
 
   async function addToList() {
@@ -170,7 +172,7 @@ export default function HospitalPatientPageView() {
 /** Name, phone, email (only if the patient has none) and the health details form, saved together. */
 function EditDetails({ data, base, onCancel, onSaved }: { data: HospitalPatientPage; base: string; onCancel: () => void; onSaved: () => void }) {
   const p = data.patient;
-  const [who, setWho] = useState({ first_name: p.first_name, last_name: p.last_name, phone: p.phone, email: "" });
+  const [who, setWho] = useState({ first_name: p.first_name, last_name: p.last_name, phone: p.phone, email: p.email ?? "" });
   const set = (k: keyof typeof who) => (e: React.ChangeEvent<HTMLInputElement>) => setWho({ ...who, [k]: e.target.value });
   const label = "block text-sm font-medium text-slate-700";
 
@@ -181,13 +183,13 @@ function EditDetails({ data, base, onCancel, onSaved }: { data: HospitalPatientP
         <label className={label}>First name<input className="input mt-1" required maxLength={150} value={who.first_name} onChange={set("first_name")} /></label>
         <label className={label}>Last name<input className="input mt-1" maxLength={150} value={who.last_name} onChange={set("last_name")} /></label>
         <label className={label}>Phone<input className="input mt-1" type="tel" maxLength={20} value={who.phone} onChange={set("phone")} /></label>
-        {p.email === null && (
+        {p.can_edit_email && (
           <label className={label}>Email <span className="font-normal text-slate-400">(optional)</span>
             <input className="input mt-1" type="email" value={who.email} onChange={set("email")} />
           </label>
         )}
       </div>
-      {p.email !== null && <p className="mt-2 text-xs text-slate-500">Email: {p.email} (the patient changes it in their account)</p>}
+      {!p.can_edit_email && p.email !== null && <p className="mt-2 text-xs text-slate-500">Email: {p.email} (the patient uses the app, so they change it in their account)</p>}
     </fieldset>
   );
 
@@ -197,7 +199,7 @@ function EditDetails({ data, base, onCancel, onSaved }: { data: HospitalPatientP
       load={() => Promise.resolve(data.details)}
       beforeSave={async () => {
         const body: Record<string, string> = { first_name: who.first_name, last_name: who.last_name, phone: who.phone };
-        if (p.email === null && who.email.trim()) body.email = who.email.trim();
+        if (p.can_edit_email && who.email.trim() && who.email.trim() !== (p.email ?? "")) body.email = who.email.trim();
         await api(base, { method: "PATCH", body: JSON.stringify(body) });
       }}
       save={async (body) => (await api<HospitalPatientPage>(base, { method: "PATCH", body: JSON.stringify(body) })).details as PatientDetails}

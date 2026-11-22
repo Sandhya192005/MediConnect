@@ -78,8 +78,17 @@ def test_add_a_new_patient_without_email_or_password(world):
 
     # Later the hospital adds the patient's email: they can then claim the account with "Forgot password?".
     r = c.patch(f"{BASE}{pid}/", {"email": "ravi@example.com"}, format="json")
-    assert r.json()["patient"]["email"] == "ravi@example.com"
+    assert r.json()["patient"]["email"] == "ravi@example.com" and r.json()["patient"]["can_edit_email"]
+    # A typo can be fixed while the patient hasn't started using the app (owner request 2026-11-22)…
+    r = c.patch(f"{BASE}{pid}/", {"email": "ravi.s@example.com"}, format="json")
+    assert r.json()["patient"]["email"] == "ravi.s@example.com"
+    # …but once they log in themselves, the email is theirs.
+    user.refresh_from_db()
+    user.set_password("their-own-pass-1")
+    user.save()
+    assert c.get(f"{BASE}{pid}/").json()["patient"]["can_edit_email"] is False
     assert "own email" in str(c.patch(f"{BASE}{pid}/", {"email": "x@example.com"}, format="json").json())
+    assert c.patch(f"{BASE}{pid}/", {"email": "ravi.s@example.com", "phone": "9000000002"}, format="json").status_code == 200  # same email: fine
 
 
 @pytest.mark.django_db
@@ -111,6 +120,9 @@ def test_both_the_hospital_and_the_patient_edit_health_details(world):
     assert r.status_code == 200, r.json()
     assert (r.json()["details"]["blood_group"], r.json()["details"]["allergies"]) == ("O+", "Penicillin")
     assert r.json()["patient"]["phone"] == "9000000001"
+    # A patient the hospital didn't create keeps their own email.
+    assert r.json()["patient"]["can_edit_email"] is False
+    assert "own email" in str(c.patch(f"{BASE}{pid}/", {"email": "new@example.com"}, format="json").json())
     # The patient sees it and can change it too.
     me = client_for(world["asha"])
     assert me.get("/api/auth/me/patient/").json()["allergies"] == "Penicillin"
