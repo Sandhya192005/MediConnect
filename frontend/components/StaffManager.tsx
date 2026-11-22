@@ -220,7 +220,7 @@ export function StaffForm({ kind, member, onClose, onSaved }: { kind: StaffPage;
       <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {kind === "doctor" && (
           <label className={`${label} sm:col-span-2 lg:col-span-3`}>
-            MediConnect account <span className="font-normal text-slate-400">(optional: doctors who take bookings here)</span>
+            MediConnect account <span className="font-normal text-slate-400">(optional: doctors who have a MediConnect account)</span>
             <select className="input mt-1" value={f.doctor} onChange={pickAccount}>
               <option value="">No account: staff record only</option>
               {member?.doctor && <option value={member.doctor}>{member.full_name} ({member.doctor_email})</option>}
