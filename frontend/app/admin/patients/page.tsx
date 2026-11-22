@@ -7,7 +7,7 @@ import { EmptyState, IconTile, Panel, SkeletonRows } from "@/components/Dashboar
 import Icon from "@/components/Icons";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
-import { fmtDate, fmtMoney, isoDate, type HospitalPatient } from "@/lib/types";
+import { fmtDate, fmtMoney, isoDate, VISIT_STATUS, type HospitalPatient } from "@/lib/types";
 
 /**
  * The hospital's Patient management (owner request 2026-11-21): every patient it added, plus everyone with a
@@ -67,9 +67,11 @@ export default function AdminPatientsPage() {
                     <p className="truncate text-xs text-slate-500">{[p.phone, p.email ?? "No email"].filter(Boolean).join(" · ")}</p>
                   </div>
                 </div>
-                {/* Simple columns (owner request 2026-11-22): Visited (editable inside), our Records, Payment. */}
-                <dl className="grid grid-cols-3 gap-4 text-xs md:w-[26rem]">
-                  <div><dt className="text-slate-400">Visited</dt><dd className="text-[#00295c]">{p.visited_on ? fmtDate(p.visited_on) : "—"}</dd></div>
+                {/* Simple columns (owner requests 2026-11-22): Visit (editable inside), Visit status, our Records, Payment. */}
+                <dl className="grid grid-cols-4 gap-4 text-xs md:w-[34rem]">
+                  <div><dt className="text-slate-400">Visit</dt><dd className="text-[#00295c]">{p.visit_on ? fmtDate(p.visit_on) : "—"}</dd></div>
+                  <div><dt className="text-slate-400">Visit status</dt>
+                    <dd>{p.visit_status ? <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-[650] ring-1 ${VISIT_STATUS[p.visit_status].cls}`}>{VISIT_STATUS[p.visit_status].label}</span> : "—"}</dd></div>
                   <div><dt className="text-slate-400">Records</dt><dd className="font-[650] text-[#00295c]">{p.records}</dd></div>
                   <div><dt className="text-slate-400">Payment</dt>
                     <dd className={`font-[650] tabular-nums ${p.payment === "pending" ? "text-amber-800" : p.payment === "completed" ? "text-emerald-700" : "text-[#00295c]"}`}>

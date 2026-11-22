@@ -211,15 +211,17 @@ def test_the_list_shows_visited_date_hospital_records_and_payment(world):
     c, pid, asha = client_for(world["desk"]), world["asha_id"], world["asha"]
     c.post(f"{BASE}add/", {"patient_id": pid}, format="json")
     row = lambda: next(r for r in c.get(BASE).json() if r["patient_id"] == pid)  # noqa: E731
-    assert (row()["visited_on"], row()["records"], row()["payment"]) == (None, 0, None)
+    assert (row()["visit_on"], row()["visit_status"], row()["records"], row()["payment"]) == (None, None, 0, None)
 
-    # The visited date is set and changed inside the patient's page.
-    r = c.patch(f"{BASE}{pid}/", {"visited_on": "2026-11-15"}, format="json")
-    assert r.status_code == 200 and r.json()["patient"]["visited_on"] == "2026-11-15"
-    assert (row()["visited_on"], row()["visited_set_by_you"]) == ("2026-11-15", True)
-    assert "future" in str(c.patch(f"{BASE}{pid}/", {"visited_on": "2999-01-01"}, format="json").json())
-    c.patch(f"{BASE}{pid}/", {"visited_on": None}, format="json")
-    assert row()["visited_on"] is None
+    # The visit date is set and changed inside the patient's page; the status follows the date (owner request 2026-11-22).
+    today = timezone.localdate()
+    for when, status in ((today - timedelta(days=7), "past"), (today, "current"), (today + timedelta(days=5), "upcoming")):
+        r = c.patch(f"{BASE}{pid}/", {"visit_on": when.isoformat()}, format="json")
+        assert r.status_code == 200 and (r.json()["patient"]["visit_on"], r.json()["patient"]["visit_status"]) == (when.isoformat(), status)
+        assert (row()["visit_on"], row()["visit_status"], row()["visit_set_by_you"]) == (when.isoformat(), status, True)
+    assert "date like" in str(c.patch(f"{BASE}{pid}/", {"visit_on": "soon"}, format="json").json())
+    c.patch(f"{BASE}{pid}/", {"visit_on": None}, format="json")
+    assert row()["visit_on"] is None
 
     # Records: only what this hospital uploaded (not the patient's own, not deleted ones).
     client_for(asha).post("/api/records/", {"title": "Own", "record_type": "other",

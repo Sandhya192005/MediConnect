@@ -279,10 +279,11 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
 ### Patient management: simple list columns (2026-11-22)
 
 Owner request: the list shows only three things per patient (plus name, ID, phone, email and Open):
-- **Visited**: the date the patient last visited. The hospital sets or changes it inside the patient's page (**Edit details → Last visited**; stored on `hospital_patient.visited_on`, migration `staff 0007`, column only added). If it isn't set, the date of the patient's last completed appointment at the hospital is shown. Future dates are refused. The patient's page also shows "Last visited …".
+- **Visit**: the patient's visit date. The hospital sets or changes it inside the patient's page (**Edit details → Visit date**, past, today or upcoming; stored on `hospital_patient.visited_on`, migration `staff 0007`, column only added). If it isn't set, today's appointment at the hospital is used, else the next upcoming one, else the last completed one. The patient's page shows it too.
+- **Visit status** (added the same day, between Visit and Records): worked out from the visit date each day: before today **Past**, today **Current**, after today **Upcoming** (`staff/patients.pick_visit`).
 - **Records**: how many records **this hospital uploaded** for the patient (not the patient's own uploads, and not ones the hospital deleted).
 - **Payment**: **Pending ₹X** while any slip is unpaid, **Completed** when every slip is paid, "—" without slips.
-- The old Visits / Last visit / Next visit columns are gone. Tests: `staff/test_patients.py` (+1), `staff/tests.py` updated; e2e `patient-management.spec.ts` sets the date and checks the three columns.
+- The old Visits / Last visit / Next visit columns are gone. Tests: `staff/test_patients.py` (+1), `staff/tests.py` updated; e2e `patient-management.spec.ts` sets an upcoming date and checks the columns.
 
 ### Patient management: fixing an email (2026-11-22)
 

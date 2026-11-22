@@ -13,7 +13,7 @@ import RecordUploadForm from "@/components/RecordUploadForm";
 import RoleGuard from "@/components/RoleGuard";
 import { TreatmentNoteView } from "@/components/TreatmentNotes";
 import { api, ApiError, errorMessage } from "@/lib/api";
-import { fmtDate, fmtDateTime, isoDate, type HospitalPatientPage, type PatientDetails } from "@/lib/types";
+import { fmtDate, fmtDateTime, VISIT_STATUS, type HospitalPatientPage, type PatientDetails } from "@/lib/types";
 
 /**
  * One patient in the hospital's Patient management (owner request 2026-11-21): their details (both the
@@ -89,7 +89,8 @@ export default function HospitalPatientPageView() {
               </p>
               <p className="text-sm text-slate-500">
                 {p.phone || "No phone"} · {p.email ?? "No email"} · {p.has_login ? "Uses the MediConnect app" : "No app login yet"}
-                {" · "}Last visited {p.visited_on ? fmtDate(p.visited_on) : "—"}
+                {" · "}Visit {p.visit_on ? fmtDate(p.visit_on) : "—"}
+                {p.visit_status && <span className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-[650] ring-1 ${VISIT_STATUS[p.visit_status].cls}`}>{VISIT_STATUS[p.visit_status].label}</span>}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -171,7 +172,7 @@ export default function HospitalPatientPageView() {
 /** Name, phone, email (only if the patient has none) and the health details form, saved together. */
 function EditDetails({ data, base, onCancel, onSaved }: { data: HospitalPatientPage; base: string; onCancel: () => void; onSaved: () => void }) {
   const p = data.patient;
-  const [who, setWho] = useState({ first_name: p.first_name, last_name: p.last_name, phone: p.phone, email: p.email ?? "", visited_on: p.visited_on ?? "" });
+  const [who, setWho] = useState({ first_name: p.first_name, last_name: p.last_name, phone: p.phone, email: p.email ?? "", visit_on: p.visit_set_by_you ? p.visit_on ?? "" : "" });
   const set = (k: keyof typeof who) => (e: React.ChangeEvent<HTMLInputElement>) => setWho({ ...who, [k]: e.target.value });
   const label = "block text-sm font-medium text-slate-700";
 
@@ -182,8 +183,8 @@ function EditDetails({ data, base, onCancel, onSaved }: { data: HospitalPatientP
         <label className={label}>First name<input className="input mt-1" required maxLength={150} value={who.first_name} onChange={set("first_name")} /></label>
         <label className={label}>Last name<input className="input mt-1" maxLength={150} value={who.last_name} onChange={set("last_name")} /></label>
         <label className={label}>Phone<input className="input mt-1" type="tel" maxLength={20} value={who.phone} onChange={set("phone")} /></label>
-        <label className={label}>Last visited <span className="font-normal text-slate-400">(optional)</span>
-          <input className="input mt-1" type="date" max={isoDate(new Date())} value={who.visited_on} onChange={set("visited_on")} />
+        <label className={label}>Visit date <span className="font-normal text-slate-400">(past, today or upcoming)</span>
+          <input className="input mt-1" type="date" value={who.visit_on} onChange={set("visit_on")} />
         </label>
         {p.can_edit_email && (
           <label className={label}>Email <span className="font-normal text-slate-400">(optional)</span>
@@ -201,7 +202,8 @@ function EditDetails({ data, base, onCancel, onSaved }: { data: HospitalPatientP
       load={() => Promise.resolve(data.details)}
       beforeSave={async () => {
         const body: Record<string, string | null> = { first_name: who.first_name, last_name: who.last_name, phone: who.phone };
-        if (who.visited_on !== (p.visited_on ?? "")) body.visited_on = who.visited_on || null; // the list's "Visited" date
+        // The list's "Visit" date; empty = use the patient's appointments here instead.
+        if (who.visit_on !== (p.visit_set_by_you ? p.visit_on ?? "" : "")) body.visit_on = who.visit_on || null;
         if (p.can_edit_email && who.email.trim() && who.email.trim() !== (p.email ?? "")) body.email = who.email.trim();
         await api(base, { method: "PATCH", body: JSON.stringify(body) });
       }}

@@ -100,8 +100,8 @@ class PatientsView(APIView):
 
     def get(self, request):
         """
-        Simple columns (owner request 2026-11-22): Visited (the date the hospital set, else the last completed
-        appointment here), Records (how many records THIS hospital uploaded for the patient) and Payment
+        Simple columns (owner requests 2026-11-22): Visit (the date the hospital set, else today's / the next /
+        the last appointment here) and Visit status (past, current, upcoming), Records (how many records THIS hospital uploaded for the patient) and Payment
         (pending amount, or completed when every slip is paid).
         """
         from apps.billing.models import PaymentSlip
@@ -113,8 +113,15 @@ class PatientsView(APIView):
         slips = PaymentSlip.objects.filter(patient=OuterRef("pk"), hospital=hospital)
         owed = (slips.filter(status=PaymentSlip.Status.PENDING).values("patient").annotate(t=Sum("total")).values("t"))
         paid = (slips.filter(status=PaymentSlip.Status.COMPLETED).values("patient").annotate(n=Count("id")).values("n"))
+        from apps.appointments.queue import day_bounds
+
+        from .patients import pick_visit
+
+        start_of_today, _ = day_bounds()
         qs = hospital_patients(hospital).select_related("patient_profile").annotate(
-            last_visit=Max("appointments__start", filter=here & Q(appointments__status="completed")),
+            last_done=Max("appointments__start", filter=here & Q(appointments__status="completed")),
+            next_start=Min("appointments__start", filter=here & Q(appointments__status__in=ACTIVE_STATUSES,
+                                                                    appointments__start__gte=start_of_today)),
             records=Coalesce(Subquery(ours), 0),
             pending_amount=Coalesce(Subquery(owed), Decimal("0")),
             paid_slips=Coalesce(Subquery(paid), 0),
@@ -127,8 +134,6 @@ class PatientsView(APIView):
         out = []
         for p in rows:
             link = links.get(p.id)
-            visited = link.visited_on if link and link.visited_on else (
-                timezone.localtime(p.last_visit).date() if p.last_visit else None)
             payment = "pending" if p.pending_amount > 0 else "completed" if p.paid_slips else None
             out.append({
                 "patient_id": getattr(getattr(p, "patient_profile", None), "patient_id", None),
@@ -137,8 +142,7 @@ class PatientsView(APIView):
                 "phone": p.phone,
                 "added_by_you": link is not None,
                 "created_by_you": bool(link and link.created_account),
-                "visited_on": visited,
-                "visited_set_by_you": bool(link and link.visited_on),
+                **pick_visit(link.visited_on if link else None, p.next_start, p.last_done),
                 "records": p.records,
                 "payment": payment,
                 "pending_amount": p.pending_amount,

@@ -454,6 +454,14 @@ export type HospitalOverview = {
   recent_activity: { kind: "staff" | "booking"; title: string; detail: string; at: string }[];
 };
 
+/** A patient's visit, by its date (2026-11-22). */
+export type VisitStatus = "past" | "current" | "upcoming";
+export const VISIT_STATUS: Record<VisitStatus, { label: string; cls: string }> = {
+  past: { label: "Past", cls: "bg-slate-100 text-slate-600 ring-slate-200" },
+  current: { label: "Current", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
+  upcoming: { label: "Upcoming", cls: "bg-sky-50 text-sky-700 ring-sky-200" },
+};
+
 export type HospitalPatient = {
   patient_id: string | null;
   name: string;
@@ -465,9 +473,11 @@ export type HospitalPatient = {
   /** What the patient still owes this hospital: pending payment slips (2026-11-21). */
   pending_amount: number;
   // Simple columns (2026-11-22):
-  /** The date the hospital set, else the last completed appointment here. */
-  visited_on: string | null;
-  visited_set_by_you: boolean;
+  /** The visit date the hospital set, else today's / the next / the last appointment here. */
+  visit_on: string | null;
+  /** From the date: before today past, today current, after today upcoming. */
+  visit_status: VisitStatus | null;
+  visit_set_by_you: boolean;
   /** Records this hospital uploaded for the patient. */
   records: number;
   /** "pending" while anything is unpaid, "completed" when every slip is paid, null without slips. */
@@ -610,8 +620,9 @@ export type HospitalPatientPage = {
     has_login: boolean; in_list: boolean; added_by_you: boolean; created_by_you: boolean;
     /** The hospital may set or fix the email: none yet, or a patient it created who hasn't used the app (2026-11-22). */
     can_edit_email: boolean;
-    /** Last visited (set by the hospital, else the last completed appointment here). */
-    visited_on: string | null;
+    visit_on: string | null;
+    visit_status: VisitStatus | null;
+    visit_set_by_you: boolean;
   };
   details: PatientDetails;
   records: MedicalRecord[];

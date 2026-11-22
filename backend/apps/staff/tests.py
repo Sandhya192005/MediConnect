@@ -233,9 +233,10 @@ def test_patient_list_shows_only_this_hospitals_patients(world):
     assert [r["name"] for r in rows] == ["Asha K"]
     row = rows[0]
     assert row["patient_id"] == PatientProfile.objects.get(user=world["patient"]).patient_id
-    # Simple columns (2026-11-22): Visited = the last completed visit here (none set by hand), Records = this
-    # hospital's uploads, Payment = no slips yet.
-    assert row["visited_on"] == (timezone.localdate() - timedelta(days=10)).isoformat() and not row["visited_set_by_you"]
+    # Simple columns (2026-11-22): Visit = the next appointment here (none set by hand) → upcoming; Records = this
+    # hospital's uploads; Payment = no slips yet.
+    assert row["visit_on"] == timezone.localtime(timezone.now() + timedelta(days=3)).date().isoformat()
+    assert (row["visit_status"], row["visit_set_by_you"]) == ("upcoming", False)
     assert (row["records"], row["payment"]) == (0, None)
     assert client_for(world["admin"]).get(f"/api/hospital-admin/patients/?q={row['patient_id']}").json()[0]["name"] == "Asha K"
     theirs = client_for(world["other_admin"]).get("/api/hospital-admin/patients/").json()

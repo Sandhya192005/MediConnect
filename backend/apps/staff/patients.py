@@ -109,13 +109,31 @@ def may_edit_email(hospital, p) -> bool:
     return created and not p.has_usable_password()
 
 
-def _visited_on(hospital, p, link):
-    """The date the hospital set, else the patient's last completed appointment here (owner request 2026-11-22)."""
-    if link and link.visited_on:
-        return link.visited_on
-    last = (Appointment.objects.filter(patient=p, doctor__hospital=hospital, status=Appointment.Status.COMPLETED)
-            .order_by("-start").values_list("start", flat=True).first())
-    return timezone.localtime(last).date() if last else None
+def pick_visit(set_on, next_start, last_done):
+    """
+    The patient's visit date and status (owner requests 2026-11-22): the date the hospital set; otherwise
+    today's or the next upcoming appointment here, else the last completed one. Status from the date:
+    before today = past, today = current, after today = upcoming.
+    """
+    on = set_on or (timezone.localtime(next_start).date() if next_start else None) or (
+        timezone.localtime(last_done).date() if last_done else None)
+    if on is None:
+        return {"visit_on": None, "visit_status": None, "visit_set_by_you": False}
+    today = timezone.localdate()
+    status = "past" if on < today else "current" if on == today else "upcoming"
+    return {"visit_on": on, "visit_status": status, "visit_set_by_you": bool(set_on)}
+
+
+def visit_of(hospital, p, link) -> dict:
+    from apps.appointments.models import ACTIVE_STATUSES
+    from apps.appointments.queue import day_bounds
+
+    here = Appointment.objects.filter(patient=p, doctor__hospital=hospital)
+    start_of_today, _ = day_bounds()
+    next_start = (here.filter(status__in=ACTIVE_STATUSES, start__gte=start_of_today)
+                  .order_by("start").values_list("start", flat=True).first())
+    last_done = (here.filter(status=Appointment.Status.COMPLETED).order_by("-start").values_list("start", flat=True).first())
+    return pick_visit(link.visited_on if link else None, next_start, last_done)
 
 
 def patient_row(p, hospital) -> dict:
@@ -123,7 +141,7 @@ def patient_row(p, hospital) -> dict:
     link = HospitalPatient.objects.filter(hospital=hospital, patient=p).first()
     return {
         "can_edit_email": may_edit_email(hospital, p),
-        "visited_on": _visited_on(hospital, p, link),
+        **visit_of(hospital, p, link),
         "patient_id": p.patient_profile.patient_id,
         "name": p.get_full_name() or "Patient",
         "first_name": p.first_name, "last_name": p.last_name,
@@ -205,15 +223,13 @@ class PatientManageView(APIView):
                 changed.append("email")
             if changed:
                 p.save(update_fields=changed)
-            if "visited_on" in data:
+            if "visit_on" in data:  # past, today or upcoming (owner request 2026-11-22)
                 visited = None
-                if data["visited_on"]:
+                if data["visit_on"]:
                     try:
-                        visited = timezone.datetime.fromisoformat(str(data["visited_on"])).date()
+                        visited = timezone.datetime.fromisoformat(str(data["visit_on"])).date()
                     except ValueError:
-                        raise ValidationError({"visited_on": "Use a date like 2026-11-22."})
-                    if visited > timezone.localdate():
-                        raise ValidationError({"visited_on": "The visit date can't be in the future."})
+                        raise ValidationError({"visit_on": "Use a date like 2026-11-22."})
                 # A patient listed through a booking gets a link row to keep the date on.
                 link, _ = HospitalPatient.objects.get_or_create(hospital=hospital, patient=p, defaults={"added_by": request.user})
                 link.visited_on = visited
