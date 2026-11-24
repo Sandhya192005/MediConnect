@@ -165,18 +165,24 @@ def test_delete_department_refusals(setup):
     cardio = Department.objects.create(name="Cardiology")  # a platform department
     setup["h"].departments.add(cardio)
     assert c.get(URL).json()["departments"][0]["mine"] is False
-    assert c.delete(f"{URL}departments/{cardio.id}/").status_code == 404
-    # Another hospital's own department.
+    # Its × removes it from this hospital only; it stays in the list (2026-11-24, every department gets an ×).
+    r = c.delete(f"{URL}departments/{cardio.id}/")
+    assert r.status_code == 200 and r.json()["deleted"] is False and r.json()["departments"] == []
+    assert Department.objects.filter(pk=cardio.pk).exists()
+    assert c.delete(f"{URL}departments/{cardio.id}/").status_code == 404  # no longer on this hospital
+    # Another hospital's own department, not on this hospital.
     theirs = Department.objects.create(name="Their Dept", created_by=setup["other"])
     assert c.delete(f"{URL}departments/{theirs.id}/").status_code == 404
-    # Its own staff are in it: refused, nothing changes.
+    # Its own staff are in it: removed from the hospital, but kept so the nurse keeps her department.
     c.patch(URL, {"new_departments": ["Pain Clinic"]}, format="json")
     pain = Department.objects.get(name="Pain Clinic")
-    StaffMember.objects.create(hospital=setup["h"], kind="nurse", full_name="Meena", department=pain,
-                               join_date="2026-01-01", monthly_salary=30000)
+    nurse = StaffMember.objects.create(hospital=setup["h"], kind="nurse", full_name="Meena", department=pain,
+                                       join_date="2026-01-01", monthly_salary=30000)
     r = c.delete(f"{URL}departments/{pain.id}/")
-    assert r.status_code == 400 and "change their department first" in r.json()["detail"]
-    assert setup["h"].departments.filter(pk=pain.pk).exists()
+    assert r.status_code == 200 and r.json()["deleted"] is False
+    assert not setup["h"].departments.filter(pk=pain.pk).exists()
+    nurse.refresh_from_db()
+    assert nurse.department_id == pain.id
     # A patient can't use it at all.
     patient = User.objects.create_user("p@example.com", "pw", role="patient")
     assert client_for(patient).delete(f"{URL}departments/{pain.id}/").status_code == 403
