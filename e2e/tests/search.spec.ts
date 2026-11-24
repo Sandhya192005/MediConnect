@@ -17,13 +17,13 @@ test("search shows MediConnect hospitals with their matching specialists", async
 
   // An everyday word finds hospitals that have that kind of specialist.
   await page.getByLabel("Search doctors").fill("heart");
-  await expect(partners.getByRole("link", { name: partner_hospital.name })).toBeVisible();
+  await expect(partners.getByRole("link", { name: partner_hospital.name, exact: true })).toBeVisible();
   await page.getByLabel("Search doctors").fill("skin");
-  await expect(partners.getByRole("link", { name: partner_hospital.name })).toHaveCount(0); // no dermatologist there
+  await expect(partners.getByRole("link", { name: partner_hospital.name, exact: true })).toHaveCount(0); // no dermatologist there
 
   // Opening the hospital shows its doctors grouped by specialty, on the specialty searched for.
   await page.getByLabel("Search doctors").fill("Testdoctr");
-  await partners.getByRole("link", { name: partner_hospital.name }).click();
+  await partners.getByRole("link", { name: partner_hospital.name, exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/hospitals/${partner_hospital.id}\\?specialty=Cardiology$`));
   await expect(page.getByRole("heading", { name: "Our specialists" })).toBeVisible();
   const cardiology = page.getByRole("region", { name: "Cardiology" });
@@ -37,7 +37,7 @@ test("a hospital name search lists it with its specialties", async ({ page }) =>
   await page.goto("/doctors");
   await page.getByLabel("Search doctors").fill("E2E Partner");
   const partners = page.getByRole("region", { name: "MediConnect hospitals" });
-  await expect(partners.getByRole("link", { name: partner_hospital.name })).toBeVisible();
+  await expect(partners.getByRole("link", { name: partner_hospital.name, exact: true })).toBeVisible();
   // Inside its own card: other MediConnect hospitals (e.g. the demo ones) can have Cardiology too.
   await expect(partners.getByRole("article", { name: partner_hospital.name }).getByRole("link", { name: /^Cardiology/ })).toBeVisible();
   await expect(page.getByText("Instant booking").first()).toBeVisible();
