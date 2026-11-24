@@ -11,7 +11,10 @@ GET/PATCH /api/hospital-admin/profile/
 - The hospital email is the login, so it's read-only here (changing it goes through Support).
 - Departments (owner request 2026-11-24): tick existing ones (department_ids) and/or type new names
   (new_departments). A typed name that matches an existing department, ignoring case and spaces, reuses it;
-  otherwise it's created and joins the shared list (patients can filter by it).
+  otherwise it's created (created_by = this hospital) and joins the shared list (patients can filter by it).
+  DELETE profile/departments/<id>/ removes a department the hospital wrote: from this hospital, and from the
+  list when no other hospital, doctor account or staff record uses it. Refused while this hospital's own
+  staff records are in it (they'd silently lose their department).
 """
 
 import re
@@ -37,12 +40,13 @@ def _clean(value: str) -> str:
 DEPT_NAME = re.compile(r"[A-Za-z0-9 &()./,'-]+")
 
 
-def department_named(name: str) -> Department:
-    """The department with this name, ignoring case; created when there's none yet."""
+def department_named(name: str, hospital: Hospital) -> Department:
+    """The department with this name, ignoring case; created (by this hospital) when there's none yet."""
     found = Department.objects.filter(name__iexact=name).first()
     if found:
         return found
-    dept, _ = Department.objects.get_or_create(name=name)  # unique name: safe if two hospitals race
+    # unique name: safe if two hospitals race
+    dept, _ = Department.objects.get_or_create(name=name, defaults={"created_by": hospital})
     return dept
 
 
@@ -54,17 +58,21 @@ class HospitalProfileSerializer(serializers.ModelSerializer):
     new_departments = serializers.ListField(
         child=serializers.CharField(max_length=100), required=False, write_only=True, max_length=20)
     departments = serializers.SerializerMethodField()
+    written_department_ids = serializers.SerializerMethodField()  # ticked or not: these get the × (2026-11-24)
     connected = serializers.BooleanField(source="is_approved", read_only=True)
 
     class Meta:
         model = Hospital
         fields = ["id", "name", "email", "address", "city", "state", "phone", "website",
                   "latitude", "longitude", "location_verified", "departments", "department_ids", "new_departments",
-                  "connected"]
+                  "written_department_ids", "connected"]
         read_only_fields = ["id", "email", "location_verified"]
 
     def get_departments(self, h):
-        return [{"id": d.id, "name": d.name} for d in h.departments.order_by("name")]
+        return [{"id": d.id, "name": d.name, "mine": d.created_by_id == h.id} for d in h.departments.order_by("name")]
+
+    def get_written_department_ids(self, h):
+        return list(h.created_departments.order_by("id").values_list("id", flat=True))
 
     def to_representation(self, h):
         data = super().to_representation(h)
@@ -137,7 +145,7 @@ class HospitalProfileSerializer(serializers.ModelSerializer):
         if departments is not None:
             h.departments.set(departments)
         if new_names:
-            h.departments.add(*[department_named(n) for n in new_names])
+            h.departments.add(*[department_named(n, h) for n in new_names])
         return h
 
 
@@ -169,3 +177,34 @@ class HospitalProfileView(APIView):
                         "Hospital details changed", f"{h.name} changed its " + " and ".join(changes) + ".",
                         "/admin/hospitals")  # Connected hospitals
         return Response(HospitalProfileSerializer(h).data)
+
+
+class HospitalDepartmentDeleteView(APIView):
+    """DELETE /api/hospital-admin/profile/departments/<id>/: remove a department this hospital wrote."""
+
+    permission_classes = [IsHospitalAdmin]
+
+    def delete(self, request, pk):
+        from apps.staff.models import StaffMember
+
+        h = request.admin_hospital
+        dept = Department.objects.filter(pk=pk, created_by=h).first()
+        if dept is None:
+            return Response({"detail": "Only departments your hospital wrote can be deleted. Untick others instead."},
+                            status=404)
+        own_staff = StaffMember.objects.filter(hospital=h, department=dept).count()
+        if own_staff:
+            return Response({"detail": f"{own_staff} of your staff {'is' if own_staff == 1 else 'are'} in {dept.name}: "
+                                       "change their department first."}, status=400)
+        with transaction.atomic():
+            h.departments.remove(dept)
+            used_elsewhere = (dept.hospitals.exists() or dept.doctors.exists()
+                              or StaffMember.objects.filter(department=dept).exists())
+            if used_elsewhere:
+                deleted = False  # others use it: it stays in the shared list, just not at this hospital
+            else:
+                dept.delete()
+                deleted = True
+        data = HospitalProfileSerializer(h).data
+        return Response({"deleted": deleted, "departments": data["departments"],
+                         "written_department_ids": data["written_department_ids"]})

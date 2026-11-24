@@ -61,7 +61,7 @@ function HospitalProfileScreen() {
   if (!h) return <>{error ? <p role="alert" className="rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p> : <SkeletonRows rows={6} />}</>;
   if (editing) {
     return (
-      <ProfileEditor initial={h} onCancel={() => setEditing(false)}
+      <ProfileEditor initial={h} onCancel={() => { setEditing(false); load(); /* a department may have been deleted */ }}
                      onSaved={(x) => { setH(x); setEditing(false); setFlash(x.connected ? "Saved. Patients see the new details now." : "Saved."); }} />
     );
   }
@@ -192,6 +192,7 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
   const [busy, setBusy] = useState(false);
   const [locating, setLocating] = useState(false);
   const [newDepts, setNewDepts] = useState<string[]>([]); // typed by the hospital (2026-11-24)
+  const [written, setWritten] = useState<number[]>(initial.written_department_ids); // these get the ×
   const [typed, setTyped] = useState("");
 
   useEffect(() => {
@@ -217,6 +218,23 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
     }
     setTyped("");
     setSaved("");
+  }
+
+  /** × on a department this hospital wrote: delete it now (from the list too, if no one else uses it). */
+  async function deleteDept(d: Department) {
+    if (!window.confirm(`Delete department "${d.name}"? It is removed from your hospital.`)) return;
+    setError("");
+    setSaved("");
+    try {
+      const r = await api<{ deleted: boolean; written_department_ids: number[] }>(
+        `/api/hospital-admin/profile/departments/${d.id}/`, { method: "DELETE" });
+      setWritten(r.written_department_ids);
+      setF((cur) => ({ ...cur, department_ids: cur.department_ids.filter((x) => x !== d.id) }));
+      if (r.deleted) setDepartments((list) => list.filter((x) => x.id !== d.id));
+      setSaved(r.deleted ? `Deleted "${d.name}".` : `Removed "${d.name}" from your hospital (another hospital still uses it).`);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
   }
 
   function locateMe() {
@@ -300,18 +318,30 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
       </Panel>
 
       <Panel title="Departments">
-        <p className="-mt-2 mb-3 text-xs text-slate-500">Tick the departments your hospital has, or write one that isn&apos;t listed. Patients search by these.</p>
+        <p className="-mt-2 mb-3 text-xs text-slate-500">Tick the departments your hospital has, or write one that isn&apos;t listed (the ones you write have an × to delete them). Patients search by these.</p>
         {departments.length === 0 ? (
           <p className="text-sm text-slate-500">No departments on MediConnect yet.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {departments.map((d) => {
               const on = f.department_ids.includes(d.id);
-              return (
+              const chip = (
                 <label key={d.id} className={`cursor-pointer ${on ? "chip chip-active" : "chip"}`}>
                   <input type="checkbox" className="sr-only" checked={on} onChange={() => toggleDept(d.id)} />
                   {d.name}
                 </label>
+              );
+              if (!written.includes(d.id)) return chip;
+              // Written by this hospital: an × deletes it (owner request 2026-11-24).
+              return (
+                <span key={d.id} className="inline-flex items-center gap-1">
+                  {chip}
+                  <button type="button" onClick={() => deleteDept(d)} aria-label={`Delete department ${d.name}`}
+                          title="Delete this department"
+                          className="-ml-2 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-sm text-slate-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600">
+                    ×
+                  </button>
+                </span>
               );
             })}
           </div>

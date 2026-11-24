@@ -577,7 +577,8 @@ export type HospitalProfile = {
   latitude: number | null;
   longitude: number | null;
   location_verified: boolean;
-  departments: { id: number; name: string }[];
+  departments: { id: number; name: string; mine?: boolean }[];
+  written_department_ids: number[]; // departments this hospital wrote: it may delete them (2026-11-24)
   connected: boolean;
 };
 

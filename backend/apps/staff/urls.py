@@ -4,7 +4,7 @@ from rest_framework.routers import SimpleRouter
 from apps.hospitals.connections import HospitalConnectionView
 
 from .patients import PatientAddView, PatientManageView, PatientRecordDeleteView, PatientRecordsView
-from .profile import HospitalProfileView
+from .profile import HospitalDepartmentDeleteView, HospitalProfileView
 from .views import DoctorAccountsView, DoctorAppointmentsView, OverviewView, PatientsView, PayrollView, ReportsView, StaffViewSet
 
 router = SimpleRouter()
@@ -22,6 +22,7 @@ urlpatterns = [
     path("payroll/", PayrollView.as_view(), name="hospital-admin-payroll"),
     path("reports/", ReportsView.as_view(), name="hospital-admin-reports"),
     path("profile/", HospitalProfileView.as_view(), name="hospital-admin-profile"),
+    path("profile/departments/<int:pk>/", HospitalDepartmentDeleteView.as_view(), name="hospital-admin-department-delete"),
     path("doctors/<int:pk>/appointments/", DoctorAppointmentsView.as_view(), name="hospital-admin-doctor-appointments"),
     path("connection/", HospitalConnectionView.as_view(), name="hospital-admin-connection"),
     path("doctor-accounts/", DoctorAccountsView.as_view(), name="hospital-admin-doctor-accounts"),

@@ -127,3 +127,56 @@ def test_typed_department_must_be_a_name(setup, bad):
     r = client_for(setup["account"]).patch(URL, {"new_departments": [bad]}, format="json")
     assert r.status_code == 400
     assert not Department.objects.exists()
+
+
+def test_delete_own_written_department(setup):
+    """Owner request 2026-11-24: an × removes a department the hospital wrote."""
+    from apps.staff.models import StaffMember
+
+    c = client_for(setup["account"])
+    c.patch(URL, {"new_departments": ["Pain Clinic", "Sleep Lab"]}, format="json")
+    r = c.get(URL).json()
+    mine = {d["name"]: d for d in r["departments"]}
+    assert mine["Pain Clinic"]["mine"] is True
+    pain, sleep = Department.objects.get(name="Pain Clinic"), Department.objects.get(name="Sleep Lab")
+    assert pain.created_by_id == setup["h"].id
+    assert r["written_department_ids"] == [pain.id, sleep.id]
+    # Unticked, it's still the hospital's own: the × stays available.
+    c.patch(URL, {"department_ids": [sleep.id]}, format="json")
+    assert c.get(URL).json()["written_department_ids"] == [pain.id, sleep.id]
+
+    # Not used anywhere else: removed from the hospital and from the list.
+    r = c.delete(f"{URL}departments/{pain.id}/")
+    assert r.status_code == 200 and r.json()["deleted"] is True
+    assert not Department.objects.filter(pk=pain.pk).exists()
+    assert [d["name"] for d in r.json()["departments"]] == ["Sleep Lab"]
+
+    # Another hospital uses it too: only removed here, stays in the list.
+    setup["other"].departments.add(sleep)
+    r = c.delete(f"{URL}departments/{sleep.id}/")
+    assert r.json()["deleted"] is False and r.json()["departments"] == []
+    assert Department.objects.filter(pk=sleep.pk).exists()
+
+
+def test_delete_department_refusals(setup):
+    from apps.staff.models import StaffMember
+
+    c = client_for(setup["account"])
+    cardio = Department.objects.create(name="Cardiology")  # a platform department
+    setup["h"].departments.add(cardio)
+    assert c.get(URL).json()["departments"][0]["mine"] is False
+    assert c.delete(f"{URL}departments/{cardio.id}/").status_code == 404
+    # Another hospital's own department.
+    theirs = Department.objects.create(name="Their Dept", created_by=setup["other"])
+    assert c.delete(f"{URL}departments/{theirs.id}/").status_code == 404
+    # Its own staff are in it: refused, nothing changes.
+    c.patch(URL, {"new_departments": ["Pain Clinic"]}, format="json")
+    pain = Department.objects.get(name="Pain Clinic")
+    StaffMember.objects.create(hospital=setup["h"], kind="nurse", full_name="Meena", department=pain,
+                               join_date="2026-01-01", monthly_salary=30000)
+    r = c.delete(f"{URL}departments/{pain.id}/")
+    assert r.status_code == 400 and "change their department first" in r.json()["detail"]
+    assert setup["h"].departments.filter(pk=pain.pk).exists()
+    # A patient can't use it at all.
+    patient = User.objects.create_user("p@example.com", "pw", role="patient")
+    assert client_for(patient).delete(f"{URL}departments/{pain.id}/").status_code == 403

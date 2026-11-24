@@ -4,6 +4,10 @@ from django.contrib.gis.db import models
 class Department(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
+    # The hospital that wrote this department on its profile (2026-11-24); empty = added by the platform.
+    # Only that hospital may delete it, and only while no one else uses it (staff/profile.py).
+    created_by = models.ForeignKey("Hospital", on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name="created_departments")
 
     class Meta:
         ordering = ["name"]

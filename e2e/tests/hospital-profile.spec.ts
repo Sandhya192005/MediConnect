@@ -62,6 +62,17 @@ test("a hospital edits its profile, departments and map pin", async ({ page, req
   await expect(card).toContainText(renamed);
   await expect(page.getByRole("region", { name: "Departments" })).toContainText("Cardiology");
 
+  // The × deletes a department the hospital wrote (2026-11-24); listed ones have no ×.
+  await card.getByRole("button", { name: "Edit profile" }).click();
+  await expect(page.getByRole("button", { name: "Delete department Cardiology" })).toHaveCount(0);
+  page.once("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: `Delete department ${dept}` }).click();
+  await expect(page.getByRole("status")).toHaveText(`Deleted "${dept}".`);
+  await expect(page.getByRole("checkbox", { name: dept })).toHaveCount(0);
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("region", { name: "Departments" })).not.toContainText(dept);
+  await expect(page.getByRole("region", { name: "Departments" })).toContainText("Cardiology");
+
   // The account is named after the hospital, so the dashboard greets the new name.
   await page.getByRole("navigation", { name: "Main menu" }).getByRole("link", { name: "Dashboard" }).click();
   await expect(page.getByText(new RegExp(`^Good (morning|afternoon|evening), ${renamed}!`))).toBeVisible();

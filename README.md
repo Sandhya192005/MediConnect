@@ -297,7 +297,7 @@ Owner request: the list shows only three things per patient (plus name, ID, phon
 
 ### Hospitals write their own departments (2026-11-24)
 
-In **Edit hospital profile → Departments**, besides ticking listed departments, the hospital can type one that isn't listed (**+ Add** or Enter). On save (`new_departments` on `PATCH /api/hospital-admin/profile/`) a name matching an existing department ignoring case reuses it; otherwise it's created and joins the shared list (patients can filter by it). Names: 2–100 characters, letters/digits/spaces and `& - ( ) . / , '`. Tests in `staff/test_profile.py`; e2e departments named "E2E Dept …" are removed by `e2e_setup` / `e2e_cleanup`.
+In **Edit hospital profile → Departments**, besides ticking listed departments, the hospital can type one that isn't listed (**+ Add** or Enter). On save (`new_departments` on `PATCH /api/hospital-admin/profile/`) a name matching an existing department ignoring case reuses it; otherwise it's created and joins the shared list (patients can filter by it). Names: 2–100 characters, letters/digits/spaces and `& - ( ) . / , '`. Departments a hospital writes are marked as its own (`Department.created_by`, migration `hospitals/0019`); they get an **×** in the form (`DELETE /api/hospital-admin/profile/departments/<id>/`): removed from the hospital, and from the shared list when no other hospital, doctor account or staff record uses it; refused while the hospital's own staff are in it; listed/platform departments have no × (untick instead). Tests in `staff/test_profile.py`; e2e departments named "E2E Dept …" are removed by `e2e_setup` / `e2e_cleanup`.
 
 ### Show on map from the hospital list (2026-11-24)
 
