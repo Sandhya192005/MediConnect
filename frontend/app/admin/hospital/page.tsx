@@ -8,6 +8,7 @@ import type { PinPoint } from "@/components/PinPicker";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { matchDepartments } from "@/lib/departmentMatch";
 import { directionsUrl } from "@/lib/directions";
 import type { Department, HospitalProfile } from "@/lib/types";
 
@@ -194,10 +195,16 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
   const [newDepts, setNewDepts] = useState<string[]>([]); // typed by the hospital (2026-11-24)
   const [written, setWritten] = useState<number[]>(initial.written_department_ids); // these get the ×
   const [typed, setTyped] = useState("");
+  const [hint, setHint] = useState(-1); // highlighted suggestion (arrow keys)
 
   useEffect(() => {
     api<Department[]>("/api/departments/").then(setDepartments).catch(() => {});
   }, []);
+
+  const suggestions = typed.trim() ? matchDepartments(typed, departments) : [];
+  const canAddNew = typed.trim().length >= 2
+    && !departments.some((d) => d.name.toLowerCase() === typed.trim().toLowerCase())
+    && !newDepts.some((n) => n.toLowerCase() === typed.trim().toLowerCase());
 
   const set = (k: (typeof TEXT)[number]) => (e: React.ChangeEvent<HTMLInputElement>) => { setF({ ...f, [k]: e.target.value }); setSaved(""); };
   const setPin = (pin: PinPoint | null) => { setF({ ...f, pin }); setSaved(""); };
@@ -207,7 +214,16 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
   };
 
   /** Add a typed department: tick it when it's already listed (any case), else keep it as new. */
+  /** Click a suggestion: tick that listed department. */
+  function pickSuggestion(d: Department) {
+    if (!f.department_ids.includes(d.id)) setF({ ...f, department_ids: [...f.department_ids, d.id] });
+    setTyped("");
+    setHint(-1);
+    setSaved("");
+  }
+
   function addTyped() {
+    setHint(-1);
     const name = typed.split(/\s+/).filter(Boolean).join(" ");
     if (name.length < 2) return;
     const listed = departments.find((d) => d.name.toLowerCase() === name.toLowerCase());
@@ -358,10 +374,46 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
           </div>
         )}
         <div className="mt-4 flex max-w-md gap-2">
-          <label className="sr-only" htmlFor="new-department">Add a department</label>
-          <input id="new-department" className="input" maxLength={100} placeholder="Write a department, e.g. Physiotherapy"
-                 value={typed} onChange={(e) => setTyped(e.target.value)}
-                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTyped(); } }} />
+          <div className="relative flex-1">
+            <label className="sr-only" htmlFor="new-department">Add a department</label>
+            <input id="new-department" className="input" maxLength={100} placeholder="Write a department, e.g. Physiotherapy"
+                   role="combobox" aria-expanded={suggestions.length > 0 || canAddNew} aria-controls="department-suggestions"
+                   aria-autocomplete="list" autoComplete="off"
+                   value={typed} onChange={(e) => { setTyped(e.target.value); setHint(-1); }}
+                   onKeyDown={(e) => {
+                     if (e.key === "ArrowDown") { e.preventDefault(); setHint((i) => Math.min(i + 1, suggestions.length - 1)); }
+                     else if (e.key === "ArrowUp") { e.preventDefault(); setHint((i) => Math.max(i - 1, -1)); }
+                     else if (e.key === "Escape") { setTyped(""); setHint(-1); }
+                     else if (e.key === "Enter") {
+                       e.preventDefault();
+                       if (hint >= 0 && suggestions[hint]) pickSuggestion(suggestions[hint]); else addTyped();
+                     }
+                   }} />
+            {/* Suggestions while typing (owner request 2026-11-24): "gynocologist" → Gynecology. */}
+            {(suggestions.length > 0 || canAddNew) && (
+              <ul id="department-suggestions" role="listbox" aria-label="Department suggestions"
+                  className="absolute left-0 right-0 top-full z-[1000] mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                {suggestions.map((d, i) => {
+                  const ticked = f.department_ids.includes(d.id);
+                  return (
+                    <li key={d.id} role="option" aria-selected={i === hint}
+                        onMouseDown={(e) => { e.preventDefault(); pickSuggestion(d); }}
+                        onMouseEnter={() => setHint(i)}
+                        className={`flex cursor-pointer items-center justify-between px-3 py-2 text-sm ${i === hint ? "bg-teal-50" : ""}`}>
+                      <span className="text-[#00295c]">{d.name}</span>
+                      {ticked && <span className="text-xs text-slate-400">✓ already added</span>}
+                    </li>
+                  );
+                })}
+                {canAddNew && (
+                  <li role="option" aria-selected={false} onMouseDown={(e) => { e.preventDefault(); addTyped(); }}
+                      className="cursor-pointer border-t border-slate-100 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+                    + Add &ldquo;{typed.trim()}&rdquo; as a new department
+                  </li>
+                )}
+              </ul>
+            )}
+          </div>
           <button type="button" onClick={addTyped} disabled={typed.trim().length < 2}
                   className="btn-outline shrink-0 rounded-xl px-4 text-sm">+ Add</button>
         </div>
