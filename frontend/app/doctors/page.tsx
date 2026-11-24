@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { directionsUrl } from "@/lib/directions";
 import HospitalRow, { type HospitalRowData } from "@/components/HospitalRow";
 import Icon from "@/components/Icons";
 import PageHeader, { Avatar } from "@/components/PageHeader";
@@ -100,7 +101,7 @@ function Chips({ title, items, active, onPick }: { title: string; items: Facet[]
   );
 }
 
-function PartnerCard({ h, department, selected }: { h: PartnerHospital; department: string; selected: boolean }) {
+function PartnerCard({ h, department, selected, onShowOnMap }: { h: PartnerHospital; department: string; selected: boolean; onShowOnMap: (id: number) => void }) {
   // Open the hospital on the specialty the patient was looking for.
   const focus = department || h.matching_doctors[0]?.department || "";
   const href = `/hospitals/${h.id}${focus ? `?specialty=${encodeURIComponent(focus)}` : ""}`;
@@ -153,10 +154,22 @@ function PartnerCard({ h, department, selected }: { h: PartnerHospital; departme
           </div>
         )}
 
-        <div className="mt-auto pt-5">
+        <div className="mt-auto space-y-2 pt-5">
           <Link href={href} className="btn-solid w-full">
             View specialists & book <Icon name="arrow" className="h-4 w-4" />
           </Link>
+          {/* Both on every card (owner request 2026-11-24). */}
+          <div className="grid grid-cols-2 gap-2">
+            <a href={directionsUrl(h.name, h)} target="_blank" rel="noopener noreferrer"
+               className="btn-outline whitespace-nowrap px-2 text-sm" aria-label={`Get directions to ${h.name}`}>
+              <Icon name="arrow" className="h-4 w-4 -rotate-45" /> Get directions
+            </a>
+            {h.latitude != null ? (
+              <button type="button" onClick={() => onShowOnMap(h.id)} className="btn-outline whitespace-nowrap px-2 text-sm" aria-label={`Show ${h.name} on map`}>
+                <Icon name="pin" className="h-4 w-4" /> Show on map
+              </button>
+            ) : <span />}
+          </div>
         </div>
       </div>
     </article>
@@ -286,6 +299,13 @@ export default function BookPage() {
     document.getElementById(`hospital-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
+  /** "Show on map" on a card (owner request 2026-11-24): open the map on that hospital, with its popup. */
+  function showOnMap(id: number) {
+    setShowMap(true);
+    setSelected(id);
+    setTimeout(() => document.getElementById("hospital-map")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
+
   // What the map shows: the hospitals currently in the list.
   const partnerPins: HospitalRowData[] = (partners?.results ?? []).map((h) => ({
     id: h.id, name: h.name, address: h.address, city: h.city, departments: h.specialties.map((s) => s.name), is_partner: true,
@@ -346,7 +366,7 @@ export default function BookPage() {
       )}
 
       {showMap && (
-        <section aria-label="Map" className="card space-y-2 overflow-hidden p-2">
+        <section id="hospital-map" aria-label="Map" className="card scroll-mt-24 space-y-2 overflow-hidden p-2">
           <HospitalMap hospitals={pins} user={me} radiusKm={me ? radius : undefined} selectedId={selected} onSelect={pick} height={380} />
           <p className="flex flex-wrap gap-4 px-2 pb-1 text-xs text-slate-500">
             <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-teal-600" /> MediConnect (instant booking)</span>
@@ -376,7 +396,7 @@ export default function BookPage() {
           ) : near.length === 0 ? (
             <p className="card p-6 text-center text-slate-600">{loadingMore ? "Loading hospitals…" : "No hospitals found nearby. Try a bigger distance."}</p>
           ) : (
-            <ul className="space-y-3">{near.map((h) => <li key={h.id}><HospitalRow h={h} selected={selected === h.id} /></li>)}</ul>
+            <ul className="space-y-3">{near.map((h) => <li key={h.id}><HospitalRow h={h} selected={selected === h.id} onShowOnMap={showOnMap} /></li>)}</ul>
           )}
         </section>
       ) : (
@@ -405,7 +425,7 @@ export default function BookPage() {
               </div>
             ) : (
               <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {partners.results.map((h) => <PartnerCard key={h.id} h={h} department={department} selected={selected === h.id} />)}
+                {partners.results.map((h) => <PartnerCard key={h.id} h={h} department={department} selected={selected === h.id} onShowOnMap={showOnMap} />)}
               </div>
             )}
           </section>
@@ -428,7 +448,7 @@ export default function BookPage() {
                 </p>
               ) : (
                 <>
-                  <ul className="space-y-3">{others.map((h) => <li key={h.id}><HospitalRow h={h} selected={selected === h.id} /></li>)}</ul>
+                  <ul className="space-y-3">{others.map((h) => <li key={h.id}><HospitalRow h={h} selected={selected === h.id} onShowOnMap={showOnMap} /></li>)}</ul>
                   {others.length < othersTotal && (
                     <div className="flex justify-center">
                       <button onClick={() => loadOthers(othersPage + 1)} className="btn-outline rounded-xl px-6 py-2.5">

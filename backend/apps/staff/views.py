@@ -22,7 +22,7 @@ from apps.doctors.models import DoctorProfile
 from apps.records.models import MedicalRecord
 from apps.records.services import RELATED_STATUSES
 
-from .models import StaffMember
+from .models import HospitalPatient, StaffMember
 from .serializers import StaffMemberSerializer
 
 User = get_user_model()
@@ -43,13 +43,15 @@ class StaffViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "patch", "delete"]
 
     def get_queryset(self):
-        qs = StaffMember.objects.filter(hospital=self.request.admin_hospital).select_related("department", "doctor__user")
+        qs = (StaffMember.objects.filter(hospital=self.request.admin_hospital)
+              .select_related("department", "doctor__user", "doctor__hospital"))
         p = self.request.query_params
         if kind := p.get("kind"):
             kinds = OTHER_STAFF_KINDS if kind == "other_staff" else kind.split(",")
             qs = qs.filter(kind__in=kinds)
         if q := p.get("q", "").strip():
-            qs = qs.filter(Q(full_name__icontains=q) | Q(designation__icontains=q) | Q(email__icontains=q))
+            qs = qs.filter(Q(full_name__icontains=q) | Q(designation__icontains=q) | Q(email__icontains=q)
+                           | Q(phone__icontains=q) | Q(specialization__icontains=q) | Q(department__name__icontains=q))
         if p.get("status") == "active":
             qs = qs.active()
         elif p.get("status") == "left":
@@ -82,10 +84,13 @@ class DoctorAccountsView(APIView):
 
 
 def hospital_patients(hospital):
-    """Patients with a booked, confirmed or completed appointment at the hospital (the records-access rule)."""
-    return User.objects.filter(
-        role="patient", appointments__doctor__hospital=hospital, appointments__status__in=RELATED_STATUSES
-    ).distinct()
+    """
+    The hospital's patients: everyone with a booked, confirmed or completed visit there, plus the patients
+    it added in Patient management (owner request 2026-11-21).
+    """
+    from .patients import hospital_patient_q
+
+    return User.objects.filter(hospital_patient_q(hospital), role="patient").distinct()
 
 
 class PatientsView(APIView):
@@ -94,33 +99,55 @@ class PatientsView(APIView):
     permission_classes = [IsHospitalAdmin]
 
     def get(self, request):
-        hospital, now = request.admin_hospital, timezone.now()
+        """
+        Simple columns (owner requests 2026-11-22): Visit (the date the hospital set, else today's / the next /
+        the last appointment here) and Visit status (past, current, upcoming), Records (how many records THIS hospital uploaded for the patient) and Payment
+        (pending amount, or completed when every slip is paid).
+        """
+        from apps.billing.models import PaymentSlip
+
+        hospital = request.admin_hospital
         here = Q(appointments__doctor__hospital=hospital)
-        records = MedicalRecord.objects.filter(patient=OuterRef("pk")).values("patient").annotate(n=Count("id")).values("n")
+        ours = (MedicalRecord.objects.filter(patient=OuterRef("pk"), uploaded_by_hospital=hospital, hidden_for_hospital=False)
+                .values("patient").annotate(n=Count("id")).values("n"))
+        slips = PaymentSlip.objects.filter(patient=OuterRef("pk"), hospital=hospital)
+        owed = (slips.filter(status=PaymentSlip.Status.PENDING).values("patient").annotate(t=Sum("total")).values("t"))
+        paid = (slips.filter(status=PaymentSlip.Status.COMPLETED).values("patient").annotate(n=Count("id")).values("n"))
+        from apps.appointments.queue import day_bounds
+
+        from .patients import pick_visit
+
+        start_of_today, _ = day_bounds()
         qs = hospital_patients(hospital).select_related("patient_profile").annotate(
-            visits=Count("appointments", filter=here & Q(appointments__status="completed"), distinct=True),
-            last_visit=Max("appointments__start", filter=here & Q(appointments__status="completed")),
-            next_visit=Min("appointments__start", filter=here & Q(appointments__status__in=ACTIVE_STATUSES,
-                                                                   appointments__start__gte=now)),
-            records=Coalesce(Subquery(records), 0),
+            last_done=Max("appointments__start", filter=here & Q(appointments__status="completed")),
+            next_start=Min("appointments__start", filter=here & Q(appointments__status__in=ACTIVE_STATUSES,
+                                                                    appointments__start__gte=start_of_today)),
+            records=Coalesce(Subquery(ours), 0),
+            pending_amount=Coalesce(Subquery(owed), Decimal("0")),
+            paid_slips=Coalesce(Subquery(paid), 0),
         )
         if q := request.query_params.get("q", "").strip():
             qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(email__icontains=q)
-                           | Q(patient_profile__patient_id__iexact=q))
-        rows = qs.order_by("first_name", "last_name")[:200]
-        return Response([
-            {
+                           | Q(phone__icontains=q) | Q(patient_profile__patient_id__iexact=q))
+        rows = list(qs.order_by("first_name", "last_name")[:200])
+        links = {l.patient_id: l for l in HospitalPatient.objects.filter(hospital=hospital, patient__in=rows)}
+        out = []
+        for p in rows:
+            link = links.get(p.id)
+            payment = "pending" if p.pending_amount > 0 else "completed" if p.paid_slips else None
+            out.append({
                 "patient_id": getattr(getattr(p, "patient_profile", None), "patient_id", None),
                 "name": p.get_full_name() or p.email,
-                "email": p.email,
+                "email": p.email if p.has_real_email else None,
                 "phone": p.phone,
-                "visits": p.visits,
-                "last_visit": p.last_visit,
-                "next_visit": p.next_visit,
+                "added_by_you": link is not None,
+                "created_by_you": bool(link and link.created_account),
+                **pick_visit(link.visited_on if link else None, p.next_start, p.last_done),
                 "records": p.records,
-            }
-            for p in rows
-        ])
+                "payment": payment,
+                "pending_amount": p.pending_amount,
+            })
+        return Response(out)
 
 
 class ReportsView(APIView):
@@ -307,8 +334,10 @@ class OverviewView(APIView):
             return staff.active(on=on).filter(kind__in=kinds).count()
 
         patients_before = User.objects.filter(
-            role="patient", appointments__doctor__hospital=hospital, appointments__status__in=RELATED_STATUSES,
-            appointments__created_at__lt=aware(month_start),
+            Q(appointments__doctor__hospital=hospital, appointments__status__in=RELATED_STATUSES,
+              appointments__created_at__lt=aware(month_start))
+            | Q(hospital_links__hospital=hospital, hospital_links__created_at__lt=aware(month_start)),
+            role="patient",
         ).distinct().count()
         week_ago_start, week_ago_end = day_bounds(today - timedelta(days=7))
         start, end = day_bounds(today)

@@ -1,21 +1,22 @@
 "use client";
 
-import { Suspense } from "react";
-import PatientRecordsLookup from "@/components/PatientRecordsLookup";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import RoleGuard from "@/components/RoleGuard";
 
-export default function AdminPatientRecordsPage() {
+/**
+ * The hospital's old "Patient records" page. Since 2026-11-21 (owner request) everything about a patient is in
+ * Patient management, so old links (`?id=P483920`) open that patient's page there.
+ */
+export default function OldPatientRecordsPage() {
+  const router = useRouter();
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+    router.replace(id ? `/admin/patients/${encodeURIComponent(id.trim().toUpperCase())}` : "/admin/patients");
+  }, [router]);
   return (
     <RoleGuard role="hospital">
-      <div className="mb-6">
-        <h1 className="page-title">Patient records</h1>
-        <p className="page-subtitle text-sm">
-          Enter a patient&apos;s ID to see their medical history: reports, scans and X-rays. Each view is shown to the patient.
-        </p>
-      </div>
-      <Suspense>
-        <PatientRecordsLookup basePath="/admin/patients/records" />
-      </Suspense>
+      <p className="text-sm text-slate-500">Opening Patient management…</p>
     </RoleGuard>
   );
 }

@@ -99,3 +99,41 @@ def log_access(*, viewer, patient, hospital: Hospital | None, action: str, recor
         record_title=record.title if record else "",
         action=action,
     )
+
+
+# ---- Records a hospital uploads (owner decisions 2026-11-21) ----
+# The patient sees them too. Each side's Delete only removes its own copy: the patient's Delete hides a
+# hospital's upload from the patient, the hospital's Delete hides it from the hospital; the row (and file)
+# is deleted once neither side keeps it. A record the patient uploaded is the patient's alone.
+
+def records_visible_to(viewer, patient):
+    """The patient's records as this viewer sees them."""
+    from django.db.models import Q
+
+    from apps.accounts.permissions import admin_hospital
+
+    qs = MedicalRecord.objects.filter(patient=patient)
+    if viewer.pk == patient.pk:
+        return qs.filter(hidden_for_patient=False)
+    hospital = admin_hospital(viewer) if viewer.role == "hospital" else None
+    if hospital is not None:
+        own = Q(uploaded_by_hospital=hospital)
+        return qs.filter((Q(hidden_for_patient=False) & ~(own & Q(hidden_for_hospital=True)))
+                         | (own & Q(hidden_for_hospital=False)))
+    return qs.filter(hidden_for_patient=False)  # doctors and the platform admin: what the patient keeps
+
+
+def delete_for_patient(record: MedicalRecord) -> None:
+    if record.uploaded_by_hospital_id and not record.hidden_for_hospital:
+        record.hidden_for_patient = True  # the hospital keeps its copy
+        record.save(update_fields=["hidden_for_patient"])
+    else:
+        record.delete()  # the file goes too (signals.py)
+
+
+def delete_for_hospital(record: MedicalRecord) -> None:
+    if not record.hidden_for_patient:
+        record.hidden_for_hospital = True  # the patient keeps their copy
+        record.save(update_fields=["hidden_for_hospital"])
+    else:
+        record.delete()

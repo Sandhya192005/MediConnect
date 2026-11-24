@@ -1,16 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { EmptyState, Panel, SkeletonRows } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
 import RecordList from "@/components/RecordList";
+import RecordUploadForm from "@/components/RecordUploadForm";
 import { TreatmentNoteView } from "@/components/TreatmentNotes";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { isoDate, RECORD_TYPES, timeAgo, type MedicalRecord, type RecordAccess, type RecordType, type TreatmentNote } from "@/lib/types";
-
-const MAX_MB = 10;
+import { timeAgo, type MedicalRecord, type RecordAccess, type TreatmentNote } from "@/lib/types";
 
 export default function PatientRecordsPage() {
   const [records, setRecords] = useState<MedicalRecord[] | null>(null);
@@ -91,7 +90,7 @@ export default function PatientRecordsPage() {
         {/* On phones the ID and upload form come first; on wide screens they sit on the right. */}
         <div className="order-first space-y-6 lg:order-none">
           <PatientIdCard />
-          <UploadForm onUploaded={load} />
+          <RecordUploadForm onUploaded={load} />
         </div>
       </div>
     </RoleGuard>
@@ -128,101 +127,6 @@ function PatientIdCard() {
         Your general health ID: show it at any hospital, and any doctor there can see your medical history. You can see each time someone does.
       </p>
     </section>
-  );
-}
-
-function UploadForm({ onUploaded }: { onUploaded: () => void }) {
-  const [title, setTitle] = useState("");
-  const [type, setType] = useState<RecordType>("lab_report");
-  const [date, setDate] = useState("");
-  const [notes, setNotes] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [done, setDone] = useState(false);
-  const fileInput = useRef<HTMLInputElement>(null);
-
-  function pick(f: File | null) {
-    setError("");
-    setDone(false);
-    if (f && f.size > MAX_MB * 1024 * 1024) {
-      setError(`The file is too large. The limit is ${MAX_MB} MB.`);
-      f = null;
-      if (fileInput.current) fileInput.current.value = "";
-    }
-    setFile(f);
-    if (f && !title) setTitle(f.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "));
-  }
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!file) return setError("Choose a file to upload.");
-    setBusy(true);
-    setError("");
-    const form = new FormData();
-    form.append("title", title);
-    form.append("record_type", type);
-    if (date) form.append("record_date", date);
-    form.append("notes", notes);
-    form.append("file", file);
-    try {
-      await api("/api/records/", { method: "POST", body: form });
-      setTitle("");
-      setDate("");
-      setNotes("");
-      setFile(null);
-      if (fileInput.current) fileInput.current.value = "";
-      setDone(true);
-      onUploaded();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Panel title="Add a record">
-      <form onSubmit={submit} className="space-y-3">
-        <label className="block text-sm font-medium text-slate-700">
-          File
-          <input
-            ref={fileInput}
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-            onChange={(e) => pick(e.target.files?.[0] ?? null)}
-            className="mt-1 block w-full text-sm text-slate-600 file:mr-3 file:rounded-full file:border-0 file:bg-teal-50 file:px-4 file:py-2 file:text-sm file:font-[650] file:text-teal-700 hover:file:bg-teal-100"
-          />
-          <span className="mt-1 block text-xs font-normal text-slate-400">PDF, JPG or PNG, up to {MAX_MB} MB</span>
-        </label>
-        <label className="block text-sm font-medium text-slate-700">
-          Title
-          <input className="input mt-1" required maxLength={150} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Blood test" />
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm font-medium text-slate-700">
-            Type
-            <select className="input mt-1" value={type} onChange={(e) => setType(e.target.value as RecordType)}>
-              {RECORD_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-slate-700">
-            Date
-            <input className="input mt-1" type="date" max={isoDate(new Date())} value={date} onChange={(e) => setDate(e.target.value)} />
-          </label>
-        </div>
-        <label className="block text-sm font-medium text-slate-700">
-          Notes <span className="font-normal text-slate-400">(optional)</span>
-          <textarea className="input mt-1" rows={2} maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </label>
-        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-        {done && <p role="status" className="text-sm text-teal-700">Uploaded.</p>}
-        <button className="btn-primary rounded-xl" disabled={busy}>
-          <Icon name="folder" className="h-4 w-4" />
-          {busy ? "Uploading…" : "Upload record"}
-        </button>
-      </form>
-    </Panel>
   );
 }
 

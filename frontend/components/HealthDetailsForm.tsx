@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Panel } from "@/components/DashboardShell";
 import { api, errorMessage } from "@/lib/api";
 import {
@@ -49,7 +49,7 @@ function missingDetails(f: Form): string {
  * group, allergies, long-term conditions, current medicines and an emergency contact. All optional.
  * Doctors and admins see them (read-only) when they open the patient's records with the patient ID.
  */
-export default function HealthDetailsForm({ personal, beforeSave, onDone, onCancel }: {
+export default function HealthDetailsForm({ personal, beforeSave, onDone, onCancel, load, save }: {
   /** Extra fields shown first in the same form (name and phone on Edit profile). */
   personal?: React.ReactNode;
   /** Saves those extra fields; runs before the health details are saved. Throws to stop the save. */
@@ -57,8 +57,13 @@ export default function HealthDetailsForm({ personal, beforeSave, onDone, onCanc
   /** After a successful save (e.g. back to the profile view). */
   onDone?: (d: PatientDetails) => void;
   onCancel?: () => void;
+  /** Where the details come from and go to; default: the patient's own (/api/auth/me/patient/). A hospital edits
+   * a patient's details from Patient management (2026-11-21). */
+  load?: () => Promise<PatientDetails>;
+  save?: (body: object) => Promise<PatientDetails>;
 } = {}) {
   const [saved, setSaved] = useState<PatientDetails | null>(null);
+  const loadRef = useRef(load); // read once when the form opens (a new function each render must not reload it)
   const [f, setF] = useState<Form | null>(null);
   const [busy, setBusy] = useState(false);
   const [ok, setOk] = useState("");
@@ -68,7 +73,7 @@ export default function HealthDetailsForm({ personal, beforeSave, onDone, onCanc
     // React (in development) runs this twice; a late answer must never overwrite what the patient has already
     // typed. So: ignore answers after cleanup, and only fill the form if it's still empty.
     let stale = false;
-    api<PatientDetails>("/api/auth/me/patient/")
+    (loadRef.current ? loadRef.current() : api<PatientDetails>("/api/auth/me/patient/"))
       .then((d) => {
         if (stale) return;
         setSaved(d);
@@ -109,9 +114,7 @@ export default function HealthDetailsForm({ personal, beforeSave, onDone, onCanc
     const yes = (a: Answer) => a === "yes";
     try {
       await beforeSave?.();
-      const d = await api<PatientDetails>("/api/auth/me/patient/", {
-        method: "PATCH",
-        body: JSON.stringify({
+      const body = {
           date_of_birth: f.date_of_birth || null,
           gender: f.gender,
           height_cm: f.height_cm ? Number(f.height_cm) : null,
@@ -127,8 +130,8 @@ export default function HealthDetailsForm({ personal, beforeSave, onDone, onCanc
           emergency_contact_name: f.emergency_contact_name,
           emergency_contact_relation: f.emergency_contact_relation,
           emergency_contact_phone: f.emergency_contact_phone,
-        }),
-      });
+      };
+      const d = save ? await save(body) : await api<PatientDetails>("/api/auth/me/patient/", { method: "PATCH", body: JSON.stringify(body) });
       setSaved(d);
       setF(toForm(d));
       setOk("Saved.");

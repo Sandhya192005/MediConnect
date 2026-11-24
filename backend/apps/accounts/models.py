@@ -54,6 +54,18 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.email} ({self.role})"
 
+    @property
+    def has_real_email(self) -> bool:
+        """False for a patient a hospital added without an email (see NO_EMAIL_DOMAIN): never email them."""
+        return bool(self.email) and not self.email.endswith("@" + NO_EMAIL_DOMAIN)
+
+
+# A patient a hospital adds without an email (owner decision 2026-11-21: email is optional) still needs a
+# unique login email, so they get a hidden one on this reserved domain (".invalid" can never receive mail).
+# They have no password either: hospitals and doctors open records by patient ID. If the hospital later
+# adds a real email, the patient can claim the account with "Forgot password?".
+NO_EMAIL_DOMAIN = "no-email.mediconnect.invalid"
+
 
 def new_patient_code() -> str:
     """A random patient ID like "P483920". Random (not P1, P2, P3…) so IDs can't be guessed by counting."""

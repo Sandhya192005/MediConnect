@@ -13,11 +13,14 @@ export default function RecordList({
   records,
   onDelete,
   empty,
+  viewer = "patient",
 }: {
   records: MedicalRecord[];
-  /** Patient's own list only. */
+  /** The patient's own list, or a hospital's (it may delete only its own uploads: `can_delete`). */
   onDelete?: (r: MedicalRecord) => Promise<void>;
   empty: { title: string; text?: string };
+  /** Who deletes: each side deletes only its own copy of a hospital's upload (2026-11-21). */
+  viewer?: "patient" | "hospital";
 }) {
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState("");
@@ -50,6 +53,9 @@ export default function RecordList({
                   {r.record_type_label}
                   {r.record_date && ` · ${fmtDate(r.record_date)}`} · {fmtSize(r.size)} · {r.original_name}
                 </p>
+                {r.uploaded_by_hospital_name && (
+                  <p className="text-xs font-[650] text-teal-700">Uploaded by {r.uploaded_by_hospital_name}</p>
+                )}
                 {r.notes && <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{r.notes}</p>}
               </div>
             </div>
@@ -63,9 +69,9 @@ export default function RecordList({
                 <Icon name="arrow" className="h-3.5 w-3.5 rotate-90" />
                 Download
               </button>
-              {onDelete && (
+              {onDelete && r.can_delete !== false && (
                 <button
-                  onClick={() => window.confirm(`Delete "${r.title}"? The file is removed for good.`) && run(r.id, () => onDelete(r))}
+                  onClick={() => window.confirm(deleteQuestion(r, viewer)) && run(r.id, () => onDelete(r))}
                   disabled={busy === r.id}
                   className="btn border border-red-200 bg-white px-3 py-1.5 text-xs text-red-700 hover:bg-red-50"
                   aria-label={`Delete ${r.title}`}
@@ -79,4 +85,11 @@ export default function RecordList({
       </ul>
     </>
   );
+}
+
+/** What Delete does, in plain words: a hospital's upload has two copies, one for each side (2026-11-21). */
+function deleteQuestion(r: MedicalRecord, viewer: "patient" | "hospital") {
+  if (viewer === "hospital") return `Delete "${r.title}" from your hospital's records? The patient keeps their copy.`;
+  if (r.uploaded_by_hospital_name) return `Remove "${r.title}" from your records? ${r.uploaded_by_hospital_name} keeps its copy.`;
+  return `Delete "${r.title}"? The file is removed for good.`;
 }

@@ -35,6 +35,12 @@ class MedicalRecord(models.Model):
     content_type = models.CharField(max_length=50)
     size = models.PositiveIntegerField()
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
+    # Uploaded by a hospital (owner decisions 2026-11-21): the patient sees it too. Each side's Delete only
+    # hides its own copy; the row and file go when neither side keeps it (records/services.delete_for_*).
+    uploaded_by_hospital = models.ForeignKey("hospitals.Hospital", on_delete=models.SET_NULL, null=True, blank=True,
+                                             related_name="uploaded_records")
+    hidden_for_patient = models.BooleanField(default=False)
+    hidden_for_hospital = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

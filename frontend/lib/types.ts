@@ -254,6 +254,10 @@ export type MedicalRecord = {
   content_type: string;
   size: number;
   created_at: string;
+  /** Uploaded by a hospital (2026-11-21); null = the patient uploaded it. */
+  uploaded_by_hospital_name: string | null;
+  /** Hospital's patient page only: whether this hospital may delete it (its own upload). */
+  can_delete?: boolean;
 };
 
 export type RecordAccess = {
@@ -377,12 +381,19 @@ export type StaffMember = {
   department: number | null;
   department_name: string | null;
   designation: string;
+  /** e.g. "Cardiology", "ICU nursing" (2026-11-22). */
+  specialization: string;
+  /** e.g. "MBBS, MD", "B.Sc Nursing". */
+  qualification: string;
   phone: string;
   email: string;
   join_date: string;
   left_on: string | null;
   monthly_salary: string;
   is_active: boolean;
+  /** A linked doctor's MediConnect profile (null without an account). */
+  doctor_profile: { id: number; specialization: string; qualification: string; experience_years: number; fee: number | string;
+                    slot_minutes: number; is_bookable: boolean } | null;
   created_at: string;
 };
 
@@ -443,15 +454,34 @@ export type HospitalOverview = {
   recent_activity: { kind: "staff" | "booking"; title: string; detail: string; at: string }[];
 };
 
+/** A patient's visit, by its date (2026-11-22). */
+export type VisitStatus = "past" | "current" | "upcoming";
+export const VISIT_STATUS: Record<VisitStatus, { label: string; cls: string }> = {
+  past: { label: "Past", cls: "bg-slate-100 text-slate-600 ring-slate-200" },
+  current: { label: "Current", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200" },
+  upcoming: { label: "Upcoming", cls: "bg-sky-50 text-sky-700 ring-sky-200" },
+};
+
 export type HospitalPatient = {
   patient_id: string | null;
   name: string;
-  email: string;
+  /** null = the patient has no email (added by a hospital without one). */
+  email: string | null;
   phone: string;
-  visits: number;
-  last_visit: string | null;
-  next_visit: string | null;
+  added_by_you: boolean;
+  created_by_you: boolean;
+  /** What the patient still owes this hospital: pending payment slips (2026-11-21). */
+  pending_amount: number;
+  // Simple columns (2026-11-22):
+  /** The visit date the hospital set, else today's / the next / the last appointment here. */
+  visit_on: string | null;
+  /** From the date: before today past, today current, after today upcoming. */
+  visit_status: VisitStatus | null;
+  visit_set_by_you: boolean;
+  /** Records this hospital uploaded for the patient. */
   records: number;
+  /** "pending" while anything is unpaid, "completed" when every slip is paid, null without slips. */
+  payment: "pending" | "completed" | null;
 };
 
 // ---- Platform analytics (platform admin) ----
@@ -547,7 +577,8 @@ export type HospitalProfile = {
   latitude: number | null;
   longitude: number | null;
   location_verified: boolean;
-  departments: { id: number; name: string }[];
+  departments: { id: number; name: string; mine?: boolean }[];
+  written_department_ids: number[]; // departments this hospital wrote: it may delete them (2026-11-24)
   connected: boolean;
 };
 
@@ -582,3 +613,41 @@ export type SupportInboxItem = {
   sender_email: string;
   sender_role: string;
 };
+
+/** A patient's page in the hospital's Patient management (GET /api/hospital-admin/patients/<id>/, 2026-11-21). */
+export type HospitalPatientPage = {
+  patient: {
+    patient_id: string; name: string; first_name: string; last_name: string; email: string | null; phone: string;
+    has_login: boolean; in_list: boolean; added_by_you: boolean; created_by_you: boolean;
+    /** The hospital may set or fix the email: none yet, or a patient it created who hasn't used the app (2026-11-22). */
+    can_edit_email: boolean;
+    visit_on: string | null;
+    visit_status: VisitStatus | null;
+    visit_set_by_you: boolean;
+  };
+  details: PatientDetails;
+  records: MedicalRecord[];
+  notes: TreatmentNote[];
+  visits: { id: number; start: string; doctor_name: string; status: AppointmentStatus; reason: string }[];
+};
+
+// ---- Payment slips (2026-11-21) ----
+export type PaymentStatus = "pending" | "completed" | "cancelled";
+export type PaymentMethod = "cash" | "card" | "upi" | "insurance" | "other";
+export const PAYMENT_METHODS: [PaymentMethod, string][] = [["cash", "Cash"], ["card", "Card"], ["upi", "UPI"], ["insurance", "Insurance"], ["other", "Other"]];
+export type PaymentSlip = {
+  id: number; number: string; issued_on: string; status: PaymentStatus; status_label: string;
+  items: { description: string; quantity: number; unit_price: number; amount: number }[];
+  subtotal: number; discount: number; total: number; notes: string;
+  method: PaymentMethod | ""; method_label: string; paid_on: string | null;
+  reopen_reason: string; cancel_reason: string;
+  appointment: number | null; visit: { start: string; doctor_name: string } | null;
+  hospital: { name: string; address: string; city: string; state: string; phone: string; email: string };
+  patient: { name: string; patient_id: string | null; phone: string };
+  created_at: string;
+};
+export type PaymentList = { totals: { pending: number; completed: number }; slips: PaymentSlip[] };
+
+/** ₹ with paise, Indian grouping: 1100.5 → "₹1,100.50". */
+export const fmtMoney = (v: string | number) =>
+  `₹${Number(v).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

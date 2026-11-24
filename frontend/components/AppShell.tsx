@@ -12,7 +12,7 @@ import Icon from "./Icons";
 import NotificationBell from "./NotificationBell";
 
 /** Pages without the top-bar search (owner requests 2026-11-21): My appointments, My medical records, Profile & settings. */
-const NO_SEARCH_PAGES = ["/patient/appointments", "/patient/records", "/settings"];
+const NO_SEARCH_PAGES = ["/patient/appointments", "/patient/records", "/patient/payments", "/settings"];
 
 /**
  * Layout for logged-in users: a sidebar with the role's menu, a top bar with search,

@@ -4,6 +4,31 @@ from django.db.models import Q
 from django.utils import timezone
 
 
+class HospitalPatient(models.Model):
+    """
+    A patient the hospital added to its Patient management (owner request 2026-11-21): someone already on
+    MediConnect (by patient ID) or a new patient it created. The hospital's patient list is these plus
+    everyone with a visit booked there. Removing a patient from the list never deletes their account.
+    """
+
+    hospital = models.ForeignKey("hospitals.Hospital", on_delete=models.CASCADE, related_name="added_patients")
+    patient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="hospital_links")
+    created_account = models.BooleanField(default=False, help_text="The hospital created this patient's account")
+    # The date the patient last visited, set by the hospital (owner request 2026-11-22). Empty = the date of
+    # their last completed appointment here is shown instead.
+    visited_on = models.DateField(null=True, blank=True)
+    added_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "hospital_patient"
+        constraints = [models.UniqueConstraint(fields=["hospital", "patient"], name="one_link_per_hospital_patient")]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.patient} at {self.hospital}"
+
+
 class HospitalAdmin(models.Model):
     """
     Links a hospital account (a user with role "hospital", logging in with the hospital's email) to its ONE
@@ -62,6 +87,10 @@ class StaffMember(models.Model):
     )
     department = models.ForeignKey("hospitals.Department", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     designation = models.CharField(max_length=100, blank=True, help_text="e.g. Senior Consultant, Staff Nurse")
+    # Staff pages (owner request 2026-11-22): shown on the person's page. For a doctor with a MediConnect
+    # account, the account's specialization is shown when this is empty.
+    specialization = models.CharField(max_length=120, blank=True, help_text="e.g. Cardiology, ICU nursing")
+    qualification = models.CharField(max_length=200, blank=True, help_text="e.g. MBBS, MD · B.Sc Nursing")
     phone = models.CharField(max_length=20, blank=True)
     email = models.EmailField(blank=True)
     join_date = models.DateField()

@@ -104,3 +104,85 @@ def test_only_hospital_accounts(setup):
     assert client_for(patient).get(URL).status_code == 403
     assert client_for(setup["platform"]).patch(URL, {"name": "X"}, format="json").status_code == 403
     assert APIClient().get(URL).status_code == 401
+
+
+def test_typed_departments_reuse_existing_or_create(setup):
+    """Owner request 2026-11-24: a hospital can write its own departments, not only tick the listed ones."""
+    cardio = Department.objects.create(name="Cardiology")
+    r = client_for(setup["account"]).patch(URL, {
+        "department_ids": [], "new_departments": ["  cardiology ", "Physio  therapy", "physio therapy", "PHYSIO THERAPY"],
+    }, format="json")
+    assert r.status_code == 200, r.json()
+    names = [d["name"] for d in r.json()["departments"]]
+    assert names == ["Cardiology", "Physio therapy"]  # existing one reused (any case), duplicates dropped
+    assert Department.objects.filter(name__iexact="cardiology").count() == 1
+    assert setup["h"].departments.filter(pk=cardio.pk).exists()
+    # Ticked and typed together: typed ones are added on top of the ticked list.
+    r = client_for(setup["account"]).patch(URL, {"department_ids": [cardio.id], "new_departments": ["ENT"]}, format="json")
+    assert [d["name"] for d in r.json()["departments"]] == ["Cardiology", "ENT"]
+
+
+@pytest.mark.parametrize("bad", ["", " ", "x", "<script>", "123", "a" * 101])
+def test_typed_department_must_be_a_name(setup, bad):
+    r = client_for(setup["account"]).patch(URL, {"new_departments": [bad]}, format="json")
+    assert r.status_code == 400
+    assert not Department.objects.exists()
+
+
+def test_delete_own_written_department(setup):
+    """Owner request 2026-11-24: an × removes a department the hospital wrote."""
+    from apps.staff.models import StaffMember
+
+    c = client_for(setup["account"])
+    c.patch(URL, {"new_departments": ["Pain Clinic", "Sleep Lab"]}, format="json")
+    r = c.get(URL).json()
+    mine = {d["name"]: d for d in r["departments"]}
+    assert mine["Pain Clinic"]["mine"] is True
+    pain, sleep = Department.objects.get(name="Pain Clinic"), Department.objects.get(name="Sleep Lab")
+    assert pain.created_by_id == setup["h"].id
+    assert r["written_department_ids"] == [pain.id, sleep.id]
+    # Unticked, it's still the hospital's own: the × stays available.
+    c.patch(URL, {"department_ids": [sleep.id]}, format="json")
+    assert c.get(URL).json()["written_department_ids"] == [pain.id, sleep.id]
+
+    # Not used anywhere else: removed from the hospital and from the list.
+    r = c.delete(f"{URL}departments/{pain.id}/")
+    assert r.status_code == 200 and r.json()["deleted"] is True
+    assert not Department.objects.filter(pk=pain.pk).exists()
+    assert [d["name"] for d in r.json()["departments"]] == ["Sleep Lab"]
+
+    # Another hospital uses it too: only removed here, stays in the list.
+    setup["other"].departments.add(sleep)
+    r = c.delete(f"{URL}departments/{sleep.id}/")
+    assert r.json()["deleted"] is False and r.json()["departments"] == []
+    assert Department.objects.filter(pk=sleep.pk).exists()
+
+
+def test_delete_department_refusals(setup):
+    from apps.staff.models import StaffMember
+
+    c = client_for(setup["account"])
+    cardio = Department.objects.create(name="Cardiology")  # a platform department
+    setup["h"].departments.add(cardio)
+    assert c.get(URL).json()["departments"][0]["mine"] is False
+    # Its × removes it from this hospital only; it stays in the list (2026-11-24, every department gets an ×).
+    r = c.delete(f"{URL}departments/{cardio.id}/")
+    assert r.status_code == 200 and r.json()["deleted"] is False and r.json()["departments"] == []
+    assert Department.objects.filter(pk=cardio.pk).exists()
+    assert c.delete(f"{URL}departments/{cardio.id}/").status_code == 404  # no longer on this hospital
+    # Another hospital's own department, not on this hospital.
+    theirs = Department.objects.create(name="Their Dept", created_by=setup["other"])
+    assert c.delete(f"{URL}departments/{theirs.id}/").status_code == 404
+    # Its own staff are in it: removed from the hospital, but kept so the nurse keeps her department.
+    c.patch(URL, {"new_departments": ["Pain Clinic"]}, format="json")
+    pain = Department.objects.get(name="Pain Clinic")
+    nurse = StaffMember.objects.create(hospital=setup["h"], kind="nurse", full_name="Meena", department=pain,
+                                       join_date="2026-01-01", monthly_salary=30000)
+    r = c.delete(f"{URL}departments/{pain.id}/")
+    assert r.status_code == 200 and r.json()["deleted"] is False
+    assert not setup["h"].departments.filter(pk=pain.pk).exists()
+    nurse.refresh_from_db()
+    assert nurse.department_id == pain.id
+    # A patient can't use it at all.
+    patient = User.objects.create_user("p@example.com", "pw", role="patient")
+    assert client_for(patient).delete(f"{URL}departments/{pain.id}/").status_code == 403

@@ -20,8 +20,9 @@ from django.utils import timezone
 
 from apps.accounts.models import PatientProfile
 from apps.appointments.models import Appointment, AppointmentRequest, ExternalAppointment
+from apps.billing.models import PaymentSlip
 from apps.records.models import MedicalRecord, RecordAccess
-from apps.staff.models import HospitalAdmin, StaffMember
+from apps.staff.models import HospitalAdmin, HospitalPatient, StaffMember
 from apps.doctors.models import DoctorProfile, WeeklyAvailability
 from apps.hospitals.models import Department, Hospital
 
@@ -47,6 +48,7 @@ class Command(BaseCommand):
 
         User.objects.filter(email__startswith=NEW_USER_PREFIX, email__endswith="@mediconnect.dev").delete()
         Hospital.objects.filter(name__startswith="E2E Signup Hospital").delete()  # from the hospital sign-up test
+        Department.objects.filter(name__startswith="E2E Dept ").delete()  # typed in hospital-profile.spec (2026-11-24)
 
         patient = self._user(PATIENT_EMAIL, "patient", "Esha", "Patient")
         doctor_user = self._user(DOCTOR_EMAIL, "doctor", "Eshwar", "Testdoctor")
@@ -65,6 +67,10 @@ class Command(BaseCommand):
         HospitalAdmin.objects.update_or_create(user=admin_user, defaults={"hospital": partner})
         Hospital.objects.filter(pk=partner.pk).update(email=ADMIN_EMAIL)
         StaffMember.objects.filter(hospital=partner).delete()
+        # Patient management (2026-11-21): patients the test hospital created go, and its added-patient list is reset.
+        User.objects.filter(hospital_links__created_account=True, hospital_links__hospital=partner).delete()
+        HospitalPatient.objects.filter(hospital=partner).delete()
+        PaymentSlip.objects.filter(hospital=partner).delete()  # payment slips (2026-11-21) start fresh too
         # A platform admin (superuser) for the platform analytics tests. e2e_setup only runs with DEBUG on.
         platform_user = self._user(PLATFORM_EMAIL, "admin", "Priya", "Platform")
         platform_user.is_superuser = platform_user.is_staff = True

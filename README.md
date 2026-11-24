@@ -276,6 +276,86 @@ Owner request (2026-11-18): besides doctors and nurses, a hospital manages its *
   - MediConnect stores only each person's **current** salary, so past months use today's salaries; the page says so. Raises would need a salary history to show up.
 - `demo_setup` adds other staff to both demo hospitals that have a Hospital login.
 
+### Patient management: simple list columns (2026-11-22)
+
+Owner request: the list shows only three things per patient (plus name, ID, phone, email and Open):
+- **Visit**: the patient's visit date. The hospital sets or changes it inside the patient's page in a **Visit** box under the patient's name (**Set visit date** / **Change visit date** / **Clear**; moved out of Edit details because it was hard to find; past, today or upcoming; stored on `hospital_patient.visited_on`, migration `staff 0007`, column only added). If it isn't set, today's appointment at the hospital is used, else the next upcoming one, else the last completed one. The list shows **Not set** when there's no date.
+- **Visit status** (added the same day, between Visit and Records): worked out from the visit date each day: before today **Past**, today **Current**, after today **Upcoming** (`staff/patients.pick_visit`).
+- **Records**: how many records **this hospital uploaded** for the patient (not the patient's own uploads, and not ones the hospital deleted).
+- **Payment**: **Pending ₹X** while any slip is unpaid, **Completed** when every slip is paid, "—" without slips.
+- The old Visits / Last visit / Next visit columns are gone. Tests: `staff/test_patients.py` (+1), `staff/tests.py` updated; e2e `patient-management.spec.ts` sets an upcoming date and checks the columns.
+
+### Patient management: fixing an email (2026-11-22)
+
+- The list keeps only **Open** (owner request: editing stays inside the patient's page, **Edit details**). An Edit button in the list was tried and removed the same day.
+- The hospital can now **set or change the email** of a patient it created, as long as the patient hasn't started using the app (no password): it's what the hospital's staff typed, so they can fix it. A patient who logs in themselves (or one the hospital didn't create) keeps their own email (`staff/patients.may_edit_email`, `can_edit_email` on the patient page).
+- Tests: `staff/test_patients.py` covers both cases; e2e `patient-management.spec.ts` opens the patient, edits and fixes an email typo.
+
+### Hospital profile as a professional profile (2026-11-24)
+
+**Hospital profile** (`/admin/hospital`) now opens read-only: a header card (name, Connected / Not connected yet badge, address, **Edit profile**), three key facts (departments, map pin, patients can book), and sections **Contact** (phone, website, login email), **Address**, **Departments** (chips) and **Location** (map + Get directions as patients see it). **Edit profile** opens the same form as before (with **Cancel**); saving returns to the profile with "Saved." e2e `hospital-profile.spec.ts` updated.
+
+### Date filter on hospital appointments (2026-11-24)
+
+**Appointments** (hospital) has a **Date** filter next to **All doctors**, on every tab: Any date, Today, Tomorrow, Yesterday, This week (Mon–Sun), Next 7 days, Last 7 days, This month, Last month, **On a date…** (one date box) and **Between dates…** (From / To; reversed dates still work). **Clear filters** resets doctor and date. It filters the loaded list in the browser (`lib/dateFilter.ts`, local calendar dates). e2e `appointment-date-filter.spec.ts`.
+
+### Hospitals write their own departments (2026-11-24)
+
+**Suggestions while typing:** under the department box, matching departments appear as you type; click one (or ↓/↑ + Enter) to tick it. Spelling mistakes and doctor-style words are tolerated (`lib/departmentMatch.ts`: "gynocologist" → Gynecology, "kardiology" → Cardiology, "pediatrician" → Pediatrics; it compares word stems with an edit distance of 1 letter per 4 typed). The last option adds the typed text as a new department. Synonyms (e.g. "skin" → Dermatology) aren't covered.
+
+In **Edit hospital profile → Departments**, besides ticking listed departments, the hospital can type one that isn't listed (**+ Add** or Enter). On save (`new_departments` on `PATCH /api/hospital-admin/profile/`) a name matching an existing department ignoring case reuses it; otherwise it's created and joins the shared list (patients can filter by it). Names: 2–100 characters, letters/digits/spaces and `& - ( ) . / , '`. Departments a hospital writes are marked as its own (`Department.created_by`, migration `hospitals/0019`); Every department the hospital has (and every one it wrote) gets an **×** in the form (`DELETE /api/hospital-admin/profile/departments/<id>/`): it's removed from the hospital at once; a department the hospital wrote also leaves the shared list when no other hospital, doctor account or staff record uses it (staff keep their department; platform departments like Cardiology always stay in the list). Tests in `staff/test_profile.py`; e2e departments named "E2E Dept …" are removed by `e2e_setup` / `e2e_cleanup`.
+
+### Show on map from the hospital list (2026-11-24)
+
+Each hospital card on **Book appointment** (MediConnect hospitals, Other hospitals, Near me) has **Get directions** (Google Maps, new tab) and **Show on map** side by side (bordered buttons). **Show on map** (when the hospital has a pin): it opens the map, zooms to that hospital, highlights its pin and opens its popup (View hospital · Get directions). `HospitalMap` `FocusSelected` (zooms only when the chosen hospital changes, so the patient can still move the map), and the fit-all-pins step is skipped then. e2e `hospitals.spec.ts`.
+
+### Get directions on the hospital map (2026-11-24)
+
+A **hospital's page** (Book appointment → a hospital) now has **Get directions** and **Show on map** buttons next to its name (Show on map scrolls to the page's map and opens the pin) and a **Get directions in Google Maps ↗** link under its map (the popup alone was too hidden). On **Book appointment → Show map**, each hospital pin's popup also has **Get directions ↗** (Google Maps, opens in a new tab) next to "View hospital". It uses the same link as on appointments: the exact pin when the location is confirmed, else the hospital's name and address. `directionsUrl` moved to `lib/directions.ts` (still re-exported from `HospitalPlace.tsx`). e2e `hospitals.spec.ts` checks the link.
+
+### Doctor, nurse and staff pages, like Patient management (2026-11-22)
+
+Owner request: the lists show each person with their department up front, and **Open** shows all their details.
+- **Lists** (Doctor, Nurse and Staff management), laid out in labelled columns like Patient management (name | **Role** | **Department** | **Status** | Open; stacks on phones): only the **name**, a **role** badge (Doctor, Nurse, Housekeeping, Pharmacist…; the job title for "Other"), a **department** badge, a **Working here** / **Left …** badge and **Open** (simplified the same day at the owner's request: contact number, joined date, role line and salary are inside Open). Edit and Delete moved to the person's page. Search still finds department, specialization, phone and email.
+- **A person's page** (`/admin/doctors/staff/<id>`, `/admin/nurses/<id>`, `/admin/staff/<id>`; `components/StaffMemberPage.tsx`): status (Working here / Left), **Work** (role, designation, department, specialization, qualification, joined, left on, time here) and **Contact and salary** (contact number, email, monthly and yearly salary, MediConnect account), with **Edit** (the same form) and **Delete**. A doctor with a MediConnect account also shows their **MediConnect doctor profile** (specialization, qualification, experience, fee, slot length, bookable) and their **Accepted / Rejected / Waiting** appointments (`components/DoctorAppointmentsPanel.tsx`, shared with `/admin/doctors/<doctor id>`).
+- New optional fields on staff records: **specialization** and **qualification** (migration `staff 0006`, columns only added). For a linked doctor, the account's values are shown when the record leaves them empty. The staff API also returns `doctor_profile`.
+- Tests: 1 new in `staff/tests.py`; 298 backend tests pass; all 42 Playwright tests pass in one run (incl. queue and notes). e2e `staff-pages.spec.ts` (a nurse: add, list with department, open, details, edit salary, delete; a doctor with an account: profile and appointments).
+
+### Payment slips — Phase 2 of 2 (screens) (2026-11-21)
+
+- **Patient management → a patient's page → Payments:** Pending and Paid totals; **New payment slip** with lines (description, quantity, price; + Add line, remove), discount, slip date, optional visit, notes, a **live total**, and "Already paid" (with the method) for bills paid on the spot. Each slip shows its number, status badge, total and lines, with **Slip** (view/print), **Mark as paid** (method + date), **Edit** and **Cancel** while pending, and **Back to pending** (reason required) once paid.
+- **Patient list:** a **Pending** column with what each patient still owes the hospital (`pending_amount` in `GET /api/hospital-admin/patients/`).
+- **Printable slip** (`/admin/payments/<id>`, `/patient/payments/<id>`): hospital name, address, phone and email; slip number, date and status; patient and patient ID; the visit; lines, subtotal, discount and total; paid on/by or "Payment pending. Amount due". **Print or save as PDF** uses the browser's print dialog; print styles show only the slip, on white (`.print-area` in `globals.css`). No new library.
+- **Patient:** new menu item **My payments** (`/patient/payments`): Pending and Paid totals and every slip from every hospital, each openable and printable. It has the "MediConnect is your Better Partner" top bar like the other patient pages without search.
+- `e2e_setup` clears the test hospital's slips each run. e2e `payments.spec.ts`: bill the E2E patient with two lines and a discount (live total ₹1,100.00) → print page → mark paid by UPI (locked) → the patient sees it in My payments.
+
+### Payment slips in Patient management (2026-11-21) — Phase 1 of 2 (backend)
+
+Owner decisions: an **itemised** slip, status **Pending / Completed**, the **patient sees** their slips, a **printable** slip page, and **completed slips are locked**.
+- New app `billing`: tables `payment_slip` and `payment_item`. A slip has a number per hospital and year from the hospital's initials (`EPH-2026-0001`), a date, an optional visit, lines (description × quantity × price), an optional discount, notes, and the **total worked out by the server** (a total sent by the browser is ignored). Database checks: no negative amounts, one number per hospital, a completed slip always has a method and paid date.
+- **Pending** slips can be edited or **cancelled** (optional reason). **Completed** = paid with **Cash, Card, UPI, Insurance or Other** and a paid date (today by default); it's locked and can only go **back to Pending with a reason**, which stays on the slip. A slip can also be created already paid.
+- The patient gets in-app notifications: "New payment slip" and "Payment received".
+- API: hospital `GET/POST /api/hospital-admin/payments/` (`?patient=`, `?status=`; totals pending/completed), `GET/PATCH …/<id>/`, `POST …/<id>/complete/`, `…/reopen/`, `…/cancel/` (only patients in its list, only its own slips); patient `GET /api/payments/` and `/api/payments/<id>/` (read-only). Each slip includes the hospital's name, address and phone, and the patient's name and ID, for the printed slip. Read-only in Django admin.
+- Tests: `billing/tests.py` (6); 297 backend tests pass.
+
+### Hospital Patient management — Phase 2 of 2 (screens) (2026-11-21)
+
+- **Patient management** (`/admin/patients`): an **Add patient** box with two tabs, **Has a patient ID** and **New patient** (first and last name, phone; email, date of birth, gender optional; the page explains that no password is needed). The list shows every patient added or with a visit, with phone, email (or "No email"), visits, records and "Added by you", and an **Open** button. Search also finds phone numbers.
+- **A patient's page** (`/admin/patients/<patient_id>`): name, ID, age, gender, phone, email, whether they use the app; **Edit details** (name, phone, email if they have none, and the same health details form the patient uses); **Medical records** (all of them, "Uploaded by <hospital>" on yours, Delete only on your uploads: "The patient keeps their copy") with an **Upload a record** form; **Visits at your hospital**; **Treatment notes**; **Add to my patients** / **Remove from my patients**. Opening it is logged for the patient.
+- The separate **Patient records** menu item is gone for hospitals (doctors keep theirs); old `/admin/patients/records?id=` links open the patient's page.
+- **Patient side:** My medical records shows "Uploaded by <hospital>"; deleting one says "<hospital> keeps its copy".
+- Shared pieces: `components/RecordUploadForm.tsx` (moved out of the patient's page, `endpoint` prop), `HealthDetailsForm` takes `load`/`save` (patient's own API by default), `RecordList` shows the uploader and asks the right delete question.
+- e2e: new `patient-management.spec.ts` (new patient without email → edit details → upload; add the E2E patient by ID → upload → the patient sees and removes it → the hospital still has it and deletes its copy); `admin` and `notes` specs updated.
+
+### Hospital Patient management: add patients, details and records in one place (2026-11-21) — Phase 1 of 2 (backend)
+
+Owner decisions: the hospital adds **every patient who visits**, whether or not they have a MediConnect account, and manages their details and medical records inside Patient management (the separate "Patient records" menu item goes in Phase 2).
+- **The hospital's patient list** = patients it added (new table `hospital_patient`) + everyone with a visit booked there.
+- **Add a patient** (`POST /api/hospital-admin/patients/add/`): by **patient ID** (already on MediConnect), or **new**: name and phone, optional email, date of birth, gender. A new patient gets a patient ID but **no password and no email** (hospitals and doctors open records by ID). Without an email they get a hidden placeholder on the reserved `no-email.mediconnect.invalid` domain, which never receives mail. A patient with an email can claim the account later with "Forgot password?". A used email is refused without revealing whose it is.
+- **Open a patient** (`GET /api/hospital-admin/patients/<patient_id>/`): details, health details, records, treatment notes and visits at this hospital; logged in the patient's access log, like every records view. Any patient can be opened by ID; **editing** (`PATCH`: name, phone, email if they had none, health details) and **uploading records** need the patient in the hospital's list. **Both the hospital and the patient can edit health details.** `DELETE` removes a patient the hospital added from its list (the account stays; patients with visits stay listed).
+- **Records the hospital uploads** (`POST …/records/`, `DELETE …/records/<id>/`): the patient sees them in My medical records ("Uploaded by <hospital>") and gets a "New medical record" notification. **Each side's Delete removes only its own copy** (`hidden_for_patient` / `hidden_for_hospital` on `MedicalRecord`); the record and file are deleted once neither side keeps it. The hospital can delete only its own uploads; the patient can't edit a hospital upload's details. Doctors and other hospitals see what the patient keeps.
+- Tests: `staff/test_patients.py` (6); 291 backend tests pass. `e2e_setup`/`e2e_cleanup` remove patients created by E2E hospitals.
+
 ### New booking flow — Phase 2 of 2 (screens) (2026-11-21)
 
 - **Booking page** (`/doctors/<id>`): reached from a hospital's specialist list (`?via=hospital`) it sends a hospital request and says "Booking through <hospital>: the hospital accepts your request and assigns a doctor, then the doctor confirms"; reached directly it says "Personal request to Dr. …". The chatbot's booking is a personal request ("✓ Request sent! Your time is held until the doctor accepts").

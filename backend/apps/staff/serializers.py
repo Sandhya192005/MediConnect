@@ -16,14 +16,25 @@ class StaffMemberSerializer(serializers.ModelSerializer):
     doctor_email = serializers.EmailField(source="doctor.user.email", read_only=True, default=None)
     full_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     kind_label = serializers.CharField(source="get_kind_display", read_only=True)
+    # A linked doctor's MediConnect profile, for the person's page (2026-11-22).
+    doctor_profile = serializers.SerializerMethodField()
 
     class Meta:
         model = StaffMember
         fields = [
             "id", "kind", "kind_label", "full_name", "doctor", "doctor_email", "department", "department_name", "designation",
-            "phone", "email", "join_date", "left_on", "monthly_salary", "is_active", "created_at",
+            "specialization", "qualification", "phone", "email", "join_date", "left_on", "monthly_salary", "is_active",
+            "doctor_profile", "created_at",
         ]
         read_only_fields = ["created_at"]
+
+    def get_doctor_profile(self, obj):
+        d = obj.doctor
+        if d is None:
+            return None
+        return {"id": d.id, "specialization": d.specialization, "qualification": d.qualification,
+                "experience_years": d.experience_years, "fee": d.fee, "slot_minutes": d.slot_minutes,
+                "is_bookable": d.is_bookable}
 
     def validate_monthly_salary(self, value):
         if value < 0:

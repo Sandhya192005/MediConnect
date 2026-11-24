@@ -15,7 +15,9 @@ from apps.accounts.permissions import IsPatient, role_required
 from .models import MedicalRecord, RecordAccess, TreatmentNote
 from .notes import TreatmentNoteSerializer
 from .serializers import MedicalRecordSerializer, RecordAccessSerializer
-from .services import RECORD_VIEWER_ROLES, log_access, may_open_records, staff_hospital
+from .services import (
+    RECORD_VIEWER_ROLES, delete_for_patient, log_access, may_open_records, records_visible_to, staff_hospital,
+)
 
 NOT_FOUND = "No patient with this ID."
 IsRecordViewer = role_required(*RECORD_VIEWER_ROLES)  # doctors, hospital accounts and platform admins
@@ -41,8 +43,16 @@ class MyRecordViewSet(
     http_method_names = ["get", "post", "patch", "delete"]
 
     def get_queryset(self):
-        # Only ever the logged-in patient's records: another patient's id gives 404.
-        return MedicalRecord.objects.filter(patient=self.request.user)
+        # Only ever the logged-in patient's records (not ones they deleted): another patient's id gives 404.
+        return records_visible_to(self.request.user, self.request.user)
+
+    def perform_update(self, serializer):
+        if serializer.instance.uploaded_by_hospital_id:
+            raise PermissionDenied("A hospital uploaded this record, so only the hospital can change its details.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        delete_for_patient(instance)  # a hospital's upload stays with the hospital (each side has its own copy)
 
     @action(detail=False, url_path="access-log")
     def access_log(self, request):
@@ -74,7 +84,7 @@ class PatientLookupView(APIView):
         patient = profile.user
         hospital = staff_hospital(request.user)  # for the log only; a viewer without a hospital is allowed too
         log_access(viewer=request.user, patient=patient, hospital=hospital, action=RecordAccess.Action.VIEW_LIST)
-        records = MedicalRecord.objects.filter(patient=patient)
+        records = records_visible_to(request.user, patient)
         return Response({
             "patient": {
                 "patient_id": profile.patient_id,
@@ -104,8 +114,11 @@ class RecordFileView(APIView):
             raise Http404
         user = request.user
         if user.role == "patient" and record.patient_id == user.id:
-            pass
+            if record.hidden_for_patient:
+                raise Http404
         elif may_open_records(user):
+            if not records_visible_to(user, record.patient).filter(pk=record.pk).exists():
+                raise Http404
             log_access(viewer=user, patient=record.patient, hospital=staff_hospital(user),
                        action=RecordAccess.Action.DOWNLOAD, record=record)
         else:

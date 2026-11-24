@@ -1,14 +1,21 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
-import { Panel, SkeletonRows } from "@/components/DashboardShell";
+import { useCallback, useEffect, useState } from "react";
+import { IconTile, Panel, SkeletonRows } from "@/components/DashboardShell";
+import Icon from "@/components/Icons";
 import type { PinPoint } from "@/components/PinPicker";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { matchDepartments } from "@/lib/departmentMatch";
+import { directionsUrl } from "@/lib/directions";
 import type { Department, HospitalProfile } from "@/lib/types";
 
+const HospitalMap = dynamic(() => import("@/components/HospitalMap"), {
+  ssr: false,
+  loading: () => <div className="h-[220px] animate-pulse rounded-xl bg-slate-100" />,
+});
 const PinPicker = dynamic(() => import("@/components/PinPicker"), {
   ssr: false,
   loading: () => <div className="h-[320px] animate-pulse rounded-xl bg-slate-100" />,
@@ -32,27 +39,173 @@ const toForm = (h: HospitalProfile): Form => ({
 export default function HospitalProfilePage() {
   return (
     <RoleGuard role="hospital">
-      <ProfileEditor />
+      <HospitalProfileScreen />
     </RoleGuard>
   );
 }
 
-function ProfileEditor() {
-  const { refresh } = useAuth();
+/**
+ * The profile opens read-only, like a professional profile (owner request 2026-11-24); "Edit profile" opens
+ * the form, and saving goes back to the profile.
+ */
+function HospitalProfileScreen() {
   const [h, setH] = useState<HospitalProfile | null>(null);
-  const [f, setF] = useState<Form | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [flash, setFlash] = useState("");
+  const [error, setError] = useState("");
+
+  const load = useCallback(() => {
+    api<HospitalProfile>("/api/hospital-admin/profile/").then(setH).catch((e) => setError(errorMessage(e)));
+  }, []);
+  useEffect(load, [load]);
+
+  if (!h) return <>{error ? <p role="alert" className="rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p> : <SkeletonRows rows={6} />}</>;
+  if (editing) {
+    return (
+      <ProfileEditor initial={h} onCancel={() => { setEditing(false); load(); /* a department may have been deleted */ }}
+                     onSaved={(x) => { setH(x); setEditing(false); setFlash(x.connected ? "Saved. Patients see the new details now." : "Saved."); }} />
+    );
+  }
+  return <ProfileView h={h} flash={flash} onEdit={() => { setFlash(""); setEditing(true); }} />;
+}
+
+function ProfileView({ h, flash, onEdit }: { h: HospitalProfile; flash: string; onEdit: () => void }) {
+  const hasPin = h.latitude != null && h.longitude != null;
+  const where = [h.address, h.city, h.state].filter(Boolean).join(", ");
+  const website = h.website ? h.website.replace(/^https?:\/\//, "").replace(/\/$/, "") : "";
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="page-title">Hospital profile</h1>
+        <p className="page-subtitle text-sm">What patients see about your hospital on MediConnect.</p>
+      </div>
+      {flash && <p role="status" className="rounded-xl bg-green-50 px-4 py-2 text-sm text-green-800">{flash}</p>}
+
+      {/* ---- Header card ---- */}
+      <section aria-label="Hospital" className="dash-card overflow-hidden">
+        <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
+          <span aria-hidden="true" className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-[#00295c] text-white">
+            <Icon name="hospital" className="h-10 w-10" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-bold text-[#00295c]">{h.name}</h2>
+              {h.connected ? (
+                <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-[650] text-emerald-700 ring-1 ring-emerald-200">Connected to MediConnect</span>
+              ) : (
+                <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-[650] text-amber-800 ring-1 ring-amber-200">Not connected yet</span>
+              )}
+            </div>
+            <p className="mt-1 flex items-start gap-1.5 text-sm text-slate-600">
+              <Icon name="pin" className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" /> {where || "Address not added"}
+            </p>
+          </div>
+          <button type="button" onClick={onEdit} className="btn-solid rounded-xl px-4 py-2 text-sm">
+            <Icon name="pencil" className="h-4 w-4" /> Edit profile
+          </button>
+        </div>
+        <dl className="grid grid-cols-3 divide-x divide-slate-100 border-t border-slate-100 text-center">
+          <Fact label="Departments" value={String(h.departments.length)} />
+          <Fact label="Map pin" value={hasPin ? "Set" : "Not set"} />
+          <Fact label="Patients can book" value={h.connected ? "Yes" : "Not yet"} />
+        </dl>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Section title="Contact" icon="phone">
+          <Row k="Phone" v={h.phone} />
+          <Row k="Website" v={website ? <a href={h.website} target="_blank" rel="noopener noreferrer" className="dash-link">{website} ↗</a> : ""} />
+          <Row k="Login email" v={h.email} />
+        </Section>
+        <Section title="Address" icon="pin">
+          <Row k="Street / area" v={h.address} />
+          <Row k="City" v={h.city} />
+          <Row k="State" v={h.state} />
+        </Section>
+      </div>
+
+      <Section title="Departments" icon="stethoscope">
+        {h.departments.length === 0 ? (
+          <p className="py-1 text-sm text-slate-400">No departments chosen yet. Patients search hospitals by department.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2 py-1">
+            {h.departments.map((d) => <span key={d.id} className="chip">{d.name}</span>)}
+          </div>
+        )}
+      </Section>
+
+      <Section title="Location" icon="map">
+        {hasPin ? (
+          <div className="space-y-2 py-1">
+            <div className="overflow-hidden rounded-xl">
+              <HospitalMap hospitals={[{ id: h.id, name: h.name, address: h.address, city: h.city, latitude: h.latitude, longitude: h.longitude, location_verified: h.location_verified }]} height={240} />
+            </div>
+            <a href={directionsUrl(h.name, h)} target="_blank" rel="noopener noreferrer" className="dash-link text-sm">
+              <Icon name="arrow" className="h-4 w-4 -rotate-45" /> Get directions (what patients see)
+            </a>
+          </div>
+        ) : (
+          <p className="py-1 text-sm text-slate-400">No pin yet: patients can&apos;t find you on the map. Use Edit profile to place it.</p>
+        )}
+      </Section>
+    </div>
+  );
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="px-2 py-4">
+      <dt className="text-xs text-slate-500">{label}</dt>
+      <dd className="mt-0.5 text-lg font-bold text-[#00295c]">{value}</dd>
+    </div>
+  );
+}
+
+function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+  return (
+    <section aria-label={title} className="dash-card p-5">
+      <div className="mb-2 flex items-center gap-3">
+        <IconTile icon={icon} tone="blue" size="sm" />
+        <h2 className="text-sm font-[650] text-[#00295c]">{title}</h2>
+      </div>
+      <dl className="divide-y divide-slate-100">{children}</dl>
+    </section>
+  );
+}
+
+function Row({ k, v }: { k: string; v: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[8rem_1fr] gap-4 py-2.5 text-sm">
+      <dt className="text-slate-500">{k}</dt>
+      <dd className="min-w-0 break-words text-[#00295c]">{v || <span className="text-slate-400">Not added</span>}</dd>
+    </div>
+  );
+}
+
+/** The edit form (details, departments, map pin). Saving goes back to the profile. */
+function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfile; onCancel: () => void; onSaved: (x: HospitalProfile) => void }) {
+  const { refresh } = useAuth();
+  const h = initial;
+  const [f, setF] = useState<Form>(() => toForm(initial));
   const [departments, setDepartments] = useState<Department[]>([]);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
   const [busy, setBusy] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [newDepts, setNewDepts] = useState<string[]>([]); // typed by the hospital (2026-11-24)
+  const [written, setWritten] = useState<number[]>(initial.written_department_ids); // written by this hospital
+  const [onFile, setOnFile] = useState<number[]>(() => initial.departments.map((d) => d.id)); // saved on the hospital
+  const [typed, setTyped] = useState("");
+  const [hint, setHint] = useState(-1); // highlighted suggestion (arrow keys)
 
   useEffect(() => {
-    api<HospitalProfile>("/api/hospital-admin/profile/").then((x) => { setH(x); setF(toForm(x)); }).catch((e) => setError(errorMessage(e)));
     api<Department[]>("/api/departments/").then(setDepartments).catch(() => {});
   }, []);
 
-  if (!f || !h) return <>{error ? <p role="alert" className="rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p> : <SkeletonRows rows={6} />}</>;
+  const suggestions = typed.trim() ? matchDepartments(typed, departments) : [];
+  const canAddNew = typed.trim().length >= 2
+    && !departments.some((d) => d.name.toLowerCase() === typed.trim().toLowerCase())
+    && !newDepts.some((n) => n.toLowerCase() === typed.trim().toLowerCase());
 
   const set = (k: (typeof TEXT)[number]) => (e: React.ChangeEvent<HTMLInputElement>) => { setF({ ...f, [k]: e.target.value }); setSaved(""); };
   const setPin = (pin: PinPoint | null) => { setF({ ...f, pin }); setSaved(""); };
@@ -60,6 +213,57 @@ function ProfileEditor() {
     setF({ ...f, department_ids: f.department_ids.includes(id) ? f.department_ids.filter((x) => x !== id) : [...f.department_ids, id] });
     setSaved("");
   };
+
+  /** Add a typed department: tick it when it's already listed (any case), else keep it as new. */
+  /** Click a suggestion: tick that listed department. */
+  function pickSuggestion(d: Department) {
+    if (!f.department_ids.includes(d.id)) setF({ ...f, department_ids: [...f.department_ids, d.id] });
+    setTyped("");
+    setHint(-1);
+    setSaved("");
+  }
+
+  function addTyped() {
+    setHint(-1);
+    const name = typed.split(/\s+/).filter(Boolean).join(" ");
+    if (name.length < 2) return;
+    const listed = departments.find((d) => d.name.toLowerCase() === name.toLowerCase());
+    if (listed) {
+      if (!f.department_ids.includes(listed.id)) setF({ ...f, department_ids: [...f.department_ids, listed.id] });
+    } else if (!newDepts.some((n) => n.toLowerCase() === name.toLowerCase())) {
+      setNewDepts([...newDepts, name]);
+    }
+    setTyped("");
+    setSaved("");
+  }
+
+  /**
+   * The × on a department (owner request 2026-11-24): on every department the hospital has, and on the ones it
+   * wrote. Saved ones are removed at once (a written one also leaves the list when no one else uses it); a
+   * department only ticked in this form is just unticked.
+   */
+  async function removeDept(d: Department) {
+    const mine = written.includes(d.id);
+    if (!mine && !onFile.includes(d.id)) {
+      setF((cur) => ({ ...cur, department_ids: cur.department_ids.filter((x) => x !== d.id) }));
+      return;
+    }
+    if (!window.confirm(mine ? `Delete department "${d.name}"? It is removed from your hospital.`
+                             : `Remove "${d.name}" from your hospital?`)) return;
+    setError("");
+    setSaved("");
+    try {
+      const r = await api<{ deleted: boolean; departments: { id: number }[]; written_department_ids: number[] }>(
+        `/api/hospital-admin/profile/departments/${d.id}/`, { method: "DELETE" });
+      setWritten(r.written_department_ids);
+      setOnFile(r.departments.map((x) => x.id));
+      setF((cur) => ({ ...cur, department_ids: cur.department_ids.filter((x) => x !== d.id) }));
+      if (r.deleted) setDepartments((list) => list.filter((x) => x.id !== d.id));
+      setSaved(r.deleted ? `Deleted "${d.name}".` : `Removed "${d.name}" from your hospital.`);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
 
   function locateMe() {
     setError("");
@@ -81,14 +285,13 @@ function ProfileEditor() {
       const body = {
         ...Object.fromEntries(TEXT.map((k) => [k, f![k]])),
         department_ids: f!.department_ids,
+        new_departments: newDepts,
         latitude: f!.pin ? Number(f!.pin.lat.toFixed(6)) : null,
         longitude: f!.pin ? Number(f!.pin.lng.toFixed(6)) : null,
       };
       const x = await api<HospitalProfile>("/api/hospital-admin/profile/", { method: "PATCH", body: JSON.stringify(body) });
-      setH(x);
-      setF(toForm(x));
-      setSaved(x.connected ? "Saved. Patients see the new details now." : "Saved.");
-      if (x.name !== h!.name) await refresh(); // the account name follows the hospital's name
+      if (x.name !== h.name) await refresh(); // the account name follows the hospital's name
+      onSaved(x); // back to the profile view
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -100,14 +303,17 @@ function ProfileEditor() {
     <form onSubmit={save} className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="page-title">Hospital profile</h1>
+          <h1 className="page-title">Edit hospital profile</h1>
           <p className="page-subtitle text-sm">
             {h.connected
               ? "Your hospital is connected: patients see these details as soon as you save."
               : "Patients will see these details once your hospital is connected with MediConnect."}
           </p>
         </div>
-        <button className="btn-solid rounded-xl px-5 py-2.5" disabled={busy}>{busy ? "Saving…" : "Save changes"}</button>
+        <div className="flex gap-2">
+          <button type="button" onClick={onCancel} className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm text-slate-700 hover:bg-slate-50">Cancel</button>
+          <button className="btn-solid rounded-xl px-5 py-2.5" disabled={busy}>{busy ? "Saving…" : "Save changes"}</button>
+        </div>
       </div>
       {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
       {saved && <p role="status" className="rounded-xl bg-green-50 px-4 py-2 text-sm text-green-800">{saved}</p>}
@@ -140,22 +346,92 @@ function ProfileEditor() {
       </Panel>
 
       <Panel title="Departments">
-        <p className="-mt-2 mb-3 text-xs text-slate-500">Tick the departments your hospital has. Patients search by these.</p>
+        <p className="-mt-2 mb-3 text-xs text-slate-500">Tick the departments your hospital has, or write one that isn&apos;t listed. The × removes a department from your hospital. Patients search by these.</p>
         {departments.length === 0 ? (
           <p className="text-sm text-slate-500">No departments on MediConnect yet.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {departments.map((d) => {
               const on = f.department_ids.includes(d.id);
-              return (
+              const chip = (
                 <label key={d.id} className={`cursor-pointer ${on ? "chip chip-active" : "chip"}`}>
                   <input type="checkbox" className="sr-only" checked={on} onChange={() => toggleDept(d.id)} />
                   {d.name}
                 </label>
               );
+              const mine = written.includes(d.id);
+              if (!on && !mine) return chip;
+              // × on every department the hospital has, and on the ones it wrote (owner request 2026-11-24).
+              return (
+                <span key={d.id} className="inline-flex items-center gap-1">
+                  {chip}
+                  <button type="button" onClick={() => removeDept(d)}
+                          aria-label={mine ? `Delete department ${d.name}` : `Remove department ${d.name}`}
+                          title={mine ? "Delete this department" : "Remove from your hospital"}
+                          className="-ml-2 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-sm text-slate-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600">
+                    ×
+                  </button>
+                </span>
+              );
             })}
           </div>
         )}
+        {newDepts.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2" aria-label="New departments">
+            {newDepts.map((n) => (
+              <span key={n} className="chip chip-active">
+                {n}
+                <button type="button" aria-label={`Remove ${n}`} className="ml-1 opacity-80 hover:opacity-100"
+                        onClick={() => setNewDepts(newDepts.filter((x) => x !== n))}>×</button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="mt-4 flex max-w-md gap-2">
+          <div className="relative flex-1">
+            <label className="sr-only" htmlFor="new-department">Add a department</label>
+            <input id="new-department" className="input" maxLength={100} placeholder="Write a department, e.g. Physiotherapy"
+                   role="combobox" aria-expanded={suggestions.length > 0 || canAddNew} aria-controls="department-suggestions"
+                   aria-autocomplete="list" autoComplete="off"
+                   value={typed} onChange={(e) => { setTyped(e.target.value); setHint(-1); }}
+                   onKeyDown={(e) => {
+                     if (e.key === "ArrowDown") { e.preventDefault(); setHint((i) => Math.min(i + 1, suggestions.length - 1)); }
+                     else if (e.key === "ArrowUp") { e.preventDefault(); setHint((i) => Math.max(i - 1, -1)); }
+                     else if (e.key === "Escape") { setTyped(""); setHint(-1); }
+                     else if (e.key === "Enter") {
+                       e.preventDefault();
+                       if (hint >= 0 && suggestions[hint]) pickSuggestion(suggestions[hint]); else addTyped();
+                     }
+                   }} />
+            {/* Suggestions while typing (owner request 2026-11-24): "gynocologist" → Gynecology. */}
+            {(suggestions.length > 0 || canAddNew) && (
+              <ul id="department-suggestions" role="listbox" aria-label="Department suggestions"
+                  className="absolute left-0 right-0 top-full z-[1000] mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                {suggestions.map((d, i) => {
+                  const ticked = f.department_ids.includes(d.id);
+                  return (
+                    <li key={d.id} role="option" aria-selected={i === hint}
+                        onMouseDown={(e) => { e.preventDefault(); pickSuggestion(d); }}
+                        onMouseEnter={() => setHint(i)}
+                        className={`flex cursor-pointer items-center justify-between px-3 py-2 text-sm ${i === hint ? "bg-teal-50" : ""}`}>
+                      <span className="text-[#00295c]">{d.name}</span>
+                      {ticked && <span className="text-xs text-slate-400">✓ already added</span>}
+                    </li>
+                  );
+                })}
+                {canAddNew && (
+                  <li role="option" aria-selected={false} onMouseDown={(e) => { e.preventDefault(); addTyped(); }}
+                      className="cursor-pointer border-t border-slate-100 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">
+                    + Add &ldquo;{typed.trim()}&rdquo; as a new department
+                  </li>
+                )}
+              </ul>
+            )}
+          </div>
+          <button type="button" onClick={addTyped} disabled={typed.trim().length < 2}
+                  className="btn-outline shrink-0 rounded-xl px-4 text-sm">+ Add</button>
+        </div>
+        {newDepts.length > 0 && <p className="mt-2 text-xs text-slate-500">New departments are saved when you press Save changes.</p>}
       </Panel>
 
       <Panel title="Location on the map">

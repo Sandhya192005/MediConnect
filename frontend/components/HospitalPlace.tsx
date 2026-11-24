@@ -2,26 +2,17 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
+import { directionsUrl } from "@/lib/directions";
 import { areaOf, type HospitalPlaceData } from "@/lib/types";
 import Icon from "./Icons";
+
+export { directionsUrl }; // kept here too: older imports use it from this file
 
 // Leaflet needs the browser: load the map only there, and only when "Show on map" is pressed.
 const HospitalMap = dynamic(() => import("./HospitalMap"), {
   ssr: false,
   loading: () => <div className="h-[220px] animate-pulse rounded-xl bg-slate-100" />,
 });
-
-/**
- * Directions to a hospital in Google Maps (owner request 2026-11-18). The patient's own phone/browser
- * fills in where they are; MediConnect never sees it. An unverified pin could be wrong, so then we send
- * the hospital's name and address and let Maps find it.
- */
-export function directionsUrl(name: string, place: HospitalPlaceData | null): string {
-  const destination = place?.latitude != null && place.location_verified
-    ? `${place.latitude},${place.longitude}`
-    : [name, place?.address, place?.city].filter(Boolean).join(", ");
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
-}
 
 /**
  * Where the hospital is, on an appointment, a request or a visit booked directly with a hospital:
