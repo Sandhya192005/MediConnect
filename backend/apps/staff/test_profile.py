@@ -104,3 +104,26 @@ def test_only_hospital_accounts(setup):
     assert client_for(patient).get(URL).status_code == 403
     assert client_for(setup["platform"]).patch(URL, {"name": "X"}, format="json").status_code == 403
     assert APIClient().get(URL).status_code == 401
+
+
+def test_typed_departments_reuse_existing_or_create(setup):
+    """Owner request 2026-11-24: a hospital can write its own departments, not only tick the listed ones."""
+    cardio = Department.objects.create(name="Cardiology")
+    r = client_for(setup["account"]).patch(URL, {
+        "department_ids": [], "new_departments": ["  cardiology ", "Physio  therapy", "physio therapy", "PHYSIO THERAPY"],
+    }, format="json")
+    assert r.status_code == 200, r.json()
+    names = [d["name"] for d in r.json()["departments"]]
+    assert names == ["Cardiology", "Physio therapy"]  # existing one reused (any case), duplicates dropped
+    assert Department.objects.filter(name__iexact="cardiology").count() == 1
+    assert setup["h"].departments.filter(pk=cardio.pk).exists()
+    # Ticked and typed together: typed ones are added on top of the ticked list.
+    r = client_for(setup["account"]).patch(URL, {"department_ids": [cardio.id], "new_departments": ["ENT"]}, format="json")
+    assert [d["name"] for d in r.json()["departments"]] == ["Cardiology", "ENT"]
+
+
+@pytest.mark.parametrize("bad", ["", " ", "x", "<script>", "123", "a" * 101])
+def test_typed_department_must_be_a_name(setup, bad):
+    r = client_for(setup["account"]).patch(URL, {"new_departments": [bad]}, format="json")
+    assert r.status_code == 400
+    assert not Department.objects.exists()

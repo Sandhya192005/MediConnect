@@ -35,6 +35,11 @@ test("a hospital edits its profile, departments and map pin", async ({ page, req
   await page.getByLabel("Phone").fill("044 1234 5678");
   await page.getByText("Cardiology", { exact: true }).click(); // e2e_setup creates this department
   await expect(page.getByRole("checkbox", { name: "Cardiology" })).toBeChecked();
+  // A department that isn't listed can be written (2026-11-24); a listed one typed in any case is just ticked.
+  const dept = `E2E Dept ${stamp}`;
+  await page.getByLabel("Add a department").fill(dept);
+  await page.getByRole("button", { name: "+ Add" }).click();
+  await expect(page.getByRole("button", { name: `Remove ${dept}` })).toBeVisible();
 
   // The pin: click the map.
   await expect(page.getByText("No pin yet")).toBeVisible();
@@ -48,6 +53,7 @@ test("a hospital edits its profile, departments and map pin", async ({ page, req
   await expect(card).toContainText("12 Test Street, Guindy, Chennai");
   await expect(page.getByRole("region", { name: "Contact" })).toContainText("044 1234 5678");
   await expect(page.getByRole("region", { name: "Departments" })).toContainText("Cardiology");
+  await expect(page.getByRole("region", { name: "Departments" })).toContainText(dept);
   await expect(card).toContainText(/Map pin\s*Set/);
   await expect(page.getByRole("region", { name: "Location" }).getByRole("link", { name: /Get directions/ })).toBeVisible();
 

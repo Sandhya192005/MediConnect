@@ -9,7 +9,13 @@ GET/PATCH /api/hospital-admin/profile/
   a pin the hospital sets itself counts as confirmed (location_verified=True), so patients' "Get directions"
   uses it. No notification for pin moves.
 - The hospital email is the login, so it's read-only here (changing it goes through Support).
+- Departments (owner request 2026-11-24): tick existing ones (department_ids) and/or type new names
+  (new_departments). A typed name that matches an existing department, ignoring case and spaces, reuses it;
+  otherwise it's created and joins the shared list (patients can filter by it).
 """
+
+import re
+
 
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import Point
@@ -28,18 +34,33 @@ def _clean(value: str) -> str:
     return " ".join(str(value).split())
 
 
+DEPT_NAME = re.compile(r"[A-Za-z0-9 &()./,'-]+")
+
+
+def department_named(name: str) -> Department:
+    """The department with this name, ignoring case; created when there's none yet."""
+    found = Department.objects.filter(name__iexact=name).first()
+    if found:
+        return found
+    dept, _ = Department.objects.get_or_create(name=name)  # unique name: safe if two hospitals race
+    return dept
+
+
 class HospitalProfileSerializer(serializers.ModelSerializer):
     latitude = serializers.FloatField(required=False, allow_null=True, min_value=-90, max_value=90)
     longitude = serializers.FloatField(required=False, allow_null=True, min_value=-180, max_value=180)
     department_ids = serializers.PrimaryKeyRelatedField(
         source="departments", queryset=Department.objects.all(), many=True, required=False)
+    new_departments = serializers.ListField(
+        child=serializers.CharField(max_length=100), required=False, write_only=True, max_length=20)
     departments = serializers.SerializerMethodField()
     connected = serializers.BooleanField(source="is_approved", read_only=True)
 
     class Meta:
         model = Hospital
         fields = ["id", "name", "email", "address", "city", "state", "phone", "website",
-                  "latitude", "longitude", "location_verified", "departments", "department_ids", "connected"]
+                  "latitude", "longitude", "location_verified", "departments", "department_ids", "new_departments",
+                  "connected"]
         read_only_fields = ["id", "email", "location_verified"]
 
     def get_departments(self, h):
@@ -69,6 +90,16 @@ class HospitalProfileSerializer(serializers.ModelSerializer):
     def validate_state(self, v):
         return _clean(v)
 
+    def validate_new_departments(self, names):
+        out = []
+        for raw in names:
+            name = _clean(raw)
+            if len(name) < 2 or not DEPT_NAME.fullmatch(name) or not any(c.isalpha() for c in name):
+                raise serializers.ValidationError(f'"{name or raw}" is not a department name: use letters, spaces and & - ( ) . / , only.')
+            if name.lower() not in {n.lower() for n in out}:
+                out.append(name)
+        return out
+
     def validate_phone(self, v):
         v = _clean(v)
         if v and not all(c.isdigit() or c in "+-() " for c in v):
@@ -90,6 +121,7 @@ class HospitalProfileSerializer(serializers.ModelSerializer):
 
     def update(self, h, validated):
         departments = validated.pop("departments", None)
+        new_names = validated.pop("new_departments", [])
         if "latitude" in validated:
             lat, lng = validated.pop("latitude"), validated.pop("longitude")
             if lat is None:
@@ -104,6 +136,8 @@ class HospitalProfileSerializer(serializers.ModelSerializer):
         h.save()
         if departments is not None:
             h.departments.set(departments)
+        if new_names:
+            h.departments.add(*[department_named(n) for n in new_names])
         return h
 
 

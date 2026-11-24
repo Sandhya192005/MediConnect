@@ -295,6 +295,10 @@ Owner request: the list shows only three things per patient (plus name, ID, phon
 
 **Hospital profile** (`/admin/hospital`) now opens read-only: a header card (name, Connected / Not connected yet badge, address, **Edit profile**), three key facts (departments, map pin, patients can book), and sections **Contact** (phone, website, login email), **Address**, **Departments** (chips) and **Location** (map + Get directions as patients see it). **Edit profile** opens the same form as before (with **Cancel**); saving returns to the profile with "Saved." e2e `hospital-profile.spec.ts` updated.
 
+### Hospitals write their own departments (2026-11-24)
+
+In **Edit hospital profile → Departments**, besides ticking listed departments, the hospital can type one that isn't listed (**+ Add** or Enter). On save (`new_departments` on `PATCH /api/hospital-admin/profile/`) a name matching an existing department ignoring case reuses it; otherwise it's created and joins the shared list (patients can filter by it). Names: 2–100 characters, letters/digits/spaces and `& - ( ) . / , '`. Tests in `staff/test_profile.py`; e2e departments named "E2E Dept …" are removed by `e2e_setup` / `e2e_cleanup`.
+
 ### Show on map from the hospital list (2026-11-24)
 
 Each hospital card on **Book appointment** (MediConnect hospitals, Other hospitals, Near me) has **Get directions** (Google Maps, new tab) and **Show on map** side by side (bordered buttons). **Show on map** (when the hospital has a pin): it opens the map, zooms to that hospital, highlights its pin and opens its popup (View hospital · Get directions). `HospitalMap` `FocusSelected` (zooms only when the chosen hospital changes, so the patient can still move the map), and the fit-all-pins step is skipped then. e2e `hospitals.spec.ts`.

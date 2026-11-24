@@ -48,6 +48,7 @@ class Command(BaseCommand):
 
         User.objects.filter(email__startswith=NEW_USER_PREFIX, email__endswith="@mediconnect.dev").delete()
         Hospital.objects.filter(name__startswith="E2E Signup Hospital").delete()  # from the hospital sign-up test
+        Department.objects.filter(name__startswith="E2E Dept ").delete()  # typed in hospital-profile.spec (2026-11-24)
 
         patient = self._user(PATIENT_EMAIL, "patient", "Esha", "Patient")
         doctor_user = self._user(DOCTOR_EMAIL, "doctor", "Eshwar", "Testdoctor")

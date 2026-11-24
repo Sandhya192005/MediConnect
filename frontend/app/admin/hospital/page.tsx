@@ -191,6 +191,8 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
   const [saved, setSaved] = useState("");
   const [busy, setBusy] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [newDepts, setNewDepts] = useState<string[]>([]); // typed by the hospital (2026-11-24)
+  const [typed, setTyped] = useState("");
 
   useEffect(() => {
     api<Department[]>("/api/departments/").then(setDepartments).catch(() => {});
@@ -202,6 +204,20 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
     setF({ ...f, department_ids: f.department_ids.includes(id) ? f.department_ids.filter((x) => x !== id) : [...f.department_ids, id] });
     setSaved("");
   };
+
+  /** Add a typed department: tick it when it's already listed (any case), else keep it as new. */
+  function addTyped() {
+    const name = typed.split(/\s+/).filter(Boolean).join(" ");
+    if (name.length < 2) return;
+    const listed = departments.find((d) => d.name.toLowerCase() === name.toLowerCase());
+    if (listed) {
+      if (!f.department_ids.includes(listed.id)) setF({ ...f, department_ids: [...f.department_ids, listed.id] });
+    } else if (!newDepts.some((n) => n.toLowerCase() === name.toLowerCase())) {
+      setNewDepts([...newDepts, name]);
+    }
+    setTyped("");
+    setSaved("");
+  }
 
   function locateMe() {
     setError("");
@@ -223,6 +239,7 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
       const body = {
         ...Object.fromEntries(TEXT.map((k) => [k, f![k]])),
         department_ids: f!.department_ids,
+        new_departments: newDepts,
         latitude: f!.pin ? Number(f!.pin.lat.toFixed(6)) : null,
         longitude: f!.pin ? Number(f!.pin.lng.toFixed(6)) : null,
       };
@@ -283,7 +300,7 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
       </Panel>
 
       <Panel title="Departments">
-        <p className="-mt-2 mb-3 text-xs text-slate-500">Tick the departments your hospital has. Patients search by these.</p>
+        <p className="-mt-2 mb-3 text-xs text-slate-500">Tick the departments your hospital has, or write one that isn&apos;t listed. Patients search by these.</p>
         {departments.length === 0 ? (
           <p className="text-sm text-slate-500">No departments on MediConnect yet.</p>
         ) : (
@@ -299,6 +316,26 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
             })}
           </div>
         )}
+        {newDepts.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2" aria-label="New departments">
+            {newDepts.map((n) => (
+              <span key={n} className="chip chip-active">
+                {n}
+                <button type="button" aria-label={`Remove ${n}`} className="ml-1 opacity-80 hover:opacity-100"
+                        onClick={() => setNewDepts(newDepts.filter((x) => x !== n))}>×</button>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="mt-4 flex max-w-md gap-2">
+          <label className="sr-only" htmlFor="new-department">Add a department</label>
+          <input id="new-department" className="input" maxLength={100} placeholder="Write a department, e.g. Physiotherapy"
+                 value={typed} onChange={(e) => setTyped(e.target.value)}
+                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTyped(); } }} />
+          <button type="button" onClick={addTyped} disabled={typed.trim().length < 2}
+                  className="btn-outline shrink-0 rounded-xl px-4 text-sm">+ Add</button>
+        </div>
+        {newDepts.length > 0 && <p className="mt-2 text-xs text-slate-500">New departments are saved when you press Save changes.</p>}
       </Panel>
 
       <Panel title="Location on the map">
