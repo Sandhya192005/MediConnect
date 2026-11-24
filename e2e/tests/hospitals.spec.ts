@@ -64,6 +64,9 @@ test("a hospital's page has Get directions next to its details and under its map
   // The E2E hospital's pin is confirmed, so the link goes to its exact spot (owner request 2026-11-24).
   await expect(links.first()).toHaveAttribute("href", /google\.com\/maps\/dir\/\?api=1&destination=13\.05%2C80\.24/);
   await expect(links).toHaveCount(2); // the button by the address and the link under the map
+  // Show on map next to it: the hospital's own map opens its pin (2026-11-24).
+  await page.getByRole("button", { name: "Show on map" }).click();
+  await expect(page.locator(".leaflet-popup-content")).toContainText(partner_hospital.name);
 });
 
 test("Show on map on a hospital card opens the map on that hospital, with directions", async ({ page }) => {

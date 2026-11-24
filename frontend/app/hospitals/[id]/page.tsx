@@ -38,6 +38,7 @@ export default function HospitalDetailPage() {
   const [startedJob, setStartedJob] = useState<ScrapeJob | null>(null);
   const [requestDoctor, setRequestDoctor] = useState<number | null>(null);
   const [autoTried, setAutoTried] = useState(false);
+  const [mapFocus, setMapFocus] = useState<number | null>(null); // "Show on map" (2026-11-24)
 
   const load = useCallback(() => {
     api<HospitalDetail>(`/api/scraper/hospitals/${id}/`).then(setHospital).catch((e) => setError(errorMessage(e)));
@@ -130,8 +131,17 @@ export default function HospitalDetailPage() {
             <div className="flex flex-wrap gap-2">
               {/* Directions (owner request 2026-11-24): exact pin when confirmed, else name + address. */}
               <a href={directionsUrl(hospital.name, hospital)} target="_blank" rel="noopener noreferrer" className="btn-solid">
-                <Icon name="pin" className="h-4 w-4" /> Get directions ↗
+                <Icon name="arrow" className="h-4 w-4 -rotate-45" /> Get directions
               </a>
+              {hasPin && (
+                <button type="button" className="btn-outline"
+                        onClick={() => {
+                          setMapFocus(hospital.id);
+                          document.getElementById("hospital-place-map")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }}>
+                  <Icon name="pin" className="h-4 w-4" /> Show on map
+                </button>
+              )}
               {phone && (
                 <a href={`tel:${phone}`} className="btn-outline">
                   <Icon name="phone" className="h-4 w-4" /> {phone}
@@ -155,8 +165,8 @@ export default function HospitalDetailPage() {
         {/* Left: where */}
         <aside className="space-y-4 lg:col-span-2">
           {hasPin && (
-            <div className="card overflow-hidden p-2">
-              <HospitalMap hospitals={[hospital]} height={260} />
+            <div id="hospital-place-map" className="card scroll-mt-24 overflow-hidden p-2">
+              <HospitalMap hospitals={[hospital]} height={260} selectedId={mapFocus} />
               <a href={directionsUrl(hospital.name, hospital)} target="_blank" rel="noopener noreferrer"
                  className="dash-link mt-2 px-2 pb-1 text-sm">
                 <Icon name="pin" className="h-4 w-4" /> Get directions in Google Maps ↗
