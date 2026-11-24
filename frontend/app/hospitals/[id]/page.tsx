@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { directionsUrl } from "@/lib/directions";
 import AppointmentRequestForm from "@/components/AppointmentRequestForm";
 import ExternalAppointmentForm from "@/components/ExternalAppointmentForm";
 import Icon from "@/components/Icons";
@@ -127,6 +128,10 @@ export default function HospitalDetailPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              {/* Directions (owner request 2026-11-24): exact pin when confirmed, else name + address. */}
+              <a href={directionsUrl(hospital.name, hospital)} target="_blank" rel="noopener noreferrer" className="btn-solid">
+                <Icon name="pin" className="h-4 w-4" /> Get directions ↗
+              </a>
               {phone && (
                 <a href={`tel:${phone}`} className="btn-outline">
                   <Icon name="phone" className="h-4 w-4" /> {phone}
@@ -152,6 +157,10 @@ export default function HospitalDetailPage() {
           {hasPin && (
             <div className="card overflow-hidden p-2">
               <HospitalMap hospitals={[hospital]} height={260} />
+              <a href={directionsUrl(hospital.name, hospital)} target="_blank" rel="noopener noreferrer"
+                 className="dash-link mt-2 px-2 pb-1 text-sm">
+                <Icon name="pin" className="h-4 w-4" /> Get directions in Google Maps ↗
+              </a>
             </div>
           )}
           {info && (info.opd_timings || info.emails.length > 0 || info.departments.length > 0 || info.notes) && (

@@ -56,3 +56,12 @@ test("book appointment: other hospitals, instant-booking filter, near me and the
   await expect(page).toHaveURL(/\/doctors\?q=heart$/);
   await expect(page.getByLabel("Search doctors")).toHaveValue("heart");
 });
+test("a hospital's page has Get directions next to its details and under its map", async ({ page }) => {
+  const { partner_hospital } = e2e();
+  await page.goto(`/hospitals/${partner_hospital.id}`);
+  const links = page.getByRole("link", { name: /Get directions/ });
+  await expect(links.first()).toBeVisible();
+  // The E2E hospital's pin is confirmed, so the link goes to its exact spot (owner request 2026-11-24).
+  await expect(links.first()).toHaveAttribute("href", /google\.com\/maps\/dir\/\?api=1&destination=13\.05%2C80\.24/);
+  await expect(links).toHaveCount(2); // the button by the address and the link under the map
+});

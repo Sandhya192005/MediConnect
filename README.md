@@ -293,7 +293,7 @@ Owner request: the list shows only three things per patient (plus name, ID, phon
 
 ### Get directions on the hospital map (2026-11-24)
 
-On **Book appointment → Show map**, each hospital pin's popup now has **Get directions ↗** (Google Maps, opens in a new tab) next to "View hospital". It uses the same link as on appointments: the exact pin when the location is confirmed, else the hospital's name and address. `directionsUrl` moved to `lib/directions.ts` (still re-exported from `HospitalPlace.tsx`). e2e `hospitals.spec.ts` checks the link.
+A **hospital's page** (Book appointment → a hospital) now has a **Get directions ↗** button next to its name and a **Get directions in Google Maps ↗** link under its map (the popup alone was too hidden). On **Book appointment → Show map**, each hospital pin's popup also has **Get directions ↗** (Google Maps, opens in a new tab) next to "View hospital". It uses the same link as on appointments: the exact pin when the location is confirmed, else the hospital's name and address. `directionsUrl` moved to `lib/directions.ts` (still re-exported from `HospitalPlace.tsx`). e2e `hospitals.spec.ts` checks the link.
 
 ### Doctor, nurse and staff pages, like Patient management (2026-11-22)
 
