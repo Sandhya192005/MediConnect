@@ -39,6 +39,15 @@ test("book appointment: other hospitals, instant-booking filter, near me and the
   const map = page.getByRole("region", { name: "Map" });
   await expect(map.locator(".leaflet-container")).toBeVisible();
   await expect.poll(() => map.locator(".leaflet-overlay-pane path.leaflet-interactive").count()).toBeGreaterThan(1);
+  // A hospital pin's popup has "Get directions" to Google Maps (2026-11-24). The patient's own pin may sit on
+  // top of a hospital, so try the pins until a hospital's popup opens.
+  const pins = map.locator(".leaflet-overlay-pane path.leaflet-interactive");
+  const directions = map.locator(".leaflet-popup-pane").getByRole("link", { name: /Get directions/ });
+  for (let i = 0; i < (await pins.count()) && !(await directions.count()); i++) {
+    await pins.nth(i).dispatchEvent("click");
+  }
+  await expect(directions.first()).toHaveAttribute("href", /^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=/);
+  await expect(directions.first()).toHaveAttribute("target", "_blank");
   await page.getByRole("button", { name: "Hide map" }).click();
   await expect(map).toHaveCount(0);
 

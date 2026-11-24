@@ -291,6 +291,10 @@ Owner request: the list shows only three things per patient (plus name, ID, phon
 - The hospital can now **set or change the email** of a patient it created, as long as the patient hasn't started using the app (no password): it's what the hospital's staff typed, so they can fix it. A patient who logs in themselves (or one the hospital didn't create) keeps their own email (`staff/patients.may_edit_email`, `can_edit_email` on the patient page).
 - Tests: `staff/test_patients.py` covers both cases; e2e `patient-management.spec.ts` opens the patient, edits and fixes an email typo.
 
+### Get directions on the hospital map (2026-11-24)
+
+On **Book appointment → Show map**, each hospital pin's popup now has **Get directions ↗** (Google Maps, opens in a new tab) next to "View hospital". It uses the same link as on appointments: the exact pin when the location is confirmed, else the hospital's name and address. `directionsUrl` moved to `lib/directions.ts` (still re-exported from `HospitalPlace.tsx`). e2e `hospitals.spec.ts` checks the link.
+
 ### Doctor, nurse and staff pages, like Patient management (2026-11-22)
 
 Owner request: the lists show each person with their department up front, and **Open** shows all their details.

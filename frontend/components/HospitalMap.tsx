@@ -5,6 +5,7 @@
 import "leaflet/dist/leaflet.css";
 import { useEffect } from "react";
 import { Circle, CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
+import { directionsUrl } from "@/lib/directions";
 import type { Hospital, LatLng } from "@/lib/types";
 
 /** What a pin needs: any hospital-like row with coordinates (null = no pin yet). */
@@ -99,6 +100,9 @@ export default function HospitalMap({ hospitals, user, radiusKm, selectedId, onS
               )}
               <br />
               <a href={`/hospitals/${h.id}`}>View hospital →</a>
+              {/* Directions on the map too (owner request 2026-11-24), the same link as on appointments. */}
+              {" · "}
+              <a href={directionsUrl(h.name, h)} target="_blank" rel="noopener noreferrer">Get directions ↗</a>
             </Popup>
           </CircleMarker>
         );
