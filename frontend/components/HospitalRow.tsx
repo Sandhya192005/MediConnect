@@ -55,7 +55,7 @@ export default function HospitalRow({ h, selected = false, onShowOnMap }: { h: H
       </div>
       <div className="flex shrink-0 flex-wrap gap-2">
         {onShowOnMap && h.latitude != null && (
-          <button type="button" onClick={() => onShowOnMap(h.id)} className="btn-ghost rounded-xl px-3 py-2 text-sm" aria-label={`Show ${h.name} on map`}>
+          <button type="button" onClick={() => onShowOnMap(h.id)} className="btn-outline rounded-xl px-3 py-2 text-sm" aria-label={`Show ${h.name} on map`}>
             <Icon name="pin" className="h-4 w-4" /> Show on map
           </button>
         )}

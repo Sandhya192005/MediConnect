@@ -158,7 +158,7 @@ function PartnerCard({ h, department, selected, onShowOnMap }: { h: PartnerHospi
             View specialists & book <Icon name="arrow" className="h-4 w-4" />
           </Link>
           {h.latitude != null && (
-            <button type="button" onClick={() => onShowOnMap(h.id)} className="btn-ghost w-full text-sm" aria-label={`Show ${h.name} on map`}>
+            <button type="button" onClick={() => onShowOnMap(h.id)} className="btn-outline w-full text-sm" aria-label={`Show ${h.name} on map`}>
               <Icon name="pin" className="h-4 w-4" /> Show on map
             </button>
           )}
