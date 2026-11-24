@@ -291,6 +291,10 @@ Owner request: the list shows only three things per patient (plus name, ID, phon
 - The hospital can now **set or change the email** of a patient it created, as long as the patient hasn't started using the app (no password): it's what the hospital's staff typed, so they can fix it. A patient who logs in themselves (or one the hospital didn't create) keeps their own email (`staff/patients.may_edit_email`, `can_edit_email` on the patient page).
 - Tests: `staff/test_patients.py` covers both cases; e2e `patient-management.spec.ts` opens the patient, edits and fixes an email typo.
 
+### Hospital profile as a professional profile (2026-11-24)
+
+**Hospital profile** (`/admin/hospital`) now opens read-only: a header card (name, Connected / Not connected yet badge, address, **Edit profile**), three key facts (departments, map pin, patients can book), and sections **Contact** (phone, website, login email), **Address**, **Departments** (chips) and **Location** (map + Get directions as patients see it). **Edit profile** opens the same form as before (with **Cancel**); saving returns to the profile with "Saved." e2e `hospital-profile.spec.ts` updated.
+
 ### Show on map from the hospital list (2026-11-24)
 
 Each hospital card on **Book appointment** (MediConnect hospitals, Other hospitals, Near me) has **Get directions** (Google Maps, new tab) and **Show on map** side by side (bordered buttons). **Show on map** (when the hospital has a pin): it opens the map, zooms to that hospital, highlights its pin and opens its popup (View hospital · Get directions). `HospitalMap` `FocusSelected` (zooms only when the chosen hospital changes, so the patient can still move the map), and the fit-all-pins step is skipped then. e2e `hospitals.spec.ts`.

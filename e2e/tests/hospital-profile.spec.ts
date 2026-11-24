@@ -18,6 +18,14 @@ test("a hospital edits its profile, departments and map pin", async ({ page, req
 
   await page.getByRole("navigation", { name: "Main menu" }).getByRole("link", { name: "Hospital profile" }).click();
   await expect(page.getByRole("heading", { name: "Hospital profile" })).toBeVisible();
+  // It opens as a read-only profile (owner request 2026-11-24); Edit profile opens the form.
+  const card = page.getByRole("region", { name: "Hospital", exact: true });
+  await expect(card).toContainText(name);
+  await expect(card).toContainText("Not connected yet");
+  await expect(page.getByRole("region", { name: "Contact" })).toContainText(email);
+  await expect(page.getByLabel("Hospital name")).toHaveCount(0);
+  await card.getByRole("button", { name: "Edit profile" }).click();
+  await expect(page.getByRole("heading", { name: "Edit hospital profile" })).toBeVisible();
   await expect(page.getByLabel("Hospital name")).toHaveValue(name);
   await expect(page.getByText(`${email} · to change it, contact support.`)).toBeVisible(); // the login email, read-only
 
@@ -34,13 +42,19 @@ test("a hospital edits its profile, departments and map pin", async ({ page, req
   await expect(page.getByText(/^Pin: \d+\.\d+, \d+\.\d+$/)).toBeVisible();
 
   await page.getByRole("button", { name: "Save changes" }).click();
+  // Back on the profile view with the new details.
   await expect(page.getByRole("status")).toHaveText("Saved.");
+  await expect(card).toContainText(renamed);
+  await expect(card).toContainText("12 Test Street, Guindy, Chennai");
+  await expect(page.getByRole("region", { name: "Contact" })).toContainText("044 1234 5678");
+  await expect(page.getByRole("region", { name: "Departments" })).toContainText("Cardiology");
+  await expect(card).toContainText(/Map pin\s*Set/);
+  await expect(page.getByRole("region", { name: "Location" }).getByRole("link", { name: /Get directions/ })).toBeVisible();
 
-  // Saved for real: a reload shows the new details and the pin.
+  // Saved for real: a reload shows the new details.
   await page.reload();
-  await expect(page.getByLabel("Hospital name")).toHaveValue(renamed);
-  await expect(page.getByRole("checkbox", { name: "Cardiology" })).toBeChecked();
-  await expect(page.getByText(/^Pin: /)).toBeVisible();
+  await expect(card).toContainText(renamed);
+  await expect(page.getByRole("region", { name: "Departments" })).toContainText("Cardiology");
 
   // The account is named after the hospital, so the dashboard greets the new name.
   await page.getByRole("navigation", { name: "Main menu" }).getByRole("link", { name: "Dashboard" }).click();
