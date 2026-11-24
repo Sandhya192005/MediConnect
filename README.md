@@ -291,6 +291,10 @@ Owner request: the list shows only three things per patient (plus name, ID, phon
 - The hospital can now **set or change the email** of a patient it created, as long as the patient hasn't started using the app (no password): it's what the hospital's staff typed, so they can fix it. A patient who logs in themselves (or one the hospital didn't create) keeps their own email (`staff/patients.may_edit_email`, `can_edit_email` on the patient page).
 - Tests: `staff/test_patients.py` covers both cases; e2e `patient-management.spec.ts` opens the patient, edits and fixes an email typo.
 
+### Show on map from the hospital list (2026-11-24)
+
+Each hospital card on **Book appointment** (MediConnect hospitals, Other hospitals, Near me) has **Show on map** (when the hospital has a pin): it opens the map, zooms to that hospital, highlights its pin and opens its popup (View hospital · Get directions). `HospitalMap` `FocusSelected` (zooms only when the chosen hospital changes, so the patient can still move the map), and the fit-all-pins step is skipped then. e2e `hospitals.spec.ts`.
+
 ### Get directions on the hospital map (2026-11-24)
 
 A **hospital's page** (Book appointment → a hospital) now has a **Get directions ↗** button next to its name and a **Get directions in Google Maps ↗** link under its map (the popup alone was too hidden). On **Book appointment → Show map**, each hospital pin's popup also has **Get directions ↗** (Google Maps, opens in a new tab) next to "View hospital". It uses the same link as on appointments: the exact pin when the location is confirmed, else the hospital's name and address. `directionsUrl` moved to `lib/directions.ts` (still re-exported from `HospitalPlace.tsx`). e2e `hospitals.spec.ts` checks the link.

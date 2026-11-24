@@ -3,7 +3,8 @@
 // Leaflet touches `window`, so this file is only ever loaded in the browser
 // (pages import it with next/dynamic and ssr: false).
 import "leaflet/dist/leaflet.css";
-import { useEffect } from "react";
+import type { CircleMarker as LeafletCircleMarker } from "leaflet";
+import { useEffect, useRef, type MutableRefObject } from "react";
 import { Circle, CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 import { directionsUrl } from "@/lib/directions";
 import type { Hospital, LatLng } from "@/lib/types";
@@ -27,10 +28,11 @@ type Props = {
 };
 
 /** Zooms/pans the map so every marker (and the user) is visible. */
-function FitToMarkers({ points }: { points: [number, number][] }) {
+function FitToMarkers({ points, skip = false }: { points: [number, number][]; skip?: boolean }) {
   const map = useMap();
   const key = JSON.stringify(points);
   useEffect(() => {
+    if (skip) return; // a hospital was chosen from the list: FocusSelected zooms to it instead
     if (points.length === 1) map.setView(points[0], 14);
     else if (points.length > 1) map.fitBounds(points, { padding: [40, 40], maxZoom: 15 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -38,7 +40,22 @@ function FitToMarkers({ points }: { points: [number, number][] }) {
   return null;
 }
 
+/** "Show on map" from the list (2026-11-24): zoom to the chosen hospital and open its popup. */
+function FocusSelected({ pin, markers }: { pin: Pin | undefined; markers: MutableRefObject<Record<number, LeafletCircleMarker | null>> }) {
+  const map = useMap();
+  const id = pin?.id, lat = pin?.latitude, lng = pin?.longitude;
+  // Only when the chosen hospital changes (the page re-renders often; the patient may move the map meanwhile).
+  useEffect(() => {
+    if (id == null || lat == null || lng == null) return;
+    map.setView([lat, lng], 15);
+    const t = setTimeout(() => markers.current[id]?.openPopup(), 300); // after the zoom has started
+    return () => clearTimeout(t);
+  }, [id, lat, lng, map, markers]);
+  return null;
+}
+
 export default function HospitalMap({ hospitals, user, radiusKm, selectedId, onSelect, height = 420 }: Props) {
+  const markers = useRef<Record<number, LeafletCircleMarker | null>>({});
   const pinned = hospitals.filter((h) => h.latitude != null && h.longitude != null);
   const points: [number, number][] = pinned.map((h) => [h.latitude!, h.longitude!]);
   if (user) points.push([user.lat, user.lng]);
@@ -51,7 +68,8 @@ export default function HospitalMap({ hospitals, user, radiusKm, selectedId, onS
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <FitToMarkers points={points} />
+      <FitToMarkers points={points} skip={pinned.some((h) => h.id === selectedId)} />
+      <FocusSelected pin={pinned.find((h) => h.id === selectedId)} markers={markers} />
 
       {user && (
         <>
@@ -68,6 +86,7 @@ export default function HospitalMap({ hospitals, user, radiusKm, selectedId, onS
         return (
           <CircleMarker
             key={h.id}
+            ref={(m) => { markers.current[h.id] = m; }}
             center={[h.latitude!, h.longitude!]}
             radius={selected ? 12 : partner ? 9 : 7}
             eventHandlers={{ click: () => onSelect?.(h.id) }}

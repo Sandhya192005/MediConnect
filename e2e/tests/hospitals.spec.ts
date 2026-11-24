@@ -65,3 +65,15 @@ test("a hospital's page has Get directions next to its details and under its map
   await expect(links.first()).toHaveAttribute("href", /google\.com\/maps\/dir\/\?api=1&destination=13\.05%2C80\.24/);
   await expect(links).toHaveCount(2); // the button by the address and the link under the map
 });
+
+test("Show on map on a hospital card opens the map on that hospital, with directions", async ({ page }) => {
+  const { partner_hospital } = e2e();
+  await page.goto("/doctors");
+  const card = page.getByRole("region", { name: "MediConnect hospitals" }).getByRole("article", { name: partner_hospital.name });
+  await card.getByRole("button", { name: `Show ${partner_hospital.name} on map` }).click();
+  const map = page.getByRole("region", { name: "Map" });
+  await expect(map.locator(".leaflet-container")).toBeVisible();
+  const popup = map.locator(".leaflet-popup-content");
+  await expect(popup).toContainText(partner_hospital.name);
+  await expect(popup.getByRole("link", { name: /Get directions/ })).toHaveAttribute("href", /google\.com\/maps\/dir/);
+});

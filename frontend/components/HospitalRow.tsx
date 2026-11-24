@@ -21,7 +21,7 @@ export type HospitalRowData = {
  * A hospital card: name, a badge (Instant booking / Request appointment), area without house numbers,
  * distance when known, specialties, and the next step (Book appointment / View details).
  */
-export default function HospitalRow({ h, selected = false }: { h: HospitalRowData; selected?: boolean }) {
+export default function HospitalRow({ h, selected = false, onShowOnMap }: { h: HospitalRowData; selected?: boolean; onShowOnMap?: (id: number) => void }) {
   return (
     <article
       id={`hospital-${h.id}`}
@@ -53,9 +53,16 @@ export default function HospitalRow({ h, selected = false }: { h: HospitalRowDat
           )}
         </div>
       </div>
-      <Link href={`/hospitals/${h.id}`} className={`${h.is_partner ? "btn-solid" : "btn-outline"} shrink-0 rounded-xl px-4 py-2 text-center`}>
-        {h.is_partner ? "Book appointment" : "View details"}
-      </Link>
+      <div className="flex shrink-0 flex-wrap gap-2">
+        {onShowOnMap && h.latitude != null && (
+          <button type="button" onClick={() => onShowOnMap(h.id)} className="btn-ghost rounded-xl px-3 py-2 text-sm" aria-label={`Show ${h.name} on map`}>
+            <Icon name="pin" className="h-4 w-4" /> Show on map
+          </button>
+        )}
+        <Link href={`/hospitals/${h.id}`} className={`${h.is_partner ? "btn-solid" : "btn-outline"} rounded-xl px-4 py-2 text-center`}>
+          {h.is_partner ? "Book appointment" : "View details"}
+        </Link>
+      </div>
     </article>
   );
 }
