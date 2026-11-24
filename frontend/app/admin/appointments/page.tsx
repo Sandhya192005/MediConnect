@@ -7,6 +7,7 @@ import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { NOTIFICATION_EVENT } from "@/lib/notifications";
+import { DATE_PRESETS, NO_DATE_FILTER, inDateFilter, type DateFilter, type DatePreset } from "@/lib/dateFilter";
 import { fmtDateTime, isoDate, timeAgo, type Appointment, type AssignableDoctor } from "@/lib/types";
 
 type Tab = "to_confirm" | "waiting_doctor" | "today" | "upcoming" | "past" | "cancelled";
@@ -31,6 +32,7 @@ export default function HospitalAppointmentsPage() {
   const [tab, setTab] = useState<Tab>("to_confirm");
   const [items, setItems] = useState<Appointment[] | null>(null);
   const [doctor, setDoctor] = useState("");
+  const [dates, setDates] = useState<DateFilter>(NO_DATE_FILTER); // date filter (owner request 2026-11-24)
   const [counts, setCounts] = useState<{ assign: number; doctor: number }>({ assign: 0, doctor: 0 });
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState("");
@@ -68,7 +70,8 @@ export default function HospitalAppointmentsPage() {
   }, [load]);
 
   const doctors = useMemo(() => [...new Set((items ?? []).map((a) => a.doctor_name))].sort(), [items]);
-  const shown = (items ?? []).filter((a) => !doctor || a.doctor_name === doctor);
+  const shown = (items ?? []).filter((a) => (!doctor || a.doctor_name === doctor) && inDateFilter(a.start, dates));
+  const filtered = !!doctor || dates.preset !== "any";
 
   /** No-show (2026-11-20): "Didn't come", or Undo for a wrong click. The server checks the rules. */
   async function markMissed(a: Appointment, action: "no-show" | "undo-no-show") {
@@ -119,18 +122,47 @@ export default function HospitalAppointmentsPage() {
                 );
               })}
             </div>
-            <select className="input w-auto rounded-xl py-2" aria-label="Doctor" value={doctor} onChange={(e) => setDoctor(e.target.value)}>
-              <option value="">All doctors</option>
-              {doctors.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
+            <div className="flex flex-wrap items-center gap-2">
+              <select className="input w-auto rounded-xl py-2" aria-label="Doctor" value={doctor} onChange={(e) => setDoctor(e.target.value)}>
+                <option value="">All doctors</option>
+                {doctors.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <select className="input w-auto rounded-xl py-2" aria-label="Date" value={dates.preset}
+                      onChange={(e) => setDates({ ...dates, preset: e.target.value as DatePreset })}>
+                {DATE_PRESETS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+              </select>
+              {dates.preset === "on" && (
+                <input type="date" className="input w-auto rounded-xl py-2" aria-label="On date"
+                       value={dates.on} onChange={(e) => setDates({ ...dates, on: e.target.value })} />
+              )}
+              {dates.preset === "between" && (
+                <>
+                  <input type="date" className="input w-auto rounded-xl py-2" aria-label="From date"
+                         value={dates.from} onChange={(e) => setDates({ ...dates, from: e.target.value })} />
+                  <span className="text-sm text-slate-500">to</span>
+                  <input type="date" className="input w-auto rounded-xl py-2" aria-label="To date"
+                         value={dates.to} onChange={(e) => setDates({ ...dates, to: e.target.value })} />
+                </>
+              )}
+              {filtered && (
+                <button type="button" className="btn-ghost rounded-xl px-3 py-2 text-sm"
+                        onClick={() => { setDoctor(""); setDates(NO_DATE_FILTER); }}>
+                  Clear filters
+                </button>
+              )}
+            </div>
           </div>
 
           <Panel title={`${TABS.find((t) => t.key === tab)!.label}${items ? ` (${shown.length})` : ""}`}>
             {items === null ? (
               <SkeletonRows rows={4} />
             ) : shown.length === 0 ? (
-              <EmptyState icon="calendar" title={tab === "to_confirm" ? "Nothing to assign" : "No appointments here"}
-                          text={tab === "to_confirm" ? "Bookings made through your hospital's page appear here." : undefined} />
+              filtered && (items?.length ?? 0) > 0 ? (
+                <EmptyState icon="calendar" title="No appointments match these filters" text="Change the doctor or date, or clear the filters." />
+              ) : (
+                <EmptyState icon="calendar" title={tab === "to_confirm" ? "Nothing to assign" : "No appointments here"}
+                            text={tab === "to_confirm" ? "Bookings made through your hospital's page appear here." : undefined} />
+              )
             ) : (
               <ul className="divide-y divide-slate-100">
                 {shown.map((a) => (
