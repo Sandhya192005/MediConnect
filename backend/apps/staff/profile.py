@@ -12,10 +12,9 @@ GET/PATCH /api/hospital-admin/profile/
 - Departments (owner request 2026-11-24): tick existing ones (department_ids) and/or type new names
   (new_departments). A typed name that matches an existing department, ignoring case and spaces, reuses it;
   otherwise it's created (created_by = this hospital) and joins the shared list (patients can filter by it).
-  DELETE profile/departments/<id>/ (the × on every department the hospital has or wrote): removes it from
-  this hospital; a department the hospital wrote also leaves the shared list when no other hospital, doctor
-  account or staff record uses it (others, e.g. the platform's Cardiology, always stay in the list). Staff
-  records in it keep their department: a department still in use is never deleted.
+  DELETE profile/departments/<id>/ removes a department the hospital wrote: from this hospital, and from the
+  list when no other hospital, doctor account or staff record uses it. Refused while this hospital's own
+  staff records are in it (they'd silently lose their department).
 """
 
 import re
@@ -24,7 +23,6 @@ import re
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import Point
 from django.db import transaction
-from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -182,7 +180,7 @@ class HospitalProfileView(APIView):
 
 
 class HospitalDepartmentDeleteView(APIView):
-    """DELETE /api/hospital-admin/profile/departments/<id>/: the × on a department (see the module notes)."""
+    """DELETE /api/hospital-admin/profile/departments/<id>/: remove a department this hospital wrote."""
 
     permission_classes = [IsHospitalAdmin]
 
@@ -190,15 +188,20 @@ class HospitalDepartmentDeleteView(APIView):
         from apps.staff.models import StaffMember
 
         h = request.admin_hospital
-        dept = Department.objects.filter(Q(created_by=h) | Q(hospitals=h), pk=pk).distinct().first()
+        dept = Department.objects.filter(pk=pk, created_by=h).first()
         if dept is None:
-            return Response({"detail": "This department isn't on your hospital."}, status=404)
+            return Response({"detail": "Only departments your hospital wrote can be deleted. Untick others instead."},
+                            status=404)
+        own_staff = StaffMember.objects.filter(hospital=h, department=dept).count()
+        if own_staff:
+            return Response({"detail": f"{own_staff} of your staff {'is' if own_staff == 1 else 'are'} in {dept.name}: "
+                                       "change their department first."}, status=400)
         with transaction.atomic():
             h.departments.remove(dept)
             used_elsewhere = (dept.hospitals.exists() or dept.doctors.exists()
                               or StaffMember.objects.filter(department=dept).exists())
-            if dept.created_by_id != h.id or used_elsewhere:
-                deleted = False  # stays in the shared list, just not at this hospital
+            if used_elsewhere:
+                deleted = False  # others use it: it stays in the shared list, just not at this hospital
             else:
                 dept.delete()
                 deleted = True

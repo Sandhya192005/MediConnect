@@ -62,20 +62,16 @@ test("a hospital edits its profile, departments and map pin", async ({ page, req
   await expect(card).toContainText(renamed);
   await expect(page.getByRole("region", { name: "Departments" })).toContainText("Cardiology");
 
-  // The × (2026-11-24): deletes a department the hospital wrote; removes a listed one from the hospital only.
+  // The × deletes a department the hospital wrote (2026-11-24); listed ones have no ×.
   await card.getByRole("button", { name: "Edit profile" }).click();
-  await expect(page.getByRole("button", { name: "Delete department Cardiology" })).toHaveCount(0); // not written here
-  await expect(page.getByRole("button", { name: "Remove department Dermatology" })).toHaveCount(0); // not ticked
+  await expect(page.getByRole("button", { name: "Delete department Cardiology" })).toHaveCount(0);
   page.once("dialog", (d) => d.accept());
   await page.getByRole("button", { name: `Delete department ${dept}` }).click();
   await expect(page.getByRole("status")).toHaveText(`Deleted "${dept}".`);
   await expect(page.getByRole("checkbox", { name: dept })).toHaveCount(0);
-  page.once("dialog", (d) => d.accept());
-  await page.getByRole("button", { name: "Remove department Cardiology" }).click();
-  await expect(page.getByRole("status")).toHaveText(`Removed "Cardiology" from your hospital.`);
-  await expect(page.getByRole("checkbox", { name: "Cardiology" })).not.toBeChecked(); // still in the list
   await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(page.getByRole("region", { name: "Departments" })).toContainText("No departments chosen yet");
+  await expect(page.getByRole("region", { name: "Departments" })).not.toContainText(dept);
+  await expect(page.getByRole("region", { name: "Departments" })).toContainText("Cardiology");
 
   // The account is named after the hospital, so the dashboard greets the new name.
   await page.getByRole("navigation", { name: "Main menu" }).getByRole("link", { name: "Dashboard" }).click();
