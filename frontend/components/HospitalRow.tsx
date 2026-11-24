@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { directionsUrl } from "@/lib/directions";
 import { areaOf } from "@/lib/types";
 import HospitalThumb from "./HospitalThumb";
 import Icon from "./Icons";
@@ -54,6 +55,11 @@ export default function HospitalRow({ h, selected = false, onShowOnMap }: { h: H
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap gap-2">
+        {/* Both on every card (owner request 2026-11-24). */}
+        <a href={directionsUrl(h.name, h)} target="_blank" rel="noopener noreferrer"
+           className="btn-outline rounded-xl px-3 py-2 text-sm" aria-label={`Get directions to ${h.name}`}>
+          <Icon name="arrow" className="h-4 w-4 -rotate-45" /> Get directions
+        </a>
         {onShowOnMap && h.latitude != null && (
           <button type="button" onClick={() => onShowOnMap(h.id)} className="btn-outline rounded-xl px-3 py-2 text-sm" aria-label={`Show ${h.name} on map`}>
             <Icon name="pin" className="h-4 w-4" /> Show on map

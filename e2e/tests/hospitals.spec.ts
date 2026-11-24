@@ -70,6 +70,10 @@ test("Show on map on a hospital card opens the map on that hospital, with direct
   const { partner_hospital } = e2e();
   await page.goto("/doctors");
   const card = page.getByRole("region", { name: "MediConnect hospitals" }).getByRole("article", { name: partner_hospital.name });
+  // Both options on the card (owner request 2026-11-24).
+  await expect(card.getByRole("link", { name: `Get directions to ${partner_hospital.name}` }))
+    .toHaveAttribute("href", /google\.com\/maps\/dir\/\?api=1&destination=13\.05%2C80\.24/);
+  await expect(page.getByRole("region", { name: /^Other hospitals/ }).getByRole("link", { name: /^Get directions to / }).first()).toBeVisible();
   await card.getByRole("button", { name: `Show ${partner_hospital.name} on map` }).click();
   const map = page.getByRole("region", { name: "Map" });
   await expect(map.locator(".leaflet-container")).toBeVisible();

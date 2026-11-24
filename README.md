@@ -293,7 +293,7 @@ Owner request: the list shows only three things per patient (plus name, ID, phon
 
 ### Show on map from the hospital list (2026-11-24)
 
-Each hospital card on **Book appointment** (MediConnect hospitals, Other hospitals, Near me) has **Show on map** (when the hospital has a pin): it opens the map, zooms to that hospital, highlights its pin and opens its popup (View hospital · Get directions). `HospitalMap` `FocusSelected` (zooms only when the chosen hospital changes, so the patient can still move the map), and the fit-all-pins step is skipped then. e2e `hospitals.spec.ts`.
+Each hospital card on **Book appointment** (MediConnect hospitals, Other hospitals, Near me) has **Get directions** (Google Maps, new tab) and **Show on map** side by side (bordered buttons). **Show on map** (when the hospital has a pin): it opens the map, zooms to that hospital, highlights its pin and opens its popup (View hospital · Get directions). `HospitalMap` `FocusSelected` (zooms only when the chosen hospital changes, so the patient can still move the map), and the fit-all-pins step is skipped then. e2e `hospitals.spec.ts`.
 
 ### Get directions on the hospital map (2026-11-24)
 

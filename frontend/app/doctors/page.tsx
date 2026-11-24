@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { directionsUrl } from "@/lib/directions";
 import HospitalRow, { type HospitalRowData } from "@/components/HospitalRow";
 import Icon from "@/components/Icons";
 import PageHeader, { Avatar } from "@/components/PageHeader";
@@ -157,11 +158,18 @@ function PartnerCard({ h, department, selected, onShowOnMap }: { h: PartnerHospi
           <Link href={href} className="btn-solid w-full">
             View specialists & book <Icon name="arrow" className="h-4 w-4" />
           </Link>
-          {h.latitude != null && (
-            <button type="button" onClick={() => onShowOnMap(h.id)} className="btn-outline w-full text-sm" aria-label={`Show ${h.name} on map`}>
-              <Icon name="pin" className="h-4 w-4" /> Show on map
-            </button>
-          )}
+          {/* Both on every card (owner request 2026-11-24). */}
+          <div className="grid grid-cols-2 gap-2">
+            <a href={directionsUrl(h.name, h)} target="_blank" rel="noopener noreferrer"
+               className="btn-outline whitespace-nowrap px-2 text-sm" aria-label={`Get directions to ${h.name}`}>
+              <Icon name="arrow" className="h-4 w-4 -rotate-45" /> Get directions
+            </a>
+            {h.latitude != null ? (
+              <button type="button" onClick={() => onShowOnMap(h.id)} className="btn-outline whitespace-nowrap px-2 text-sm" aria-label={`Show ${h.name} on map`}>
+                <Icon name="pin" className="h-4 w-4" /> Show on map
+              </button>
+            ) : <span />}
+          </div>
         </div>
       </div>
     </article>
