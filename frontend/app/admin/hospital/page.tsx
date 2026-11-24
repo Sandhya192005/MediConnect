@@ -192,7 +192,8 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
   const [busy, setBusy] = useState(false);
   const [locating, setLocating] = useState(false);
   const [newDepts, setNewDepts] = useState<string[]>([]); // typed by the hospital (2026-11-24)
-  const [written, setWritten] = useState<number[]>(initial.written_department_ids); // these get the ×
+  const [written, setWritten] = useState<number[]>(initial.written_department_ids); // written by this hospital
+  const [onFile, setOnFile] = useState<number[]>(() => initial.departments.map((d) => d.id)); // saved on the hospital
   const [typed, setTyped] = useState("");
 
   useEffect(() => {
@@ -220,18 +221,29 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
     setSaved("");
   }
 
-  /** × on a department this hospital wrote: delete it now (from the list too, if no one else uses it). */
-  async function deleteDept(d: Department) {
-    if (!window.confirm(`Delete department "${d.name}"? It is removed from your hospital.`)) return;
+  /**
+   * The × on a department (owner request 2026-11-24): on every department the hospital has, and on the ones it
+   * wrote. Saved ones are removed at once (a written one also leaves the list when no one else uses it); a
+   * department only ticked in this form is just unticked.
+   */
+  async function removeDept(d: Department) {
+    const mine = written.includes(d.id);
+    if (!mine && !onFile.includes(d.id)) {
+      setF((cur) => ({ ...cur, department_ids: cur.department_ids.filter((x) => x !== d.id) }));
+      return;
+    }
+    if (!window.confirm(mine ? `Delete department "${d.name}"? It is removed from your hospital.`
+                             : `Remove "${d.name}" from your hospital?`)) return;
     setError("");
     setSaved("");
     try {
-      const r = await api<{ deleted: boolean; written_department_ids: number[] }>(
+      const r = await api<{ deleted: boolean; departments: { id: number }[]; written_department_ids: number[] }>(
         `/api/hospital-admin/profile/departments/${d.id}/`, { method: "DELETE" });
       setWritten(r.written_department_ids);
+      setOnFile(r.departments.map((x) => x.id));
       setF((cur) => ({ ...cur, department_ids: cur.department_ids.filter((x) => x !== d.id) }));
       if (r.deleted) setDepartments((list) => list.filter((x) => x.id !== d.id));
-      setSaved(r.deleted ? `Deleted "${d.name}".` : `Removed "${d.name}" from your hospital (another hospital still uses it).`);
+      setSaved(r.deleted ? `Deleted "${d.name}".` : `Removed "${d.name}" from your hospital.`);
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -318,7 +330,7 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
       </Panel>
 
       <Panel title="Departments">
-        <p className="-mt-2 mb-3 text-xs text-slate-500">Tick the departments your hospital has, or write one that isn&apos;t listed (the ones you write have an × to delete them). Patients search by these.</p>
+        <p className="-mt-2 mb-3 text-xs text-slate-500">Tick the departments your hospital has, or write one that isn&apos;t listed. The × removes a department from your hospital. Patients search by these.</p>
         {departments.length === 0 ? (
           <p className="text-sm text-slate-500">No departments on MediConnect yet.</p>
         ) : (
@@ -331,13 +343,15 @@ function ProfileEditor({ initial, onCancel, onSaved }: { initial: HospitalProfil
                   {d.name}
                 </label>
               );
-              if (!written.includes(d.id)) return chip;
-              // Written by this hospital: an × deletes it (owner request 2026-11-24).
+              const mine = written.includes(d.id);
+              if (!on && !mine) return chip;
+              // × on every department the hospital has, and on the ones it wrote (owner request 2026-11-24).
               return (
                 <span key={d.id} className="inline-flex items-center gap-1">
                   {chip}
-                  <button type="button" onClick={() => deleteDept(d)} aria-label={`Delete department ${d.name}`}
-                          title="Delete this department"
+                  <button type="button" onClick={() => removeDept(d)}
+                          aria-label={mine ? `Delete department ${d.name}` : `Remove department ${d.name}`}
+                          title={mine ? "Delete this department" : "Remove from your hospital"}
                           className="-ml-2 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-sm text-slate-500 hover:border-red-300 hover:bg-red-50 hover:text-red-600">
                     ×
                   </button>
