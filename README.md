@@ -295,6 +295,10 @@ Owner request: the list shows only three things per patient (plus name, ID, phon
 
 **Hospital profile** (`/admin/hospital`) now opens read-only: a header card (name, Connected / Not connected yet badge, address, **Edit profile**), three key facts (departments, map pin, patients can book), and sections **Contact** (phone, website, login email), **Address**, **Departments** (chips) and **Location** (map + Get directions as patients see it). **Edit profile** opens the same form as before (with **Cancel**); saving returns to the profile with "Saved." e2e `hospital-profile.spec.ts` updated.
 
+### Need help?: emergency line for patients only (2026-11-25)
+
+The red "In a medical emergency, call 112 or an ambulance on 108. Support can't help with emergencies." box on **Need help?** (`/support`) is no longer shown to doctor and hospital accounts; patients (and the platform admin) still see it. e2e `settings.spec.ts`.
+
 ### Date filter on hospital appointments (2026-11-24)
 
 **Appointments** (hospital) has a **Date** filter next to **All doctors**, on every tab: Any date, Today, Tomorrow, Yesterday, This week (Mon–Sun), Next 7 days, Last 7 days, This month, Last month, **On a date…** (one date box) and **Between dates…** (From / To; reversed dates still work). **Clear filters** resets doctor and date. It filters the loaded list in the browser (`lib/dateFilter.ts`, local calendar dates). e2e `appointment-date-filter.spec.ts`.

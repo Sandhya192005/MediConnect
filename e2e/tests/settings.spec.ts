@@ -184,6 +184,7 @@ test("contact support from the sidebar", async ({ page }) => {
   await login(page, e2e().doctor.email);
   await page.getByRole("link", { name: /Need help\?/ }).click();
   await expect(page.getByRole("heading", { name: "Need help?" })).toBeVisible();
+  await expect(page.getByText("Support can't help with emergencies")).toHaveCount(0); // not for doctors (2026-11-25)
   const subject = `E2E support ${Date.now()}`;
   await page.getByLabel("Topic").selectOption("records");
   await page.getByLabel("Subject").fill(subject);
@@ -243,4 +244,15 @@ test("the platform admin closes a support message without replying", async ({ pa
   await login(page, e2e().doctor.email);
   await page.goto("/support");
   await expect(page.getByRole("region", { name: "Your messages" }).getByRole("listitem").filter({ hasText: subject })).toContainText("Closed");
+});
+
+test("the emergency line on Need help? is for patients, not hospitals (2026-11-25)", async ({ page }) => {
+  await login(page, e2e().patient.email);
+  await page.goto("/support");
+  await expect(page.getByText("Support can't help with emergencies")).toBeVisible();
+  await page.getByRole("button", { name: "Log out" }).click();
+  await login(page, e2e().admin.email); // the hospital account
+  await page.goto("/support");
+  await expect(page.getByRole("heading", { name: "Need help?" })).toBeVisible();
+  await expect(page.getByText("Support can't help with emergencies")).toHaveCount(0);
 });
