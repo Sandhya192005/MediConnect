@@ -135,8 +135,8 @@ test("each role gets its own dashboard and menu", async ({ page }) => {
   // The greeting uses the first name (a last name is often just an initial, e.g. "Jeevitha D").
   await expect(page.getByText(/^Good (morning|afternoon|evening), Dr\. Eshwar!/)).toBeVisible(); // (a wave emoji follows)
 
-  // Today's appointments compared with yesterday (reference design, Part 3).
-  await expect(page.getByText(/from yesterday$|^Same as yesterday$/).first()).toBeVisible();
+  // Today's appointments without a comparison with yesterday (owner request 2026-11-25).
+  await expect(page.getByText(/from yesterday$|^Same as yesterday$/)).toHaveCount(0);
 
   // Patient records by ID is its own menu item (2026-11-21): no ID box on the dashboard or in the top bar.
   await expect(page.getByLabel("Search patient by ID")).toHaveCount(0);

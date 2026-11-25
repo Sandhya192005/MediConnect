@@ -295,6 +295,10 @@ Owner request: the list shows only three things per patient (plus name, ID, phon
 
 **Hospital profile** (`/admin/hospital`) now opens read-only: a header card (name, Connected / Not connected yet badge, address, **Edit profile**), three key facts (departments, map pin, patients can book), and sections **Contact** (phone, website, login email), **Address**, **Departments** (chips) and **Location** (map + Get directions as patients see it). **Edit profile** opens the same form as before (with **Cancel**); saving returns to the profile with "Saved." e2e `hospital-profile.spec.ts` updated.
 
+### Doctor dashboard: no comparison with yesterday (2026-11-25)
+
+The **Today's appointments** card shows today's count and "N completed" only; the "+N / −N from yesterday" line is gone (no extra request for yesterday's list). e2e `auth.spec.ts`.
+
 ### Need help?: emergency line for patients only (2026-11-25)
 
 The red "In a medical emergency, call 112 or an ambulance on 108. Support can't help with emergencies." box on **Need help?** (`/support`) is no longer shown to doctor and hospital accounts; patients (and the platform admin) still see it. e2e `settings.spec.ts`.
@@ -515,7 +519,7 @@ Owner request (2026-11-18): from their appointments, patients can find their way
 
 ### Reference-design features, Part 3 (doctor)
 
-- **"+N from yesterday"** on the doctor dashboard's Today's appointments ("+2 from yesterday", "−1 from yesterday", "Same as yesterday"), from real appointments; cancelled visits aren't counted.
+- **"+N from yesterday"** on the doctor dashboard's Today's appointments ("+2 from yesterday", "−1 from yesterday", "Same as yesterday"), from real appointments; cancelled visits aren't counted. *Removed 2026-11-25 (owner request): the card shows only today's count and how many are completed.*
 - **Search patient by ID** in the top bar for doctors and hospital admins: typing an ID opens the patient's records. Patients keep the hospital and doctor search.
 - **Treatment notes** (owner decision 2026-11-19: the patient and any doctor read them):
   - **Contents:** one note per visit, with a diagnosis, medicines (name and strength, dose, how often, days; up to 20), advice and an optional follow-up date.
