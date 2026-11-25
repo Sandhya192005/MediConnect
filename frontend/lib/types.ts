@@ -604,7 +604,7 @@ export type SupportInboxItem = {
   topic_label: string;
   subject: string;
   message: string;
-  status: "open" | "answered" | "closed";
+  status: "open" | "closed";
   status_label: string;
   reply: string;
   created_at: string;

@@ -14,7 +14,7 @@ type SupportRequest = {
   topic_label: string;
   subject: string;
   message: string;
-  status: "open" | "answered" | "closed";
+  status: "open" | "closed";
   status_label: string;
   reply: string;
   created_at: string;
@@ -30,7 +30,6 @@ const TOPICS = [
 
 const STATUS_STYLE: Record<SupportRequest["status"], string> = {
   open: "bg-amber-50 text-amber-700",
-  answered: "bg-teal-50 text-teal-700",
   closed: "bg-slate-100 text-slate-500",
 };
 
@@ -120,7 +119,10 @@ export default function SupportPage() {
                       <p className="truncate text-sm font-[650] text-[#00295c]">{r.subject}</p>
                       <p className="text-xs text-slate-500">{r.topic_label} · {timeAgo(r.created_at)}</p>
                     </div>
-                    <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-[650] ${STATUS_STYLE[r.status]}`}>{r.status_label}</span>
+                    {/* Replying closes a message (2026-11-25); to the sender a closed message with a reply reads "Replied". */}
+                    {r.status === "closed" && r.reply
+                      ? <span className="shrink-0 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-[650] text-teal-700">Replied</span>
+                      : <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-[650] ${STATUS_STYLE[r.status]}`}>{r.status_label}</span>}
                   </div>
                   <p className="mt-1 whitespace-pre-line text-sm text-slate-600">{r.message}</p>
                   {r.reply && (

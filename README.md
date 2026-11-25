@@ -440,11 +440,19 @@ Owner decisions: a no-show is marked **by hand** (never automatically: hospitals
 - Fixed: the appointment lists (patient, doctor, hospital) could show an old answer when reloads overlapped (switching to Past while live notifications arrive showed "No past appointments"). Only the newest request fills the list now.
 - Tests: `appointments/test_no_show.py` (12), report tests updated; e2e `no-show.spec.ts` (doctor marks + undoes, hospital marks, reports count it, the patient sees it). `e2e_setup` adds the patient "Mani Noshow" with a visit two days ago.
 
+### Support inbox: Open / Closed only (2026-11-25)
+
+A message gets one reply (the sender can't write back on it), so "Answered" and "Closed" meant the same thing to the sender. Owner decision: keep only **Open / Closed / All**.
+- **Send reply** now closes the message (the "Send and close" button is gone). **Reopen** still brings a message back to Open; editing the reply closes it again. A reply written in Django admin closes it too.
+- Migration `support/0002` turns any old "answered" message into "closed" (the dev database had none).
+- On the sender's Need help? page, a closed message with a reply shows **Replied**; one closed without a reply shows **Closed**.
+- Tests: `support/tests.py` updated (replying closes, "answered" is refused); e2e `settings.spec.ts` checks the Answered tab is gone and the doctor sees "Replied".
+
 ### Support inbox for the platform admin (2026-11-20)
 
 "Need help?" messages from patients, doctors and hospitals used to be answered only in Django admin, and the platform admin got no notification. Now:
 - A new message sends every platform admin an in-app notification ("New support message", links to the inbox). The email to the support address stays.
-- **Support inbox** (`/admin/support`, platform admin menu): Open / Answered / Closed / All tabs; each message shows who sent it (patient, doctor or hospital), the topic and the text. **Send reply** (→ Answered) or **Send and close**; **Close** / **Reopen**. The sender gets a "Support replied" notification and sees the reply on their Need help? page, as before.
+- **Support inbox** (`/admin/support`, platform admin menu): Open / Answered / Closed / All tabs (Answered removed 2026-11-25, see above); each message shows who sent it (patient, doctor or hospital), the topic and the text. **Send reply** (→ Answered) or **Send and close**; **Close** / **Reopen**. The sender gets a "Support replied" notification and sees the reply on their Need help? page, as before.
 - The platform admin's sidebar box shows **Support inbox** with the open count (instead of "Need help?"), and the account menu says "Support inbox". Open messages also appear under "Waiting for you" on the platform dashboard.
 - **Close without reply** (added 2026-11-21) on Open messages that need no answer (e.g. "thanks, it works now"): the message moves to Closed with no reply; the sender sees it as Closed. **Reopen** brings it back.
 - API: `GET /api/support/inbox/?status=`, `POST /api/support/inbox/<id>/reply/ {reply, close}`, `POST /api/support/inbox/<id>/status/ {status}` (platform admin only). Django admin still works as a backup.

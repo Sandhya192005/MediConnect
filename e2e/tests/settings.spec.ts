@@ -206,15 +206,18 @@ test("contact support from the sidebar", async ({ page }) => {
   await expect(msg).toContainText("I can't open a patient's X-ray file.");
   await msg.getByLabel(/Reply to/).fill("Please upload it again as a PDF.");
   await msg.getByRole("button", { name: "Send reply" }).click();
-  await expect(msg).toHaveCount(0); // answered: gone from "Open"
-  await page.getByRole("button", { name: "Answered" }).click();
+  await expect(msg).toHaveCount(0); // replying closes it: gone from "Open" (2026-11-25)
+  await expect(page.getByRole("button", { name: "Answered" })).toHaveCount(0); // tab removed
+  await page.getByRole("button", { name: "Closed" }).click();
   await expect(page.getByRole("listitem", { name: subject })).toContainText("Your reply: Please upload it again as a PDF.");
 
   // The doctor sees the answer on their Need help? page.
   await page.getByRole("button", { name: "Log out" }).click();
   await login(page, e2e().doctor.email);
   await page.goto("/support");
-  await expect(page.getByRole("region", { name: "Your messages" })).toContainText("Please upload it again as a PDF.");
+  const yours = page.getByRole("region", { name: "Your messages" });
+  await expect(yours).toContainText("Please upload it again as a PDF.");
+  await expect(yours.getByText("Replied", { exact: true }).first()).toBeVisible();
 });
 
 test("the platform admin closes a support message without replying", async ({ page }) => {

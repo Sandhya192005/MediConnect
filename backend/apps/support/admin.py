@@ -20,8 +20,8 @@ class SupportRequestAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         new_reply = "reply" in form.changed_data and obj.reply.strip()
-        if new_reply and obj.status == SupportRequest.Status.OPEN:
-            obj.status = SupportRequest.Status.ANSWERED
+        if new_reply:
+            obj.status = SupportRequest.Status.CLOSED  # replying closes it (2026-11-25)
         super().save_model(request, obj, form, change)
         if new_reply:
             create_notification(obj.user, "support_reply", "Support replied",
