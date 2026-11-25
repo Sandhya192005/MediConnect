@@ -5,6 +5,7 @@ import { EmptyState, Panel, SkeletonRows } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { NOTIFICATION_EVENT } from "@/lib/notifications";
 import { timeAgo } from "@/lib/types";
 
@@ -36,6 +37,9 @@ const STATUS_STYLE: Record<SupportRequest["status"], string> = {
 
 /** "Need help? Contact support": send a message and see the answers (for every role). */
 export default function SupportPage() {
+  const { user } = useAuth();
+  // The emergency line is for patients (and the platform admin): doctors and hospitals don't see it (2026-11-25).
+  const showEmergency = !!user && user.role !== "doctor" && user.role !== "hospital";
   const [items, setItems] = useState<SupportRequest[] | null>(null);
   const [f, setF] = useState({ topic: "appointment", subject: "", message: "" });
   const [busy, setBusy] = useState(false);
@@ -75,6 +79,7 @@ export default function SupportPage() {
         <h1 className="page-title">Need help?</h1>
         <p className="page-subtitle text-sm">Send a message to MediConnect support. We answer here, and you get a notification.</p>
       </div>
+      {showEmergency && (
       <p className="mb-6 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
         <Icon name="siren" className="mt-0.5 h-4 w-4 shrink-0" />
         <span>
@@ -82,6 +87,7 @@ export default function SupportPage() {
           <a href="tel:108" className="font-[650] underline">108</a>. Support can&apos;t help with emergencies.
         </span>
       </p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-5">
         <Panel title="Contact support" className="lg:col-span-2">

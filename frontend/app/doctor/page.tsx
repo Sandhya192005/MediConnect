@@ -14,16 +14,10 @@ import { fmtTime, isoDate, type Appointment, type Doctor } from "@/lib/types";
 /** Python's Monday=0 weekday, as used by WeeklyAvailability. */
 const todayWeekday = () => (new Date().getDay() + 6) % 7;
 
-/** "+2 from yesterday", "−1 from yesterday" or "Same as yesterday". */
-function vsYesterday(today: number, yesterday: number): string {
-  const d = today - yesterday;
-  return d === 0 ? "Same as yesterday" : `${d > 0 ? "+" : "−"}${Math.abs(d)} from yesterday`;
-}
 
 export default function DoctorDashboard() {
   const { user } = useAuth();
   const [today, setToday] = useState<Appointment[] | null>(null);
-  const [yesterdayCount, setYesterdayCount] = useState<number | null>(null);
   const [me, setMe] = useState<Doctor | null>(null);
   const [error, setError] = useState(false);
 
@@ -39,12 +33,7 @@ export default function DoctorDashboard() {
   useEffect(() => {
     loadToday();
     api<Doctor>("/api/doctors/me/").then(setMe).catch(() => setMe(null));
-    // "+N from yesterday" (reference design, Part 3): yesterday's visits, cancelled ones not counted.
-    const y = new Date();
-    y.setDate(y.getDate() - 1);
-    api<Appointment[]>(`/api/appointments/?date=${isoDate(y)}`)
-      .then((list) => setYesterdayCount(list.filter((a) => a.status !== "cancelled").length))
-      .catch(() => setYesterdayCount(null));
+    // No comparison with yesterday on the card (owner request 2026-11-25).
   }, [loadToday]);
 
   // Refresh when a live notification arrives (a booking, a cancellation, a patient checking in), and every 30 s.
@@ -77,7 +66,6 @@ export default function DoctorDashboard() {
           value={today === null ? "…" : visits.length}
           detail={today === null ? undefined : (
             <>
-              {yesterdayCount !== null && <span className="block font-[650] text-[#00295c]">{vsYesterday(visits.length, yesterdayCount)}</span>}
               {visits.filter((a) => a.status === "completed").length} completed
             </>
           )}
