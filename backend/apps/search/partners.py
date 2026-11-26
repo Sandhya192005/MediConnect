@@ -1,7 +1,8 @@
 """
 MediConnect hospitals (partners) for the "Find hospitals or doctors" page.
 
-A partner = an approved hospital with at least one active doctor who has working hours. Each result
+A partner = an approved hospital with at least one active doctor who has working hours, or (since
+2026-11-26) at least one doctor it added in Doctor management (listed, not bookable online). Each result
 lists the hospital's specialties and, when the patient searched something ("heart", "Dr. Rao",
 "cardiolgist"), the doctors there who match. Elasticsearch finds the matches (typos, synonyms);
 PostgreSQL decides what's actually bookable. If Elasticsearch is down, a plain database search is used.
@@ -14,6 +15,7 @@ from django.db.models import Q
 from elasticsearch import ApiError, ConnectionError as ESConnectionError
 
 from apps.doctors.models import DoctorProfile
+from apps.staff import listed
 
 from .indexes import es, index_name
 from .queries import doctor_text_query
@@ -84,36 +86,57 @@ def partner_hospitals(q: str = "", department: str | None = None, city: str | No
     for d in doctors:
         by_hospital[d.hospital_id].append(d)
 
+    # Doctors the hospital added in Doctor management without online booking (owner request 2026-11-26).
+    # They have no fee, so a fee limit leaves them out.
+    listed_by_hospital = defaultdict(list)
+    if max_fee is None:
+        staff = listed.listed_doctors()
+        if city:
+            staff = staff.filter(hospital__city__iexact=city)
+        for s in staff:
+            listed_by_hospital[s.hospital_id].append(s)
+    if q:  # Elasticsearch only knows hospitals with bookable doctors; check the others' names here.
+        name_hits |= {hid for hid, lst in listed_by_hospital.items()
+                      if hid not in by_hospital and listed.name_or_city_match(lst[0].hospital, q)}
+
     results = []
-    for hospital_id, docs in by_hospital.items():
+    for hospital_id in by_hospital.keys() | listed_by_hospital.keys():
+        docs, staff = by_hospital.get(hospital_id, []), listed_by_hospital.get(hospital_id, [])
         matching = sorted((d for d in docs if d.id in doctor_rank), key=lambda d: doctor_rank[d.id])
+        matching_listed = [s for s in staff if listed.matches(s, q)] if q else []
         if department:
             # A department filter means: hospitals that have this kind of specialist.
-            pool = matching if (q and hospital_id not in name_hits) else docs
-            matching = [d for d in pool if _specialty(d) == department]
-            if not matching:
+            searched_doctors = q and hospital_id not in name_hits
+            matching = [d for d in (matching if searched_doctors else docs) if _specialty(d) == department]
+            matching_listed = [s for s in (matching_listed if searched_doctors else staff)
+                               if listed.specialty(s) == department]
+            if not matching and not matching_listed:
                 continue
-        elif q and not matching and hospital_id not in name_hits:
+        elif q and not matching and not matching_listed and hospital_id not in name_hits:
             continue
         elif hospital_id in name_hits:
-            matching = []  # searched the hospital itself: its specialties say enough, no "matching doctors"
-        h = docs[0].hospital
-        specialties = Counter(_specialty(d) for d in docs)
+            matching, matching_listed = [], []  # searched the hospital itself: its specialties say enough
+        h = (docs or staff)[0].hospital
+        specialties = Counter([_specialty(d) for d in docs] + [listed.specialty(s) for s in staff])
         results.append({
             "id": h.id, "name": h.name, "address": h.address, "city": h.city,
             "location_verified": h.location_verified,
             # For the map on Book appointment (None when the hospital has no pin yet).
             "latitude": h.location.y if h.location else None,
             "longitude": h.location.x if h.location else None,
-            "doctor_count": len(docs),
+            "doctor_count": len(docs) + len(staff),
+            "bookable_count": len(docs),
             "specialties": [{"name": n, "count": c} for n, c in sorted(specialties.items())],
             "matching_doctors": [
                 {"id": d.id, "name": d.user.get_full_name() or d.user.email, "specialization": d.specialization,
-                 "department": _specialty(d), "fee": float(d.fee)}
+                 "department": _specialty(d), "fee": float(d.fee), "bookable": True}
                 for d in matching
             ],
+            # Listed by the hospital, not bookable online: shown after the bookable ones, clearly labelled.
+            "matching_listed_doctors": [listed.public(s) for s in matching_listed],
             "name_match": hospital_id in name_hits,
-            "_rank": min((doctor_rank[d.id] for d in matching if d.id in doctor_rank), default=MAX_MATCHES),
+            "_rank": min((doctor_rank[d.id] for d in matching if d.id in doctor_rank),
+                         default=MAX_MATCHES if not matching_listed else MAX_MATCHES - 1),
         })
 
     # Hospital name matches first ("apollo"), then the hospital with the best-matching specialist.

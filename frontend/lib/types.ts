@@ -57,6 +57,17 @@ export type ScrapedDoctor = {
   collected_at: string;
 };
 
+/** A doctor the hospital added in Doctor management, without online booking (no account or no working hours). */
+export type HospitalListedDoctor = {
+  id: number;
+  name: string;
+  specialization: string;
+  department: string;
+  qualification: string;
+  designation: string;
+  bookable: false;
+};
+
 export type HospitalDetail = Hospital & {
   source_url: string;
   scraped_at: string | null;
@@ -70,6 +81,8 @@ export type HospitalDetail = Hospital & {
     address: string;
   } | null;
   scraped_doctors: ScrapedDoctor[];
+  /** Doctors the hospital added itself who can't be booked online (connected hospitals only). */
+  hospital_listed_doctors: HospitalListedDoctor[];
   is_fresh: boolean;
   has_bookable_doctors: boolean;
   active_job: ScrapeJob | null;

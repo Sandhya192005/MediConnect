@@ -9,7 +9,7 @@ import Icon from "@/components/Icons";
 import PageHeader, { Avatar } from "@/components/PageHeader";
 import SearchBox from "@/components/SearchBox";
 import { api, errorMessage } from "@/lib/api";
-import type { LatLng, NearbyResponse } from "@/lib/types";
+import type { HospitalListedDoctor, LatLng, NearbyResponse } from "@/lib/types";
 
 // Leaflet needs the browser: load the map only there, and only when "Show map" is pressed.
 const HospitalMap = dynamic(() => import("@/components/HospitalMap"), {
@@ -30,8 +30,11 @@ type PartnerHospital = {
   longitude: number | null;
   location_verified: boolean;
   doctor_count: number;
+  /** Doctors with free slots online; the rest were added by the hospital and can't be booked online. */
+  bookable_count: number;
   specialties: { name: string; count: number }[];
   matching_doctors: { id: number; name: string; specialization: string; department: string; fee: number }[];
+  matching_listed_doctors: HospitalListedDoctor[];
 };
 
 type PartnerResponse = {
@@ -103,8 +106,10 @@ function Chips({ title, items, active, onPick }: { title: string; items: Facet[]
 
 function PartnerCard({ h, department, selected, onShowOnMap }: { h: PartnerHospital; department: string; selected: boolean; onShowOnMap: (id: number) => void }) {
   // Open the hospital on the specialty the patient was looking for.
-  const focus = department || h.matching_doctors[0]?.department || "";
+  const focus = department || h.matching_doctors[0]?.department || h.matching_listed_doctors[0]?.department || "";
   const href = `/hospitals/${h.id}${focus ? `?specialty=${encodeURIComponent(focus)}` : ""}`;
+  const listedCount = h.doctor_count - h.bookable_count;
+  const matchCount = h.matching_doctors.length + h.matching_listed_doctors.length;
   return (
     <article id={`hospital-${h.id}`} aria-label={h.name} className={`card-hover flex scroll-mt-24 flex-col overflow-hidden ${selected ? "ring-2 ring-amber-400" : ""}`}>
       <div className="bg-brand-gradient h-1.5" />
@@ -121,12 +126,19 @@ function PartnerCard({ h, department, selected, onShowOnMap }: { h: PartnerHospi
             </p>
           </div>
         </div>
-        <span className="mt-3 inline-flex w-fit items-center gap-1 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800">
-          <Icon name="check" className="h-3 w-3" /> Instant booking
-        </span>
+        {h.bookable_count > 0 ? (
+          <span className="mt-3 inline-flex w-fit items-center gap-1 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-800">
+            <Icon name="check" className="h-3 w-3" /> Instant booking
+          </span>
+        ) : (
+          <span className="mt-3 inline-flex w-fit items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+            Doctors listed by the hospital
+          </span>
+        )}
 
         <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
           {h.doctor_count} specialist{h.doctor_count === 1 ? "" : "s"}
+          {h.bookable_count > 0 && listedCount > 0 && ` · ${h.bookable_count} bookable online`}
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {h.specialties.map((s) => (
@@ -136,12 +148,12 @@ function PartnerCard({ h, department, selected, onShowOnMap }: { h: PartnerHospi
           ))}
         </div>
 
-        {h.matching_doctors.length > 0 && (
+        {matchCount > 0 && (
           <div className="mt-4 rounded-xl bg-slate-50 p-3">
             <p className="text-xs font-semibold text-slate-500">Matching specialists</p>
             <ul className="mt-2 space-y-2 text-sm">
               {h.matching_doctors.slice(0, 3).map((d) => (
-                <li key={d.id} className="flex items-center gap-2">
+                <li key={`b${d.id}`} className="flex items-center gap-2">
                   <Avatar name={d.name} size="sm" />
                   <span className="min-w-0">
                     <Link href={`/doctors/${d.id}`} className="font-medium text-navy-800 hover:text-teal-700">Dr. {d.name}</Link>
@@ -149,14 +161,25 @@ function PartnerCard({ h, department, selected, onShowOnMap }: { h: PartnerHospi
                   </span>
                 </li>
               ))}
-              {h.matching_doctors.length > 3 && <li className="text-xs text-slate-500">+{h.matching_doctors.length - 3} more</li>}
+              {/* Added by the hospital in Doctor management: shown, but clearly not bookable online. */}
+              {h.matching_listed_doctors.slice(0, Math.max(0, 3 - h.matching_doctors.length)).map((d) => (
+                <li key={`l${d.id}`} className="flex items-center gap-2" data-testid="listed-doctor">
+                  <Avatar name={d.name} size="sm" />
+                  <span className="min-w-0">
+                    <Link href={`/hospitals/${h.id}?specialty=${encodeURIComponent(d.department)}`} className="font-medium text-navy-800 hover:text-teal-700">Dr. {d.name}</Link>
+                    <span className="block truncate text-xs text-slate-500">{d.specialization || d.department}</span>
+                    <span className="block text-xs font-medium text-amber-700">Listed by the hospital · not bookable online</span>
+                  </span>
+                </li>
+              ))}
+              {matchCount > 3 && <li className="text-xs text-slate-500">+{matchCount - 3} more</li>}
             </ul>
           </div>
         )}
 
         <div className="mt-auto space-y-2 pt-5">
           <Link href={href} className="btn-solid w-full">
-            View specialists & book <Icon name="arrow" className="h-4 w-4" />
+            {h.bookable_count > 0 ? "View specialists & book" : "View doctors"} <Icon name="arrow" className="h-4 w-4" />
           </Link>
           {/* Both on every card (owner request 2026-11-24). */}
           <div className="grid grid-cols-2 gap-2">

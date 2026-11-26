@@ -29,12 +29,20 @@ class HospitalWithScrapeSerializer(HospitalSerializer):
     has_bookable_doctors = serializers.SerializerMethodField()
     active_job = serializers.SerializerMethodField()
     can_search_website = serializers.SerializerMethodField()
+    # Doctors the hospital added in Doctor management who can't be booked online (owner request 2026-11-26).
+    hospital_listed_doctors = serializers.SerializerMethodField()
 
     class Meta(HospitalSerializer.Meta):
         fields = HospitalSerializer.Meta.fields + [
             "source_url", "scraped_at", "booking_url", "scraped_info", "scraped_doctors",
             "is_fresh", "has_bookable_doctors", "active_job", "website_source", "can_search_website",
+            "hospital_listed_doctors",
         ]
+
+    def get_hospital_listed_doctors(self, obj):
+        from apps.staff.listed import for_hospital
+
+        return for_hospital(obj)
 
     def get_can_search_website(self, obj):
         return can_search_website(obj)

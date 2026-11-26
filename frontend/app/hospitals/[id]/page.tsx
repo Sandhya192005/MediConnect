@@ -92,7 +92,8 @@ export default function HospitalDetailPage() {
   const matchDoc = (...fields: (string | null | undefined)[]) => !dq || fields.some((f) => (f ?? "").toLowerCase().includes(dq));
   const listedDoctors = hospital.scraped_doctors.filter((d) => matchDoc(d.name, d.specialization, d.qualification));
   const mcDoctors = (doctors ?? []).filter((d) => matchDoc(d.name, d.specialization, d.department_name));
-  const totalDoctors = hospital.scraped_doctors.length + (doctors?.length ?? 0);
+  const hospitalListed = (hospital.hospital_listed_doctors ?? []).filter((d) => matchDoc(d.name, d.specialization, d.department, d.qualification));
+  const totalDoctors = hospital.scraped_doctors.length + (doctors?.length ?? 0) + (hospital.hospital_listed_doctors?.length ?? 0);
 
   const phone = hospital.phone || info?.phones[0] || "";
   const busy = job?.status === "pending" || job?.status === "running";
@@ -214,7 +215,7 @@ export default function HospitalDetailPage() {
               </label>
               {dq && (
                 <p className="mt-2 text-xs text-slate-500">
-                  {mcDoctors.length + listedDoctors.length} of {totalDoctors} doctors match “{docQuery}”.
+                  {mcDoctors.length + hospitalListed.length + listedDoctors.length} of {totalDoctors} doctors match “{docQuery}”.
                 </p>
               )}
             </div>
@@ -225,6 +226,39 @@ export default function HospitalDetailPage() {
               <p className="mb-4 text-sm text-slate-500">MediConnect doctors at this hospital. Pick a specialist to see free slots and book instantly.</p>
               <SpecialistList doctors={mcDoctors} searching={!!dq} />
             </div>
+          )}
+
+          {/* Doctors the hospital added in Doctor management without online booking (owner request 2026-11-26). */}
+          {(hospital.hospital_listed_doctors?.length ?? 0) > 0 && (
+            <section className="card p-5" aria-label="Doctors listed by the hospital">
+              <h2 className="section-title">Doctors listed by the hospital</h2>
+              <p className="mb-4 text-sm text-slate-500">
+                Added by {hospital.name} itself. They can&apos;t be booked online on MediConnect yet
+                {phone ? <>: call <a href={`tel:${phone}`} className="font-medium text-teal-700 hover:underline">{phone}</a> to book.</> : "."}
+              </p>
+              {hospitalListed.length === 0 ? (
+                <p className="text-sm text-slate-500">No doctor here matches your search.</p>
+              ) : (
+                <ul className="grid gap-3 sm:grid-cols-2">
+                  {hospitalListed.map((d) => (
+                    <li key={d.id} className="flex gap-3 rounded-xl border border-slate-200 p-4" data-testid="listed-doctor">
+                      <Avatar name={d.name} />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-navy-800">Dr. {d.name}</p>
+                        <p className="text-sm text-teal-700">{d.specialization || d.department}</p>
+                        {d.specialization && d.department !== d.specialization && <p className="text-xs text-slate-500">{d.department}</p>}
+                        {(d.qualification || d.designation) && (
+                          <p className="text-xs text-slate-500">{[d.qualification, d.designation].filter(Boolean).join(" · ")}</p>
+                        )}
+                        <span className="mt-2 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                          Not bookable online
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           )}
 
           <div className="card p-5">

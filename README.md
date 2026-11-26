@@ -448,6 +448,16 @@ Owner decisions: a no-show is marked **by hand** (never automatically: hospitals
 - Fixed: the appointment lists (patient, doctor, hospital) could show an old answer when reloads overlapped (switching to Past while live notifications arrive showed "No past appointments"). Only the newest request fills the list now.
 - Tests: `appointments/test_no_show.py` (12), report tests updated; e2e `no-show.spec.ts` (doctor marks + undoes, hospital marks, reports count it, the patient sees it). `e2e_setup` adds the patient "Mani Noshow" with a visit two days ago.
 
+### Doctors added by the hospital are shown to patients (2026-11-26, phase 1 of 2)
+
+Owner request: "all the doctors should be listed whether they have a doctor account in MediConnect or not". Shiva, a neurologist ABC Hospital added in Doctor management (no doctor account), didn't appear when patients searched "neurology", because the search only listed doctors with an account and working hours.
+- New `staff/listed.py`: working doctors (staff records) of **connected** hospitals who can't be booked online (no account, or an account without working hours). Doctors who have left, nurses and other staff are never shown; a doctor whose linked account is bookable is shown once, as bookable.
+- Only safe details are public: name, specialization, department, qualification, designation. Phone, email, salary and dates stay on the hospital's own pages.
+- Search (`/api/search/partner-hospitals/`): hospitals now also appear with only hospital-added doctors; each result has `bookable_count` and `matching_listed_doctors` (matched by name or specialty, with the word-root / everyday-word / typo matching of `search/specialties.py`: "neurology", "nerology", "brain" all find Shiva). A fee limit leaves them out (no fee known). The hospital page API (`/api/scraper/hospitals/<id>/`) adds `hospital_listed_doctors`.
+- Frontend: the search card says "Listed by the hospital · not bookable online" under such a doctor, and "Instant booking" only when the hospital has a bookable doctor. The hospital page has a "Doctors listed by the hospital" section with a "Not bookable online" badge and the hospital's phone number.
+- Phase 2 (next): "Request appointment" on these doctors; the hospital confirms or declines it.
+- Tests: `staff/test_listed.py` (13); 340 backend tests pass (1 opt-in live browser test skipped). Checked on the running server with ABC Hospital's real data.
+
 ### Specialist search for website doctors (2026-11-26)
 
 Owner report: searching "gynecologist" among doctors read from hospital websites listed a cardiologist, a dermatologist and a neurologist. Cause: the typo-tolerant search compared letters, and almost every specialty ends in "-ologist".
