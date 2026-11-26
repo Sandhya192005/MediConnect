@@ -94,7 +94,7 @@ export default function PatientRecordsLookup({ basePath }: { basePath: string })
               </p>
             </div>
             <p className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              <Icon name="eye" className="h-4 w-4" /> This visit is shown in the patient&apos;s access log.
+              <Icon name="eye" className="h-4 w-4" /> The patient can see that you opened their records (shown in their &apos;Who opened your records&apos; list).
             </p>
           </section>
           <HealthSummary d={result.details} />
