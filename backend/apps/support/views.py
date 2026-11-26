@@ -63,8 +63,8 @@ class SupportInboxViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
     """
     The platform admin's Support inbox (owner request 2026-11-20), replacing replies in Django admin.
 
-    GET  /api/support/inbox/?status=open|answered|closed
-    POST /api/support/inbox/<id>/reply/  {reply, close: bool}  — the sender gets a notification
+    GET  /api/support/inbox/?status=open|closed
+    POST /api/support/inbox/<id>/reply/  {reply}  — closes the message; the sender gets a notification
     POST /api/support/inbox/<id>/status/ {status}              — close or reopen
     """
 
@@ -86,7 +86,7 @@ class SupportInboxViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
         if len(text) > 4000:
             raise ValidationError({"reply": "That's too long (4000 characters at most)."})
         req.reply = text
-        req.status = SupportRequest.Status.CLOSED if request.data.get("close") is True else SupportRequest.Status.ANSWERED
+        req.status = SupportRequest.Status.CLOSED  # one reply per message, so replying closes it (2026-11-25)
         req.save(update_fields=["reply", "status", "updated_at"])
         _notify_later([req.user], "support_reply", "Support replied", f"{req.subject}: {text[:200]}", "/support")
         return Response(self.get_serializer(req).data)
@@ -96,7 +96,7 @@ class SupportInboxViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
         req = self.get_object()
         value = request.data.get("status")
         if value not in SupportRequest.Status.values:
-            raise ValidationError({"status": "Use open, answered or closed."})
+            raise ValidationError({"status": "Use open or closed."})
         req.status = value
         req.save(update_fields=["status", "updated_at"])
         return Response(self.get_serializer(req).data)

@@ -6,8 +6,9 @@ class SupportRequest(models.Model):
     """A user's message to MediConnect support. The platform admin replies in Django admin."""
 
     class Status(models.TextChoices):
+        # Only open and closed (owner decision 2026-11-25): a message gets one reply, so replying closes it.
+        # The old "answered" status was turned into "closed" by migration 0002.
         OPEN = "open", "Open"
-        ANSWERED = "answered", "Answered"
         CLOSED = "closed", "Closed"
 
     class Topic(models.TextChoices):

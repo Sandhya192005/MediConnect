@@ -58,7 +58,7 @@ def test_validation_and_users_cannot_set_status_or_reply():
 
 
 @pytest.mark.django_db
-def test_a_reply_in_django_admin_marks_it_answered_and_notifies_the_user():
+def test_a_reply_in_django_admin_closes_it_and_notifies_the_user():
     user = User.objects.create_user("a@example.com", "pw")
     req_id = send(client_for(user)).json()["id"]
     boss = User.objects.create_superuser("boss@example.com", "pw")
@@ -73,7 +73,7 @@ def test_a_reply_in_django_admin_marks_it_answered_and_notifies_the_user():
     request.user = boss
     admin.save_model(request, obj, Form(), change=True)
     obj.refresh_from_db()
-    assert obj.status == "answered"
+    assert obj.status == "closed"
     note = Notification.objects.get(user=user, kind="support_reply")
     assert "Fixed now" in note.message and note.link == "/support"
     assert client_for(user).get("/api/support/").json()[0]["reply"] == "Fixed now, please try again."
@@ -128,15 +128,17 @@ def test_reply_notifies_the_sender_and_they_see_it(inbox_world, django_capture_o
     assert boss.post(f"{INBOX}{req.id}/reply/", {"reply": "  "}, format="json").status_code == 400
     with django_capture_on_commit_callbacks(execute=True):
         r = boss.post(f"{INBOX}{req.id}/reply/", {"reply": "Fixed it, try again."}, format="json")
-    assert r.status_code == 200 and r.json()["status"] == "answered"
+    assert r.status_code == 200 and r.json()["status"] == "closed"  # replying closes it (2026-11-25)
     n = Notification.objects.get(user=inbox_world["doctor"], kind="support_reply")
     assert "Fixed it" in n.message
     mine = client_for(inbox_world["doctor"]).get("/api/support/").json()
-    assert mine[0]["reply"] == "Fixed it, try again." and mine[0]["status"] == "answered"
-    # Reply and close in one go, then reopen.
-    assert boss.post(f"{INBOX}{req.id}/reply/", {"reply": "Done.", "close": True}, format="json").json()["status"] == "closed"
+    assert mine[0]["reply"] == "Fixed it, try again." and mine[0]["status"] == "closed"
+    # Reopen, and an edited reply closes it again.
+    assert boss.post(f"{INBOX}{req.id}/status/", {"status": "open"}, format="json").json()["status"] == "open"
+    assert boss.post(f"{INBOX}{req.id}/reply/", {"reply": "Done."}, format="json").json()["status"] == "closed"
     assert boss.post(f"{INBOX}{req.id}/status/", {"status": "open"}, format="json").json()["status"] == "open"
     assert boss.post(f"{INBOX}{req.id}/status/", {"status": "lost"}, format="json").status_code == 400
+    assert boss.post(f"{INBOX}{req.id}/status/", {"status": "answered"}, format="json").status_code == 400  # removed
 
 
 def test_only_the_platform_admin_uses_the_inbox(inbox_world):

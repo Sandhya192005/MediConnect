@@ -7,12 +7,12 @@ import { api, errorMessage } from "@/lib/api";
 import { NOTIFICATION_EVENT } from "@/lib/notifications";
 import { timeAgo, type SupportInboxItem } from "@/lib/types";
 
-type Show = "open" | "answered" | "closed" | "";
-const TABS: [Show, string][] = [["open", "Open"], ["answered", "Answered"], ["closed", "Closed"], ["", "All"]];
+// Open / Closed / All (owner decision 2026-11-25): a message gets one reply, so replying closes it; Reopen brings it back.
+type Show = "open" | "closed" | "";
+const TABS: [Show, string][] = [["open", "Open"], ["closed", "Closed"], ["", "All"]];
 const ROLE: Record<string, string> = { patient: "Patient", doctor: "Doctor", hospital: "Hospital", admin: "Admin" };
 const STATUS_STYLE: Record<SupportInboxItem["status"], string> = {
   open: "bg-amber-50 text-amber-700",
-  answered: "bg-teal-50 text-teal-700",
   closed: "bg-slate-100 text-slate-500",
 };
 
@@ -137,8 +137,6 @@ function Message({ m, onChange }: { m: SupportInboxItem; onChange: () => void })
           {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
           <div className="flex flex-wrap gap-2">
             <button className="btn-solid rounded-xl px-4 py-2 text-sm" disabled={busy}>{busy ? "Sending…" : "Send reply"}</button>
-            <button type="button" onClick={() => post("reply", { reply, close: true })} disabled={busy || !reply.trim()}
-                    className="btn-outline px-4 py-2 text-sm">Send and close</button>
             {/* Some messages need no answer (spam, "thanks", already solved): close them straight away (2026-11-21). */}
             {m.status === "open" && (
               <button type="button" onClick={() => post("status", { status: "closed" })} disabled={busy}
