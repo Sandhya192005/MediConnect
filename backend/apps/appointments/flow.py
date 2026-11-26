@@ -11,7 +11,7 @@ The booking flow (owner decisions 2026-11-21). How the patient booked decides wh
       patient books ──► doctor: Accept → "confirmed"  /  Reject (reason) → declined (patient told)
 
 The slot is held from booking until it's declined or cancelled (status "booked"), so nobody can double
-book it. Only an accepted appointment ("confirmed") gets reminders, the queue and treatment notes.
+book it. Only an accepted appointment ("confirmed") gets reminders and the queue.
 Every rejection is kept (DoctorRejection), so the hospital sees each doctor's rejections.
 Requests nobody answered before the visit time are cancelled by the hourly job (expire_unanswered).
 """

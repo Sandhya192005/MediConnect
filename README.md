@@ -448,6 +448,14 @@ Owner decisions: a no-show is marked **by hand** (never automatically: hospitals
 - Fixed: the appointment lists (patient, doctor, hospital) could show an old answer when reloads overlapped (switching to Past while live notifications arrive showed "No past appointments"). Only the newest request fills the list now.
 - Tests: `appointments/test_no_show.py` (12), report tests updated; e2e `no-show.spec.ts` (doctor marks + undoes, hospital marks, reports count it, the patient sees it). `e2e_setup` adds the patient "Mani Noshow" with a visit two days ago.
 
+### Treatment notes removed (2026-11-26)
+
+Owner decision: prescriptions and visit details are uploaded as files (PDF, JPG, PNG) in **Medical records** (type "Prescription"), so the separate treatment notes are removed completely.
+- Gone: the doctor's **Write note / Edit note** (appointments and queue), the patient's **Visit notes**, the **Treatment notes** panel on the hospital's patient page, and **Visit notes** in the doctor's patient-ID lookup and the queue's Patient details. API `/api/records/notes/` and the `notes` field in the lookups are gone.
+- Database: the `treatment_note` table is dropped (migration `records/0005_remove_treatment_note`). The one note in the dev database is kept only in the backup `mediconnect-before-removing-treatment-notes-2026-11-26-1623.dump`.
+- No-show: "the patient came" now means checked in or called in (a note no longer counts).
+- Tests: `records/test_notes.py` and e2e `notes.spec.ts` removed; 338 backend tests pass.
+
 ### Requests for doctors added by the hospital (2026-11-26, phase 2 of 2)
 
 Owner decisions: the patient can **request an appointment** with a doctor the hospital added itself; the hospital may **give the visit to another doctor** (e.g. another neurologist) if one is available, and otherwise **declines with a valid reason**.

@@ -6,7 +6,6 @@ import { EmptyState, Panel, SkeletonRows } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
 import PatientDetailsPanel from "@/components/PatientDetailsPanel";
 import RoleGuard from "@/components/RoleGuard";
-import { TreatmentNoteForm } from "@/components/TreatmentNotes";
 import { api, errorMessage } from "@/lib/api";
 import { NOTIFICATION_EVENT } from "@/lib/notifications";
 import { fmtTime, type Appointment, type DoctorQueue } from "@/lib/types";
@@ -17,7 +16,6 @@ export default function DoctorQueuePage() {
   const [q, setQ] = useState<DoctorQueue | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<number | null>(null);
-  const [noteSaved, setNoteSaved] = useState(0); // reloads Patient details after a note is saved
 
   const load = useCallback(() => {
     api<DoctorQueue>("/api/appointments/queue/")
@@ -120,22 +118,6 @@ export default function DoctorQueuePage() {
               )}
             </section>
 
-            {/* Reference design, Part 3: write the visit's treatment note while the patient is here. */}
-            {current && (
-              <Panel title={current.treatment_note ? "Treatment note (saved, you can still edit it)" : "Treatment note"}>
-                <TreatmentNoteForm
-                  key={current.id}
-                  appointmentId={current.id}
-                  noteId={current.treatment_note}
-                  onSaved={() => {
-                    setNoteSaved((n) => n + 1);
-                    load();
-                  }}
-                />
-                {noteSaved > 0 && <p role="status" className="mt-2 text-sm text-teal-700">Note saved. The patient can see it now.</p>}
-              </Panel>
-            )}
-
             <Panel title={`Waiting (${q.waiting.length})`}>
               {q.waiting.length === 0 ? (
                 <EmptyState icon="users" title="No one is waiting" text="Patients appear here when they check in." />
@@ -169,8 +151,7 @@ export default function DoctorQueuePage() {
 
           <div className="space-y-6 lg:col-span-2">
             {current?.patient_id && (
-              <PatientDetailsPanel key={current.id} patientId={current.patient_id} recordsHref={`/doctor/records?id=${current.patient_id}`}
-                                   refreshKey={noteSaved} />
+              <PatientDetailsPanel key={current.id} patientId={current.patient_id} recordsHref={`/doctor/records?id=${current.patient_id}`} />
             )}
             <Panel title={`Not arrived yet (${q.not_arrived.length})`}>
               {q.not_arrived.length === 0 ? (

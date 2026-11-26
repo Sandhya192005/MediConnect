@@ -15,7 +15,6 @@ test("doctor and hospital mark a missed visit; the patient is told; reports coun
   await row.getByRole("button", { name: `Didn't come for ${name}` }).click();
   await expect(row).toContainText("Missed");
   await expect(row).toContainText("The patient didn't come (marked by the doctor).");
-  await expect(row.getByRole("button", { name: /Write note/ })).toHaveCount(0); // no note for a visit that didn't happen
   await row.getByRole("button", { name: `Undo missed for ${name}` }).click();
   await expect(row).toContainText("completed");
   await expect(row.getByRole("button", { name: `Didn't come for ${name}` })).toBeVisible();

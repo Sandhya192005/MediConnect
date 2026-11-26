@@ -183,7 +183,7 @@ class DoctorAppointmentsView(APIView):
         if doctor is None:
             return Response({"detail": "Not one of your hospital's doctors."}, status=404)
         here = (Appointment.objects.filter(doctor=doctor, doctor__hospital=hospital)
-                .select_related("patient__patient_profile", "doctor__user", "doctor__hospital", "treatment_note")
+                .select_related("patient__patient_profile", "doctor__user", "doctor__hospital")
                 .prefetch_related("rejections__doctor__user"))
         ctx = {"request": request}
         waiting = here.filter(status=Appointment.Status.BOOKED, awaiting_doctor=True).order_by("start")

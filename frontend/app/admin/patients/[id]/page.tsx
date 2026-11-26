@@ -11,14 +11,13 @@ import { HealthSummary } from "@/components/PatientRecordsLookup";
 import RecordList from "@/components/RecordList";
 import RecordUploadForm from "@/components/RecordUploadForm";
 import RoleGuard from "@/components/RoleGuard";
-import { TreatmentNoteView } from "@/components/TreatmentNotes";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { fmtDate, fmtDateTime, VISIT_STATUS, type HospitalPatientPage, type PatientDetails } from "@/lib/types";
 
 /**
  * One patient in the hospital's Patient management (owner request 2026-11-21): their details (both the
  * hospital and the patient can edit them), medical records (upload; delete your own uploads — the patient
- * keeps their copy), visits at this hospital and doctors' treatment notes. Opening it is logged for the patient.
+ * keeps their copy) and visits at this hospital. Opening it is logged for the patient.
  */
 export default function HospitalPatientPageView() {
   const { id } = useParams<{ id: string }>();
@@ -139,8 +138,8 @@ export default function HospitalPatientPageView() {
           {/* ---- Payments (2026-11-21) ---- */}
           <PatientPayments patientId={p.patient_id} visits={data.visits} canAdd={p.in_list} />
 
-          {/* ---- Visits and notes ---- */}
-          <div className="grid gap-6 lg:grid-cols-2">
+          {/* ---- Visits ---- */}
+          <div>
             <Panel title={`Visits at your hospital (${data.visits.length})`}>
               {data.visits.length === 0 ? (
                 <EmptyState icon="calendar" title="No visits booked here yet" />
@@ -154,13 +153,6 @@ export default function HospitalPatientPageView() {
                     </li>
                   ))}
                 </ul>
-              )}
-            </Panel>
-            <Panel title={`Treatment notes (${data.notes.length})`}>
-              {data.notes.length === 0 ? (
-                <EmptyState icon="file" title="No treatment notes yet" text="Doctors write them after a visit on MediConnect." />
-              ) : (
-                <div className="space-y-3">{data.notes.map((n) => <TreatmentNoteView key={n.id} note={n} />)}</div>
               )}
             </Panel>
           </div>

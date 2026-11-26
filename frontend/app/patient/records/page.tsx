@@ -5,11 +5,10 @@ import { EmptyState, Panel, SkeletonRows } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
 import RecordList from "@/components/RecordList";
 import RecordUploadForm from "@/components/RecordUploadForm";
-import { TreatmentNoteView } from "@/components/TreatmentNotes";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { timeAgo, type MedicalRecord, type RecordAccess, type TreatmentNote } from "@/lib/types";
+import { timeAgo, type MedicalRecord, type RecordAccess } from "@/lib/types";
 
 export default function PatientRecordsPage() {
   const [records, setRecords] = useState<MedicalRecord[] | null>(null);
@@ -52,8 +51,6 @@ export default function PatientRecordsPage() {
               />
             )}
           </Panel>
-
-          <VisitNotes />
 
           <Panel title="Who opened your records">
             <p className="-mt-2 mb-4 text-xs text-slate-500">
@@ -127,25 +124,5 @@ function PatientIdCard() {
         Your general health ID: show it at any hospital, and any doctor there can see your medical history. You can see each time someone does.
       </p>
     </section>
-  );
-}
-
-/** The doctors' notes from your visits: diagnosis, medicines, advice, follow-up (reference design, Part 3). */
-function VisitNotes() {
-  const [notes, setNotes] = useState<TreatmentNote[] | null>(null);
-  useEffect(() => {
-    api<TreatmentNote[]>("/api/records/notes/").then(setNotes).catch(() => setNotes([]));
-  }, []);
-  return (
-    <Panel title={`Visit notes${notes ? ` (${notes.length})` : ""}`}>
-      <p className="-mt-2 mb-4 text-xs text-slate-500">What your doctors wrote after your visits on MediConnect.</p>
-      {notes === null ? (
-        <SkeletonRows rows={2} />
-      ) : notes.length === 0 ? (
-        <p className="text-sm text-slate-500">No visit notes yet. Your doctor adds one after your visit.</p>
-      ) : (
-        <div className="space-y-3">{notes.map((n) => <TreatmentNoteView key={n.id} note={n} />)}</div>
-      )}
-    </Panel>
   );
 }

@@ -84,7 +84,7 @@ export default function DoctorDashboard() {
           label="Current patient"
           value={today === null ? "…" : current ? `#${current.token}` : "—"}
           detail={current ? `${current.patient_name} · consulting…` : today === null ? undefined : "No one in consultation"}
-          link={current ? { href: "/doctor/queue", label: "Patient details & treatment note" } : undefined}
+          link={current ? { href: "/doctor/queue", label: "Patient details" } : undefined}
         />
       </div>
 

@@ -30,7 +30,7 @@ class AppointmentViewSet(
 
     def get_queryset(self):
         user = self.request.user
-        qs = (Appointment.objects.select_related("patient__patient_profile", "doctor__user", "doctor__hospital", "treatment_note")
+        qs = (Appointment.objects.select_related("patient__patient_profile", "doctor__user", "doctor__hospital")
               .prefetch_related("rejections__doctor__user"))
         if user.role == "patient":
             qs = qs.filter(patient=user)

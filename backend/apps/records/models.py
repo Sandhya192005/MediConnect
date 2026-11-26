@@ -79,32 +79,3 @@ class RecordAccess(models.Model):
     def __str__(self):
         return f"{self.viewer_name} · {self.get_action_display()} · {self.created_at:%Y-%m-%d %H:%M}"
 
-
-class TreatmentNote(models.Model):
-    """
-    A doctor's notes for one visit (reference design, Part 3; owner decision 2026-11-19): diagnosis,
-    medicines prescribed, advice and an optional follow-up date. Written by the visit's doctor, who alone
-    can edit it. Read by the patient, and by any doctor or admin who opens the patient's records by ID
-    (that lookup is logged), the same rule as reports.
-    """
-
-    appointment = models.OneToOneField("appointments.Appointment", on_delete=models.CASCADE, related_name="treatment_note")
-    patient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="treatment_notes")
-    doctor = models.ForeignKey("doctors.DoctorProfile", on_delete=models.SET_NULL, null=True, related_name="treatment_notes")
-    # Kept as text too, so a note still says who wrote it if the doctor's account is ever removed.
-    doctor_name = models.CharField(max_length=150)
-    hospital_name = models.CharField(max_length=200, blank=True)
-    diagnosis = models.CharField(max_length=300)
-    # [{"name": "Paracetamol 500 mg", "dose": "1 tablet", "frequency": "3 times a day", "days": 5}, ...]
-    medicines = models.JSONField(default=list, blank=True)
-    advice = models.TextField(max_length=2000, blank=True)
-    follow_up_on = models.DateField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = "treatment_note"
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"{self.patient} · {self.diagnosis} · {self.created_at:%Y-%m-%d}"

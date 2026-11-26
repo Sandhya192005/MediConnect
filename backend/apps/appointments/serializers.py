@@ -27,8 +27,6 @@ class AppointmentSerializer(serializers.ModelSerializer):
     hospital_name = serializers.CharField(source="doctor.hospital.name", read_only=True, default=None)
     # Where to go (owner request 2026-11-18): directions and a small map on the patient's appointments.
     hospital = serializers.SerializerMethodField()
-    # Treatment note of this visit, if written (reference design, Part 3).
-    treatment_note = serializers.SerializerMethodField()
     patient_name = serializers.SerializerMethodField()
     patient_email = serializers.EmailField(source="patient.email", read_only=True)
     # Patient queue (Step 3)
@@ -44,7 +42,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = [
-            "id", "doctor", "doctor_name", "specialization", "hospital_name", "hospital", "treatment_note",
+            "id", "doctor", "doctor_name", "specialization", "hospital_name", "hospital",
             "patient_name", "patient_email", "patient_id", "start", "end", "status", "reason",
             "cancelled_by", "cancel_reason", "awaiting_hospital", "created_at",
             "queue_status", "token", "checked_in_at", "consultation_started_at", "people_ahead",
@@ -59,10 +57,6 @@ class AppointmentSerializer(serializers.ModelSerializer):
     def get_hospital(self, obj):
         """The hospital's place: id, address, city, phone and its map pin (None if it has none yet)."""
         return hospital_place(obj.doctor.hospital)
-
-    def get_treatment_note(self, obj):
-        note = getattr(obj, "treatment_note", None)  # reverse one-to-one: missing = no note yet
-        return note.id if note else None
 
     def get_doctor_name(self, obj):
         return str(obj.doctor)

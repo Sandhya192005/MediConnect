@@ -12,8 +12,7 @@ from apps.accounts.models import PatientProfile
 from apps.accounts.serializers import PatientDetailsSerializer
 from apps.accounts.permissions import IsPatient, role_required
 
-from .models import MedicalRecord, RecordAccess, TreatmentNote
-from .notes import TreatmentNoteSerializer
+from .models import MedicalRecord, RecordAccess
 from .serializers import MedicalRecordSerializer, RecordAccessSerializer
 from .services import (
     RECORD_VIEWER_ROLES, delete_for_patient, log_access, may_open_records, records_visible_to, staff_hospital,
@@ -94,9 +93,6 @@ class PatientLookupView(APIView):
             "details": PatientDetailsSerializer(profile).data,
             "hospital": hospital.name if hospital else None,  # the viewer's hospital, shown on the page
             "records": MedicalRecordSerializer(records, many=True).data,
-            # Treatment notes from every doctor, newest first (part of this logged lookup).
-            "notes": TreatmentNoteSerializer(
-                TreatmentNote.objects.filter(patient=patient).select_related("appointment"), many=True).data,
         })
 
 
@@ -133,47 +129,3 @@ class RecordFileView(APIView):
         response["Cache-Control"] = "private, no-store"
         return response
 
-
-class TreatmentNoteViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.RetrieveModelMixin,
-                           mixins.UpdateModelMixin, viewsets.GenericViewSet):
-    """
-    Treatment notes (reference design, Part 3).
-    GET  /api/records/notes/                — a patient: their own notes; a doctor: the notes they wrote
-                                              (?appointment=<id> for one visit).
-    POST /api/records/notes/                — the visit's doctor writes the note (one per visit).
-    PATCH /api/records/notes/<id>/          — only the doctor who wrote it.
-    Other doctors and admins read notes through the logged patient-ID lookup (PatientLookupView).
-    """
-
-    serializer_class = TreatmentNoteSerializer
-    permission_classes = [IsAuthenticated]
-    http_method_names = ["get", "post", "patch"]
-
-    def get_queryset(self):
-        user = self.request.user
-        qs = TreatmentNote.objects.select_related("appointment")
-        if user.role == "patient":
-            return qs.filter(patient=user)
-        if user.role == "doctor":
-            qs = qs.filter(doctor__user=user)
-            if appt := self.request.query_params.get("appointment"):
-                qs = qs.filter(appointment_id=appt)
-            return qs
-        return qs.none()
-
-    def create(self, request, *args, **kwargs):
-        if request.user.role != "doctor":
-            raise PermissionDenied("Only the visit's doctor writes its treatment note.")
-        return super().create(request, *args, **kwargs)
-
-    def perform_create(self, serializer):
-        appt = serializer.validated_data["appointment"]
-        doctor = appt.doctor
-        serializer.save(patient=appt.patient, doctor=doctor, doctor_name=str(doctor),
-                        hospital_name=doctor.hospital.name if doctor.hospital else "")
-
-    def update(self, request, *args, **kwargs):
-        if request.user.role != "doctor":
-            raise PermissionDenied("Only the doctor who wrote this note can change it.")
-        kwargs["partial"] = True
-        return super().update(request, *args, **kwargs)

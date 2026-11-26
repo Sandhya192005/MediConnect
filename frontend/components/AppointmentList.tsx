@@ -8,22 +8,14 @@ import HospitalPlace from "./HospitalPlace";
 import Icon from "./Icons";
 import { Avatar } from "./PageHeader";
 import StatusBadge from "./StatusBadge";
-import { TreatmentNoteForm } from "./TreatmentNotes";
 
 type Viewer = "patient" | "doctor";
-
-const endOfToday = () => {
-  const d = new Date();
-  d.setHours(23, 59, 59, 999);
-  return d;
-};
 
 /** Upcoming/past appointment list with the actions each role is allowed. */
 export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: Viewer; extraQuery?: string }) {
   const [when, setWhen] = useState<"upcoming" | "past">("upcoming");
   const [items, setItems] = useState<Appointment[] | null>(null);
   const [error, setError] = useState("");
-  const [noteFor, setNoteFor] = useState<number | null>(null); // the visit whose note form is open
   const [rejectFor, setRejectFor] = useState<number | null>(null); // the request whose Reject form is open
   const [rejectReason, setRejectReason] = useState("");
 
@@ -186,19 +178,6 @@ export default function AppointmentList({ viewer, extraQuery = "" }: { viewer: V
                   <button onClick={() => act(a.id, "undo-no-show")} className="btn-ghost px-3 py-1.5 text-sm">
                     Undo missed<span className="sr-only"> for {a.patient_name}</span>
                   </button>
-                )}
-                {/* Treatment note (reference design, Part 3): on the day of the visit or after it. */}
-                {viewer === "doctor" && a.status !== "cancelled" && a.status !== "no_show" && !pending && new Date(a.start) <= endOfToday() && noteFor !== a.id && (
-                  <button onClick={() => setNoteFor(a.id)} className={`${a.treatment_note ? "btn-ghost" : "btn-outline"} px-3 py-1.5 text-sm`}>
-                    <Icon name="file" className="h-4 w-4" /> {a.treatment_note ? "Edit note" : "Write note"}
-                  </button>
-                )}
-                {noteFor === a.id && (
-                  <div className="w-full rounded-xl border border-slate-100 bg-white p-4">
-                    <p className="mb-3 text-sm font-[650] text-[#00295c]">Treatment note · {a.patient_name}</p>
-                    <TreatmentNoteForm appointmentId={a.id} noteId={a.treatment_note}
-                                       onCancel={() => setNoteFor(null)} onSaved={() => { setNoteFor(null); load(); }} />
-                  </div>
                 )}
               </li>
             );

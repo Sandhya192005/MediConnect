@@ -8,19 +8,13 @@ import { SkeletonRows } from "./DashboardShell";
 import Icon from "./Icons";
 import { HealthSummary } from "./PatientRecordsLookup";
 import RecordList from "./RecordList";
-import { TreatmentNoteView } from "./TreatmentNotes";
 
 /**
  * Patient Details for the patient in front of the doctor (reference design, Part 3): name, patient ID,
- * age and gender, the health summary (allergies first), recent reports and earlier treatment notes.
+ * age and gender, the health summary (allergies first), and recent reports.
  * It uses the same patient-ID lookup as the records page, so opening it is logged for the patient.
  */
-export default function PatientDetailsPanel({ patientId, recordsHref, refreshKey = 0 }: {
-  patientId: string;
-  recordsHref: string;
-  /** Change it to reload (e.g. after the doctor saves a note). */
-  refreshKey?: number;
-}) {
+export default function PatientDetailsPanel({ patientId, recordsHref }: { patientId: string; recordsHref: string }) {
   const [p, setP] = useState<PatientLookup | null>(null);
   const [error, setError] = useState("");
 
@@ -32,7 +26,7 @@ export default function PatientDetailsPanel({ patientId, recordsHref, refreshKey
     return () => {
       stale = true;
     };
-  }, [patientId, refreshKey]);
+  }, [patientId]);
 
   if (error) return <p role="alert" className="rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>;
   if (!p) return <div className="dash-card p-5"><SkeletonRows rows={4} /></div>;
@@ -60,16 +54,6 @@ export default function PatientDetailsPanel({ patientId, recordsHref, refreshKey
         <h3 className="mb-3 text-sm font-[650] text-[#00295c]">Reports and scans ({p.records.length})</h3>
         <RecordList records={p.records.slice(0, 3)} empty={{ title: "No reports uploaded yet" }} />
         {p.records.length > 3 && <Link href={recordsHref} className="dash-link mt-2 text-xs">See all {p.records.length}</Link>}
-      </div>
-
-      <div className="dash-card p-5">
-        <h3 className="mb-3 text-sm font-[650] text-[#00295c]">Earlier visit notes ({p.notes.length})</h3>
-        {p.notes.length === 0 ? (
-          <p className="text-sm text-slate-500">No treatment notes yet.</p>
-        ) : (
-          <div className="space-y-3">{p.notes.slice(0, 3).map((n) => <TreatmentNoteView key={n.id} note={n} compact />)}</div>
-        )}
-        {p.notes.length > 3 && <Link href={recordsHref} className="dash-link mt-2 text-xs">See all {p.notes.length}</Link>}
       </div>
     </section>
   );

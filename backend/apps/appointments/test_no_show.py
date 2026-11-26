@@ -12,7 +12,6 @@ from apps.doctors.models import DoctorProfile
 from apps.hospitals.models import Hospital
 from apps.notifications.models import Notification
 from apps.notifications.tasks import complete_past_appointments
-from apps.records.models import TreatmentNote
 from apps.staff.models import HospitalAdmin
 from apps.staff.reports import hospital_reports
 
@@ -103,15 +102,6 @@ def test_refused_when_the_rules_say_no(world, hours, status, extra, why):
     r = post(world["doctor"].user, a, "no-show") if not extra.get("awaiting_hospital") else post(world["manager"], a, "no-show")
     assert r.status_code == 400
     assert why in str(r.json())
-
-
-@pytest.mark.django_db
-def test_a_treatment_note_means_the_patient_came(world):
-    a = visit(world, -2)
-    TreatmentNote.objects.create(appointment=a, patient=world["patient"], doctor=world["doctor"],
-                                 doctor_name="Dr Priya", diagnosis="Fever")
-    r = post(world["doctor"].user, a, "no-show")
-    assert r.status_code == 400 and "so they came" in str(r.json())
 
 
 @pytest.mark.django_db

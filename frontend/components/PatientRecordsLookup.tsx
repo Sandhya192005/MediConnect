@@ -7,7 +7,6 @@ import { bloodGroupLabel, bmiBand, CONDITIONS, fmtDate, timeAgo, type PatientDet
 import { EmptyState, IconTile, Panel, SkeletonRows } from "./DashboardShell";
 import Icon from "./Icons";
 import RecordList from "./RecordList";
-import { TreatmentNoteView } from "./TreatmentNotes";
 
 /**
  * Open a patient's records by patient ID (doctors and admins). The patient ID is a general ID:
@@ -100,13 +99,6 @@ export default function PatientRecordsLookup({ basePath }: { basePath: string })
           <HealthSummary d={result.details} />
           <Panel title={`Records (${result.records.length})`}>
             <RecordList records={result.records} empty={{ title: "This patient hasn't uploaded any records yet" }} />
-          </Panel>
-          <Panel title={`Visit notes (${result.notes.length})`}>
-            {result.notes.length === 0 ? (
-              <EmptyState icon="file" title="No treatment notes yet" text="Doctors write them after a visit on MediConnect." />
-            ) : (
-              <div className="space-y-3">{result.notes.map((n) => <TreatmentNoteView key={n.id} note={n} />)}</div>
-            )}
           </Panel>
         </>
       )}

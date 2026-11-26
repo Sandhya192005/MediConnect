@@ -4,7 +4,7 @@ No-show: the patient didn't come (owner decisions 2026-11-20).
 - Marked BY HAND, by the patient's doctor or the hospital account. Never automatic: hospitals that don't
   use the check-in queue would otherwise see real visits counted as no-shows.
 - Allowed once the visit time has started, for up to NO_SHOW_DAYS days, and only if nothing shows the
-  patient came (not checked in, never called in, no treatment note). An appointment the hourly job has
+  patient came (not checked in, never called in). An appointment the hourly job has
   already auto-completed can still be marked: that job can't know whether the patient came.
 - "Undo" turns a no-show back into a completed visit within the same window (for a wrong click).
 - The patient gets an in-app notification (no email) either way.
@@ -30,7 +30,7 @@ def _in_window(a: Appointment) -> bool:
 
 
 def _came(a: Appointment) -> bool:
-    return bool(a.checked_in_at or a.consultation_started_at or getattr(a, "treatment_note", None))
+    return bool(a.checked_in_at or a.consultation_started_at)
 
 
 def can_mark(a: Appointment, user) -> bool:
@@ -55,7 +55,7 @@ def mark_no_show(a: Appointment, user) -> Appointment:
     if not _in_window(a):
         raise ValidationError({"status": f"Visits can be marked as missed for up to {NO_SHOW_DAYS} days."})
     if _came(a):
-        raise ValidationError({"status": "The patient checked in or has a treatment note for this visit, so they came."})
+        raise ValidationError({"status": "The patient checked in or was called in for this visit, so they came."})
     a.status = Appointment.Status.NO_SHOW
     a.no_show_by = user.role
     a.save(update_fields=["status", "no_show_by", "updated_at"])

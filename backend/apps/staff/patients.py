@@ -29,8 +29,7 @@ from apps.accounts.models import NO_EMAIL_DOMAIN, PatientProfile
 from apps.accounts.permissions import IsHospitalAdmin
 from apps.accounts.serializers import PatientDetailsSerializer
 from apps.appointments.models import Appointment
-from apps.records.models import MedicalRecord, RecordAccess, TreatmentNote
-from apps.records.notes import TreatmentNoteSerializer
+from apps.records.models import MedicalRecord, RecordAccess
 from apps.records.serializers import MedicalRecordSerializer
 from apps.records.services import delete_for_hospital, log_access, records_visible_to
 
@@ -178,7 +177,6 @@ class PatientManageView(APIView):
             "details": PatientDetailsSerializer(profile).data,
             "records": [{**MedicalRecordSerializer(r).data, "can_delete": r.uploaded_by_hospital_id == hospital.id}
                         for r in records],
-            "notes": TreatmentNoteSerializer(TreatmentNote.objects.filter(patient=p).select_related("appointment"), many=True).data,
             "visits": [{"id": a.id, "start": a.start, "doctor_name": str(a.doctor), "status": a.status, "reason": a.reason}
                        for a in visits],
         }
