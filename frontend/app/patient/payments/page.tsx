@@ -25,14 +25,8 @@ export default function MyPaymentsPage() {
 
   return (
     <RoleGuard role="patient">
-      <div className="mb-6"><PageHeader icon="rupee" title="My payments" subtitle="Payment slips from your hospitals: what you've paid and what's still pending." /></div>
+      <div className="mb-6"><PageHeader icon="rupee" title="My payments" subtitle="Payment slips from your hospitals." /></div>
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
-      {data && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-2">
-          <div className="dash-card p-5"><p className="text-sm text-slate-500">Pending</p><p className="text-2xl font-bold text-amber-800">{fmtMoney(data.totals.pending)}</p></div>
-          <div className="dash-card p-5"><p className="text-sm text-slate-500">Paid</p><p className="text-2xl font-bold text-emerald-700">{fmtMoney(data.totals.completed)}</p></div>
-        </div>
-      )}
       <Panel title={`Payment slips${data ? ` (${data.slips.length})` : ""}`}>
         {data === null ? (
           <SkeletonRows rows={3} />
