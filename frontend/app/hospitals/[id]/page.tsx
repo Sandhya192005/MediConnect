@@ -37,6 +37,7 @@ export default function HospitalDetailPage() {
   const [refreshMsg, setRefreshMsg] = useState("");
   const [startedJob, setStartedJob] = useState<ScrapeJob | null>(null);
   const [requestDoctor, setRequestDoctor] = useState<number | null>(null);
+  const [requestStaff, setRequestStaff] = useState<number | null>(null); // a hospital-added doctor (2026-11-26)
   const [autoTried, setAutoTried] = useState(false);
   const [mapFocus, setMapFocus] = useState<number | null>(null); // "Show on map" (2026-11-24)
 
@@ -233,8 +234,8 @@ export default function HospitalDetailPage() {
             <section className="card p-5" aria-label="Doctors listed by the hospital">
               <h2 className="section-title">Doctors listed by the hospital</h2>
               <p className="mb-4 text-sm text-slate-500">
-                Added by {hospital.name} itself. They can&apos;t be booked online on MediConnect yet
-                {phone ? <>: call <a href={`tel:${phone}`} className="font-medium text-teal-700 hover:underline">{phone}</a> to book.</> : "."}
+                Added by {hospital.name} itself. They have no free slots online: send a request and the hospital
+                confirms a time{phone ? <>, or call <a href={`tel:${phone}`} className="font-medium text-teal-700 hover:underline">{phone}</a></> : ""}.
               </p>
               {hospitalListed.length === 0 ? (
                 <p className="text-sm text-slate-500">No doctor here matches your search.</p>
@@ -253,11 +254,28 @@ export default function HospitalDetailPage() {
                         <span className="mt-2 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
                           Not bookable online
                         </span>
+                        {user?.role === "patient" ? (
+                          <button onClick={() => setRequestStaff(requestStaff === d.id ? null : d.id)} aria-expanded={requestStaff === d.id}
+                                  className="btn-outline mt-3 block px-3 py-1.5 text-sm">
+                            {requestStaff === d.id ? "Close" : "Request appointment"}
+                          </button>
+                        ) : !user ? (
+                          <Link href="/login" className="mt-3 block text-sm font-medium text-teal-700 hover:underline">Log in to request an appointment</Link>
+                        ) : null}
                       </div>
                     </li>
                   ))}
                 </ul>
               )}
+              {requestStaff !== null && hospitalListed.some((d) => d.id === requestStaff) && (() => {
+                const d = hospitalListed.find((x) => x.id === requestStaff)!;
+                return (
+                  <div className="mt-4">
+                    <AppointmentRequestForm key={d.id} hospitalId={hospital.id} doctors={[]}
+                                            staffDoctor={{ id: d.id, name: d.name, department: d.department }} />
+                  </div>
+                );
+              })()}
             </section>
           )}
 
@@ -341,8 +359,8 @@ export default function HospitalDetailPage() {
             )}
           </div>
 
-          {/* Booking */}
-          {!partner && (
+          {/* Booking (website hospitals; a connected hospital's own doctors have their request buttons above) */}
+          {!partner && !(hospital.hospital_listed_doctors?.length) && (
             <div className="card space-y-4 p-5">
               <div>
                 <h2 className="section-title">How to book</h2>

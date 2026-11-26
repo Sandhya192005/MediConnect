@@ -448,6 +448,16 @@ Owner decisions: a no-show is marked **by hand** (never automatically: hospitals
 - Fixed: the appointment lists (patient, doctor, hospital) could show an old answer when reloads overlapped (switching to Past while live notifications arrive showed "No past appointments"). Only the newest request fills the list now.
 - Tests: `appointments/test_no_show.py` (12), report tests updated; e2e `no-show.spec.ts` (doctor marks + undoes, hospital marks, reports count it, the patient sees it). `e2e_setup` adds the patient "Mani Noshow" with a visit two days ago.
 
+### Requests for doctors added by the hospital (2026-11-26, phase 2 of 2)
+
+Owner decisions: the patient can **request an appointment** with a doctor the hospital added itself; the hospital may **give the visit to another doctor** (e.g. another neurologist) if one is available, and otherwise **declines with a valid reason**.
+- Built on the existing `AppointmentRequest` (never a reserved slot, "Pending – not confirmed" until answered). New fields (migration `0009_request_hospital_doctor`): `for_hospital` (answered by the hospital, not the platform admin), `staff_doctor` (asked for), `assigned_doctor`, `confirmed_date`, `confirmed_time`.
+- Patient: **Request appointment** on the doctor's card on the hospital page (preferred date, morning/afternoon/evening, reason, call-back phone). Only doctors patients can see may be requested.
+- Hospital: an **Appointment requests** box at the top of Appointments (hidden until there are any), with in-app notifications for new and cancelled requests. **Confirm** = doctor (the one asked for by default; same-department doctors listed first, then the others), date and time, optional note: `POST /api/appointment-requests/<id>/hospital-confirm/` `{doctor?, date?, time, note?}`. It refuses a doctor who doesn't work there that day, a time that has passed, and the same doctor twice at the same time (also against their online bookings when the doctor has a MediConnect account). **Decline** needs a reason of at least 5 characters: `hospital-decline/` `{reason}`.
+- Patient notifications: confirmed (doctor, department, date and time; "Dr. X isn't available, so another doctor will see you" when reassigned) or declined (with the reason). My appointments → Appointment requests shows the confirmed time, the assigned doctor and the reason.
+- The platform admin keeps answering only website-hospital requests; a hospital only sees its own. A connected hospital with only hospital-added doctors no longer shows the website-hospital request form.
+- Tests: `staff/test_listed_requests.py` (8); e2e `hospital-doctor-requests.spec.ts` (request → hospital gives it to another neurologist → patient sees why; decline needs a reason → patient reads it).
+
 ### Doctors added by the hospital are shown to patients (2026-11-26, phase 1 of 2)
 
 Owner request: "all the doctors should be listed whether they have a doctor account in MediConnect or not". Shiva, a neurologist ABC Hospital added in Doctor management (no doctor account), didn't appear when patients searched "neurology", because the search only listed doctors with an account and working hours.
@@ -455,7 +465,7 @@ Owner request: "all the doctors should be listed whether they have a doctor acco
 - Only safe details are public: name, specialization, department, qualification, designation. Phone, email, salary and dates stay on the hospital's own pages.
 - Search (`/api/search/partner-hospitals/`): hospitals now also appear with only hospital-added doctors; each result has `bookable_count` and `matching_listed_doctors` (matched by name or specialty, with the word-root / everyday-word / typo matching of `search/specialties.py`: "neurology", "nerology", "brain" all find Shiva). A fee limit leaves them out (no fee known). The hospital page API (`/api/scraper/hospitals/<id>/`) adds `hospital_listed_doctors`.
 - Frontend: the search card says "Listed by the hospital · not bookable online" under such a doctor, and "Instant booking" only when the hospital has a bookable doctor. The hospital page has a "Doctors listed by the hospital" section with a "Not bookable online" badge and the hospital's phone number.
-- Phase 2 (next): "Request appointment" on these doctors; the hospital confirms or declines it.
+- Phase 2: "Request appointment" on these doctors (see above).
 - Tests: `staff/test_listed.py` (13); 340 backend tests pass (1 opt-in live browser test skipped). Checked on the running server with ABC Hospital's real data.
 
 ### Specialist search for website doctors (2026-11-26)

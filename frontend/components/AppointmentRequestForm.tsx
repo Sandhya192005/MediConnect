@@ -5,8 +5,16 @@ import { useState } from "react";
 import { api, errorMessage } from "@/lib/api";
 import { isoDate, type ScrapedDoctor } from "@/lib/types";
 
-/** For hospitals that aren't MediConnect partners: a request, never a confirmed booking. */
-export default function AppointmentRequestForm({ hospitalId, doctors, presetDoctor }: { hospitalId: number; doctors: ScrapedDoctor[]; presetDoctor?: number | null }) {
+/**
+ * A request, never a confirmed booking. For hospitals that aren't MediConnect partners (website doctors),
+ * or for one doctor a connected hospital added itself (`staffDoctor`: that hospital answers it).
+ */
+export default function AppointmentRequestForm({ hospitalId, doctors, presetDoctor, staffDoctor }: {
+  hospitalId: number;
+  doctors: ScrapedDoctor[];
+  presetDoctor?: number | null;
+  staffDoctor?: { id: number; name: string; department: string };
+}) {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const [form, setForm] = useState({
@@ -29,7 +37,11 @@ export default function AppointmentRequestForm({ hospitalId, doctors, presetDoct
     try {
       await api("/api/appointment-requests/", {
         method: "POST",
-        body: JSON.stringify({ ...form, hospital: hospitalId, scraped_doctor: form.scraped_doctor ? Number(form.scraped_doctor) : null }),
+        body: JSON.stringify({
+          ...form, hospital: hospitalId,
+          scraped_doctor: !staffDoctor && form.scraped_doctor ? Number(form.scraped_doctor) : null,
+          staff_doctor: staffDoctor ? staffDoctor.id : null,
+        }),
       });
       setSent(true);
     } catch (err) {
@@ -54,13 +66,20 @@ export default function AppointmentRequestForm({ hospitalId, doctors, presetDoct
       <p className="text-sm text-slate-600">
         Send an <strong>appointment request</strong>. It stays <em>pending – not confirmed</em> until the hospital confirms it.
       </p>
-      <label className="block text-sm">
-        Doctor (optional)
-        <select className="input mt-1" value={form.scraped_doctor} onChange={set("scraped_doctor")}>
-          <option value="">Any doctor</option>
-          {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}{d.specialization ? ` – ${d.specialization}` : ""}</option>)}
-        </select>
-      </label>
+      {staffDoctor ? (
+        <p className="text-sm text-slate-600">
+          For <strong>Dr. {staffDoctor.name}</strong> ({staffDoctor.department}). The hospital sets the time. If this doctor isn&apos;t
+          free, it may offer another {staffDoctor.department} doctor, or tell you why it can&apos;t.
+        </p>
+      ) : (
+        <label className="block text-sm">
+          Doctor (optional)
+          <select className="input mt-1" value={form.scraped_doctor} onChange={set("scraped_doctor")}>
+            <option value="">Any doctor</option>
+            {doctors.map((d) => <option key={d.id} value={d.id}>{d.name}{d.specialization ? ` – ${d.specialization}` : ""}</option>)}
+          </select>
+        </label>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <label className="block text-sm">Preferred date<input className="input mt-1" type="date" required min={isoDate(new Date())} value={form.preferred_date} onChange={set("preferred_date")} /></label>
         <label className="block text-sm">

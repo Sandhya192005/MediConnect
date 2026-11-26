@@ -153,9 +153,11 @@ class ExternalAppointment(models.Model):
 
 class AppointmentRequest(models.Model):
     """
-    A patient's request to visit a hospital that is NOT a MediConnect partner (scraped only).
+    A patient's request to visit a hospital that is NOT a MediConnect partner (scraped only), or (since
+    2026-11-26) to see a doctor a connected hospital added without online booking (`staff_doctor`).
     This is not an appointment: it never reserves a slot, and it is shown as
-    "Pending – not confirmed" until an admin (later: the hospital) confirms it.
+    "Pending – not confirmed" until the platform admin (website hospitals) or the hospital (its own
+    doctors) confirms it.
     """
 
     class Status(models.TextChoices):
@@ -169,6 +171,20 @@ class AppointmentRequest(models.Model):
     scraped_doctor = models.ForeignKey(
         "scraper.ScrapedDoctor", on_delete=models.SET_NULL, null=True, blank=True, related_name="requests"
     )
+    # A doctor a connected hospital added in Doctor management (no online booking; owner request 2026-11-26).
+    # Such requests are answered by that hospital, not the platform: it confirms a date and time with this
+    # doctor or another one (e.g. another neurologist), or declines with a reason.
+    for_hospital = models.BooleanField(default=False, help_text="Answered by the hospital, not the platform admin")
+    staff_doctor = models.ForeignKey(
+        "staff.StaffMember", on_delete=models.SET_NULL, null=True, blank=True, related_name="requested_in",
+        help_text="The hospital-added doctor the patient asked for",
+    )
+    assigned_doctor = models.ForeignKey(
+        "staff.StaffMember", on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_requests",
+        help_text="The doctor the hospital confirmed (may differ from the one asked for)",
+    )
+    confirmed_date = models.DateField(null=True, blank=True)
+    confirmed_time = models.TimeField(null=True, blank=True)
     preferred_date = models.DateField()
     preferred_time = models.CharField(max_length=30, blank=True, help_text="e.g. 'Morning' or '10:30 AM'")
     reason = models.CharField(max_length=300, blank=True)

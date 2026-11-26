@@ -105,15 +105,29 @@ export type AppointmentRequest = {
   hospital_phone: string;
   hospital_place: HospitalPlaceData | null;
   scraped_doctor: number | null;
+  /** A doctor the hospital added itself (not bookable online); then the hospital answers (`for_hospital`). */
+  staff_doctor: number | null;
   doctor_name: string | null;
+  doctor_department: string | null;
+  for_hospital: boolean;
+  /** Set when the hospital confirms: the doctor (maybe another one than asked for), date and time. */
+  assigned_doctor: number | null;
+  assigned_doctor_name: string | null;
+  assigned_department: string | null;
+  reassigned: boolean;
+  confirmed_date: string | null;
+  confirmed_time: string | null;
   preferred_date: string;
   preferred_time: string;
   reason: string;
   phone: string;
   status: "pending" | "confirmed" | "declined" | "cancelled";
   status_label: string;
+  /** The answer's note; for a decline, the reason. */
   admin_note: string;
   patient_email: string;
+  patient_name: string;
+  patient_id: string | null;
   created_at: string;
 };
 

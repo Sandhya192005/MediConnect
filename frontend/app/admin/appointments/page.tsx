@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EmptyState, Panel, pillFor, SkeletonRows, StatusPill } from "@/components/DashboardShell";
+import HospitalRequests from "@/components/HospitalRequests";
 import RoleGuard from "@/components/RoleGuard";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -98,6 +99,9 @@ export default function HospitalAppointmentsPage() {
             <p className="page-subtitle text-sm">Every booking with your hospital&apos;s doctors.</p>
           </div>
           {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
+
+          {/* Requests for doctors the hospital added itself (no online booking; 2026-11-26). Hidden until there are any. */}
+          <HospitalRequests />
 
           <section aria-label="How bookings work" className="dash-card mb-6 p-5 text-sm text-slate-600">
             <p className="font-[650] text-[#00295c]">How bookings reach your doctors</p>
