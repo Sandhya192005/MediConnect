@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { EmptyState, Panel, SkeletonRows } from "@/components/DashboardShell";
+import { Panel, SkeletonRows } from "@/components/DashboardShell";
 import Icon from "@/components/Icons";
 import RecordList from "@/components/RecordList";
 import RecordUploadForm from "@/components/RecordUploadForm";
@@ -54,32 +55,26 @@ export default function PatientRecordsPage() {
 
           <Panel title="Who opened your records">
             <p className="-mt-2 mb-4 text-xs text-slate-500">
-              Any doctor or hospital admin on MediConnect can open your records with your patient ID. Every time they do, it&apos;s listed here.
+              Any doctor or hospital on MediConnect can open your records with your patient ID. Every time they do, it&apos;s saved in your access history.
             </p>
+            {/* The full list lives on its own page with filters (owner request 2026-11-26). */}
             {log === null ? (
-              <SkeletonRows rows={2} />
-            ) : log.length === 0 ? (
-              <EmptyState icon="shield" title="No one has opened your records" />
+              <SkeletonRows rows={1} />
             ) : (
-              <ul className="divide-y divide-slate-100">
-                {log.map((e) => (
-                  <li key={e.id} className="flex items-start gap-3 py-2.5 text-sm first:pt-0 last:pb-0">
-                    <Icon name={e.action === "download" ? "file" : "eye"} className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                    <span className="min-w-0 flex-1">
-                      <span className="font-[650] text-[#00295c]">{e.viewer_role === "doctor" ? `Dr. ${e.viewer_name}` : e.viewer_name}</span>
-                      {e.viewer_role !== "doctor" && <span className="text-slate-500"> ({e.viewer_role === "hospital" ? "hospital" : "MediConnect admin"})</span>}
-                      {e.hospital_name && <span className="text-slate-500"> · {e.hospital_name}</span>}
-                      <span className="block text-xs text-slate-500">
-                        {e.action_label}
-                        {e.record_title && `: ${e.record_title}`}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-xs text-slate-400" title={new Date(e.created_at).toLocaleString()}>
-                      {timeAgo(e.created_at)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <div className="flex flex-wrap items-center gap-3">
+                <Icon name="shield" className="h-5 w-5 shrink-0 text-slate-400" />
+                <p className="min-w-0 flex-1 text-sm text-slate-600">
+                  {log.length === 0 ? "No one has opened your records yet." : (
+                    <>
+                      Opened <b>{log.length >= 200 ? "200+" : log.length}</b> {log.length === 1 ? "time" : "times"}. Last by{" "}
+                      <b>{log[0].viewer_role === "doctor" ? `Dr. ${log[0].viewer_name}` : log[0].viewer_name}</b>, {timeAgo(log[0].created_at)}.
+                    </>
+                  )}
+                </p>
+                <Link href="/patient/records/access" className="btn-outline px-3 py-1.5 text-sm">
+                  View access history <Icon name="arrow" className="h-4 w-4" />
+                </Link>
+              </div>
             )}
           </Panel>
         </div>

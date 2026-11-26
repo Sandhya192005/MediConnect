@@ -70,13 +70,21 @@ test("patient uploads a record, a doctor opens it with the general patient ID, a
   await expect(doctorPage.getByRole("button", { name: "Delete Blood test" })).toHaveCount(0);
   await doctorContext.close();
 
-  // Patient: the access log shows the doctor's visit and download.
+  // Patient: My records shows a short summary; the full list is on the Access history page, with filters.
   await page.reload();
-  const log = page.getByRole("region", { name: "Who opened your records" });
+  await expect(page.getByRole("region", { name: "Who opened your records" })).toContainText("Last by Dr. Eshwar Testdoctor");
+  await page.getByRole("link", { name: "View access history" }).click();
+  await expect(page).toHaveURL(/\/patient\/records\/access$/);
+  const log = page.getByRole("region", { name: /^Who opened your records/ });
   await expect(log.getByText("Dr. Eshwar Testdoctor").first()).toBeVisible();
+  await expect(log.getByText("Opened a file: Blood test")).toBeVisible();
+  await log.getByRole("button", { name: /^Hospitals/ }).click();
+  await expect(log.getByText("Dr. Eshwar Testdoctor")).toHaveCount(0);
+  await log.getByRole("button", { name: /^Doctors/ }).click();
   await expect(log.getByText("Opened a file: Blood test")).toBeVisible();
 
   // Patient deletes the record.
+  await page.getByRole("link", { name: "← My medical records" }).click();
   page.once("dialog", (d) => d.accept());
   await myRecords.getByRole("button", { name: "Delete Blood test" }).click();
   await expect(myRecords.getByText("No records yet")).toBeVisible();

@@ -448,6 +448,14 @@ Owner decisions: a no-show is marked **by hand** (never automatically: hospitals
 - Fixed: the appointment lists (patient, doctor, hospital) could show an old answer when reloads overlapped (switching to Past while live notifications arrive showed "No past appointments"). Only the newest request fills the list now.
 - Tests: `appointments/test_no_show.py` (12), report tests updated; e2e `no-show.spec.ts` (doctor marks + undoes, hospital marks, reports count it, the patient sees it). `e2e_setup` adds the patient "Mani Noshow" with a visit two days ago.
 
+### Access history page for patients (2026-11-26)
+
+Owner request: "Who opened your records" grew long (one patient had 25 entries from just 2 accounts), so it moved to its own page with filters.
+- New page **Access history** (`/patient/records/access`): every time a doctor, hospital or the MediConnect admin opened the patient's records or a file, newest first, with filter chips **All · Doctors · Hospitals** (and **MediConnect admin** only if the admin ever looked), each with its count. Older hospital entries saved as "admin" count as hospitals.
+- **My records** keeps a short box: how many times the records were opened, who opened them last and when, and **View access history**.
+- `GET /api/records/access-log/` now returns the latest 200 entries (was 50). Logging is unchanged: every view is still recorded.
+- e2e `records.spec.ts` checks the summary, the page and the filters.
+
 ### Treatment notes removed (2026-11-26)
 
 Owner decision: prescriptions and visit details are uploaded as files (PDF, JPG, PNG) in **Medical records** (type "Prescription"), so the separate treatment notes are removed completely.

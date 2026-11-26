@@ -55,8 +55,8 @@ class MyRecordViewSet(
 
     @action(detail=False, url_path="access-log")
     def access_log(self, request):
-        """Who opened this patient's records, newest first (last 50)."""
-        entries = RecordAccess.objects.filter(patient=request.user)[:50]
+        """Who opened this patient's records, newest first (last 200; shown on the Access history page)."""
+        entries = RecordAccess.objects.filter(patient=request.user)[:200]
         return Response(RecordAccessSerializer(entries, many=True).data)
 
 
