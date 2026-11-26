@@ -53,15 +53,18 @@ def test_each_role_gets_its_own_tools_and_instructions(people):
         [roles.PATIENT, roles.DOCTOR, roles.HOSPITAL, roles.PLATFORM]
     assert {"search_doctors", "propose_booking", "my_requests", "my_payments"} <= names(roles.PATIENT)
     assert names(roles.DOCTOR) == {"my_schedule", "my_appointments", "requests_waiting_for_me", "my_working_hours"}
-    assert names(roles.HOSPITAL) == set() and names(roles.PLATFORM) == set()  # phases 2 and 3
+    assert names(roles.HOSPITAL) == {"hospital_summary", "hospital_appointments", "hospital_requests_waiting",
+                                     "hospital_doctors", "hospital_payments"}
+    assert names(roles.PLATFORM) == set()  # phase 3
 
     doctor_prompt = service.system_prompt(p["doctor_user"], has_location=False)
     assert "a DOCTOR" in doctor_prompt and "Patient queue" in doctor_prompt and "READ-ONLY" in doctor_prompt
     assert "propose_booking" not in doctor_prompt and "Share my location" not in doctor_prompt
     hospital_prompt = service.system_prompt(p["hospital_user"], has_location=False)
     assert "HOSPITAL account" in hospital_prompt and "Doctor management" in hospital_prompt
-    assert "never guess a number" in hospital_prompt  # no data tools yet
-    assert "PLATFORM ADMIN" in service.system_prompt(p["platform"], has_location=False)
+    assert "never guess a number" not in hospital_prompt  # it has data tools since phase 2
+    platform_prompt = service.system_prompt(p["platform"], has_location=False)
+    assert "PLATFORM ADMIN" in platform_prompt and "never guess a number" in platform_prompt  # phase 3
     assert "propose_booking" in service.system_prompt(p["patient"], has_location=False)
 
 
@@ -72,6 +75,8 @@ def test_a_role_cannot_run_another_roles_tool(people):
     as_patient = ToolContext(people["patient"])
     assert "isn't available" in run_tool(as_patient, "my_schedule", "{}")
     assert "isn't available" in run_tool(ToolContext(people["hospital_user"]), "my_appointments", "{}")
+    assert "isn't available" in run_tool(as_doctor, "hospital_summary", "{}")
+    assert "isn't available" in run_tool(ToolContext(people["platform"]), "hospital_payments", "{}")
 
 
 def test_doctor_schedule_queue_and_requests(people):
@@ -148,4 +153,49 @@ def test_the_api_offers_only_the_roles_tools(people, monkeypatch, settings):
 
     c.force_authenticate(people["hospital_user"])
     res = c.post("/api/chat/", {"message": "How do I add a doctor?"}, format="json")
-    assert res.status_code == 200 and "tools" not in fake.calls[2]  # no data tools for hospitals yet
+    assert res.status_code == 200
+    assert {t["function"]["name"] for t in fake.calls[2]["tools"]} == names(roles.HOSPITAL)
+
+
+def test_hospital_tools_see_only_their_own_hospital(people):
+    from apps.staff.models import StaffMember
+
+    p, today = people, timezone.localdate()
+    other = Hospital.objects.create(name="Other Hospital", city="Chennai")
+    other_user = User.objects.create_user("o@x.com", "pw", role="doctor", first_name="Other")
+    other_doc = DoctorProfile.objects.get(user=other_user)
+    other_doc.hospital = other
+    other_doc.save()
+    StaffMember.objects.create(hospital=p["hospital"], kind="doctor", full_name="Shiva", join_date=today,
+                               monthly_salary=50000, specialization="Neurology")
+    StaffMember.objects.create(hospital=p["hospital"], kind="nurse", full_name="Nila", join_date=today, monthly_salary=30000)
+    Appointment.objects.create(patient=p["patient"], doctor=p["doctor"], start=at(today, 23, 30), end=at(today, 23, 45),
+                               status="confirmed")
+    Appointment.objects.create(patient=p["patient"], doctor=other_doc, start=at(today, 23, 0), end=at(today, 23, 15),
+                               status="confirmed")  # another hospital's visit: never counted
+    tomorrow = today + timedelta(days=1)
+    Appointment.objects.create(patient=p["patient"], doctor=p["doctor"], start=at(tomorrow, 9), end=at(tomorrow, 9, 15),
+                               status="booked", awaiting_hospital=True)
+    PaymentSlip.objects.create(hospital=p["hospital"], patient=p["patient"], number="AH-2026-0009",
+                               issued_on=today, total=Decimal("1200"))
+    PaymentSlip.objects.create(hospital=other, patient=p["patient"], number="OH-2026-0001",
+                               issued_on=today, total=Decimal("9999"))
+
+    ctx = ToolContext(p["hospital_user"])
+    summary = json.loads(run_tool(ctx, "hospital_summary", "{}"))
+    assert (summary["hospital"], summary["doctors"], summary["nurses"]) == ("ABC Hospital", 1, 1)
+    assert (summary["appointments_today"], summary["bookings_to_assign"], summary["monthly_payroll_rupees"]) == (1, 1, 80000)
+
+    day = json.loads(run_tool(ctx, "hospital_appointments", "{}"))
+    assert day["total"] == 1 and day["appointments"][0]["doctor"].startswith("Dr. Jeevitha")
+    waiting = json.loads(run_tool(ctx, "hospital_requests_waiting", "{}"))
+    assert len(waiting["to_assign"]) == 1 and waiting["waiting_for_doctors"] == []
+
+    doctors = json.loads(run_tool(ctx, "hospital_doctors", json.dumps({"date": tomorrow.isoformat()})))["doctors"]
+    by_name = {d["name"]: d for d in doctors}
+    assert set(by_name) == {"Dr. Shiva", "Dr. Jeevitha D"}  # never the other hospital's doctor
+    assert by_name["Dr. Shiva"]["bookable_online"] is False
+    assert by_name["Dr. Jeevitha D"]["bookable_online"] is True
+
+    pay = json.loads(run_tool(ctx, "hospital_payments", "{}"))
+    assert (pay["pending_total_rupees"], pay["pending_slips"]) == (1200, 1)

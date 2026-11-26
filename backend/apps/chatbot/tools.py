@@ -147,6 +147,11 @@ TOOL_SPECS = [
 ]
 
 
+from . import hospital_tools  # noqa: E402  (phase 2: hospital accounts)
+
+TOOL_SPECS += hospital_tools.SPECS
+
+
 def specs_for(role: str) -> list[dict]:
     """The tool descriptions offered to the model for this role (roles.TOOLS)."""
     from .roles import tools_for
@@ -401,6 +406,7 @@ REGISTRY = {
     "my_schedule": my_schedule,
     "requests_waiting_for_me": requests_waiting_for_me,
     "my_working_hours": my_working_hours,
+    **hospital_tools.REGISTRY,
 }
 
 

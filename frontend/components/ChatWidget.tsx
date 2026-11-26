@@ -41,28 +41,28 @@ const chatRole = (u: User): ChatRole =>
 const INTRO: Record<ChatRole, string> = {
   patient: "I can find doctors, check free slots, help you book, and tell you about your appointments, requests and payments.",
   doctor: "I can tell you about today's patients and queue, your upcoming visits, requests waiting for you and your working hours.",
-  hospital: "I can explain how to manage appointments, requests, doctors, staff, patients and payments in MediConnect.",
+  hospital: "I can tell you today's appointments, what is waiting to be assigned, which doctors are on duty, your staff and patient numbers and pending payments, and explain how to do things.",
   platform: "I can explain how to handle connection requests, connected hospitals, appointment requests and support messages.",
 };
 
 const SUBTITLE: Record<ChatRole, string> = {
   patient: "Finds doctors & slots · not medical advice",
   doctor: "Your day, queue and requests · read-only",
-  hospital: "How-to help for your hospital · read-only",
+  hospital: "Your hospital's numbers and how-to · read-only",
   platform: "How-to help for the platform · read-only",
 };
 
 const PLACEHOLDER: Record<ChatRole, string> = {
   patient: "Ask about doctors, slots, hospitals…",
   doctor: "Ask about your patients, queue, requests…",
-  hospital: "Ask how to do something in MediConnect…",
+  hospital: "Ask about appointments, doctors, payments…",
   platform: "Ask how to do something in MediConnect…",
 };
 
 const STARTERS: Record<ChatRole, string[]> = {
   patient: ["Find a heart doctor in Chennai", "Hospitals near me", "Is my appointment request confirmed?"],
   doctor: ["How many patients do I have today?", "Who is next in my queue?", "Any requests waiting for me?"],
-  hospital: ["How do I assign a booking to a doctor?", "How do I add a nurse?", "How do I create a payment slip?"],
+  hospital: ["How many appointments do we have today?", "What is waiting to be assigned?", "Which doctors are on duty today?"],
   platform: ["How do I approve a hospital?", "How do I reply to a support message?", "How do I disconnect a hospital?"],
 };
 

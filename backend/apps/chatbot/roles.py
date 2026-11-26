@@ -19,7 +19,8 @@ TOOLS = {
     PATIENT: ["search_doctors", "get_available_slots", "find_hospitals", "my_appointments", "propose_booking",
               "my_requests", "my_payments"],
     DOCTOR: ["my_schedule", "my_appointments", "requests_waiting_for_me", "my_working_hours"],
-    HOSPITAL: [],   # phase 2
+    HOSPITAL: ["hospital_summary", "hospital_appointments", "hospital_requests_waiting", "hospital_doctors",
+               "hospital_payments"],
     PLATFORM: [],   # phase 3
 }
 
@@ -28,8 +29,9 @@ PURPOSE = {
              "appointment requests and payment slips.",
     DOCTOR: "You help a DOCTOR with their own work on MediConnect: today's schedule and queue, upcoming visits, "
             "booking requests waiting for their answer, and their working hours.",
-    HOSPITAL: "You help a HOSPITAL account use MediConnect to run the hospital: appointments, requests, doctors, "
-              "nurses, staff, patients and payments.",
+    HOSPITAL: "You help a HOSPITAL account use MediConnect to run the hospital: its numbers (today's appointments, "
+              "what is waiting to be assigned or answered, doctors on duty, staff and patient counts, payments) and "
+              "how to do things on its pages. You only ever see this one hospital's data.",
     PLATFORM: "You help the MediConnect PLATFORM ADMIN: connected hospitals, connection requests, appointment "
               "requests for website hospitals, support messages and platform reports.",
 }
