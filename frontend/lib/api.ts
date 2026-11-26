@@ -103,16 +103,21 @@ export async function api<T = unknown>(
  * Downloads a protected file (e.g. a medical record) with the login token and saves it.
  * A plain <a href> can't send the token, so the file is fetched and handed to the browser as a blob.
  */
-export async function downloadFile(path: string, filename: string, retry = true): Promise<void> {
+/** A protected file (e.g. a medical record) as a Blob, fetched with the login token. */
+export async function fetchFile(path: string, retry = true): Promise<Blob> {
   const headers = new Headers();
   if (tokens.access) headers.set("Authorization", `Bearer ${tokens.access}`);
   const res = await fetch(`${API_URL}${path}`, { headers });
-  if (res.status === 401 && retry && (await refreshAccess())) return downloadFile(path, filename, false);
+  if (res.status === 401 && retry && (await refreshAccess())) return fetchFile(path, false);
   if (!res.ok) {
     const text = await res.text();
     throw new ApiError(res.status, text ? JSON.parse(text) : null);
   }
-  const url = URL.createObjectURL(await res.blob());
+  return res.blob();
+}
+
+export async function downloadFile(path: string, filename: string): Promise<void> {
+  const url = URL.createObjectURL(await fetchFile(path));
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;

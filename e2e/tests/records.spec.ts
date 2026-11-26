@@ -34,6 +34,14 @@ test("patient uploads a record, a doctor opens it with the general patient ID, a
   const myRecords = page.getByRole("region", { name: /^My records/ });
   await expect(myRecords.getByText("Blood test", { exact: true })).toBeVisible();
 
+  // Open: the file shows inside the page (owner request 2026-11-26); Esc closes it. (Real Chrome/Edge show the
+  // PDF in their viewer, checked by hand; this test's headless browser has no PDF viewer, so it can't show it.)
+  await myRecords.getByRole("button", { name: "Open Blood test" }).click();
+  const viewer = page.getByRole("dialog", { name: "Blood test" });
+  await expect(viewer.locator("iframe[title='Blood test']")).toHaveAttribute("src", /^blob:/);
+  await page.keyboard.press("Escape");
+  await expect(viewer).toHaveCount(0);
+
   // Doctor: an ID that doesn't exist opens nothing…
   const doctorContext = await browser.newContext();
   const doctorPage = await doctorContext.newPage();

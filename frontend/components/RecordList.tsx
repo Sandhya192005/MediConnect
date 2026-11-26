@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { downloadFile, errorMessage } from "@/lib/api";
+import { useEffect, useRef, useState } from "react";
+import { downloadFile, errorMessage, fetchFile } from "@/lib/api";
 import { fmtDate, fmtSize, RECORD_TYPES, type MedicalRecord } from "@/lib/types";
 import { EmptyState, IconTile, type Tone } from "./DashboardShell";
 import Icon from "./Icons";
 
 const TONE: Record<string, Tone> = { lab_report: "rose", scan: "indigo", xray: "blue", prescription: "teal", discharge: "orange", other: "teal" };
 
-/** A list of medical records with Download (and Delete for the patient's own list). */
+/** A list of medical records with Open (view in the page), Download, and Delete for the owner's own copy. */
 export default function RecordList({
   records,
   onDelete,
@@ -24,6 +24,7 @@ export default function RecordList({
 }) {
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [viewing, setViewing] = useState<Viewing | null>(null);
 
   async function run(id: number, task: () => Promise<void>) {
     setBusy(id);
@@ -60,6 +61,19 @@ export default function RecordList({
               </div>
             </div>
             <div className="flex gap-2">
+              {/* Open: see the file inside the page, without saving it (owner request 2026-11-26). */}
+              <button
+                onClick={() => run(r.id, async () => {
+                  const blob = await fetchFile(`/api/records/${r.id}/file/`);
+                  setViewing({ record: r, url: URL.createObjectURL(blob), isPdf: blob.type === "application/pdf" });
+                })}
+                disabled={busy === r.id}
+                className="btn-solid px-3 py-1.5 text-xs"
+                aria-label={`Open ${r.title}`}
+              >
+                <Icon name="eye" className="h-3.5 w-3.5" />
+                Open
+              </button>
               <button
                 onClick={() => run(r.id, () => downloadFile(`/api/records/${r.id}/file/`, r.original_name))}
                 disabled={busy === r.id}
@@ -83,7 +97,59 @@ export default function RecordList({
           </li>
         ))}
       </ul>
+      {viewing && (
+        <RecordViewer
+          v={viewing}
+          onClose={() => { URL.revokeObjectURL(viewing.url); setViewing(null); }}
+        />
+      )}
     </>
+  );
+}
+
+type Viewing = { record: MedicalRecord; url: string; isPdf: boolean };
+
+/** The file shown inside the page (PDF in the browser's viewer, JPG/PNG as a picture). Esc or Close shuts it. */
+function RecordViewer({ v, onClose }: { v: Viewing; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const close = useRef(onClose); // the parent re-renders often; focus only once, when the viewer opens
+  close.current = onClose;
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close.current();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-2 sm:p-6" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-label={v.record.title} onClick={(e) => e.stopPropagation()}
+           className="flex h-full max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
+        <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-[650] text-[#00295c]">{v.record.title}</p>
+            <p className="truncate text-xs text-slate-500">{v.record.original_name}</p>
+          </div>
+          <a href={v.url} download={v.record.original_name} className="btn-outline px-3 py-1.5 text-xs">
+            <Icon name="arrow" className="h-3.5 w-3.5 rotate-90" /> Download
+          </a>
+          <button ref={closeRef} onClick={onClose} className="btn-outline px-3 py-1.5 text-xs" aria-label="Close">Close</button>
+        </div>
+        <div className="min-h-0 flex-1 bg-slate-100">
+          {v.isPdf ? (
+            <iframe src={v.url} title={v.record.title} className="h-full w-full" />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- a private file from memory, not a public image
+            <img src={v.url} alt={v.record.title} className="mx-auto h-full w-auto max-w-full object-contain" />
+          )}
+        </div>
+        {v.isPdf && (
+          <p className="border-t border-slate-200 px-4 py-2 text-xs text-slate-500">
+            If the PDF doesn&apos;t show (some phones can&apos;t show PDFs inside a page), use Download.
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
