@@ -448,6 +448,14 @@ Owner decisions: a no-show is marked **by hand** (never automatically: hospitals
 - Fixed: the appointment lists (patient, doctor, hospital) could show an old answer when reloads overlapped (switching to Past while live notifications arrive showed "No past appointments"). Only the newest request fills the list now.
 - Tests: `appointments/test_no_show.py` (12), report tests updated; e2e `no-show.spec.ts` (doctor marks + undoes, hospital marks, reports count it, the patient sees it). `e2e_setup` adds the patient "Mani Noshow" with a visit two days ago.
 
+### Specialist search for website doctors (2026-11-26)
+
+Owner report: searching "gynecologist" among doctors read from hospital websites listed a cardiologist, a dermatologist and a neurologist. Cause: the typo-tolerant search compared letters, and almost every specialty ends in "-ologist".
+- New `search/specialties.py`: specialties are compared by their **word root** (the ending is cut off first: "gynecologist" → "gynec", "cardiologist" → "cardi"), with typo tolerance only for medical words.
+- It uses the **same everyday words** as the bookable search (`indexes.SYNONYMS`), so "women" and "pregnancy" find gynecologists too. Added "gynaecologist, obstetrics, obstetrician" to that list (run `manage.py search_index --rebuild` so Elasticsearch picks them up).
+- Typed text matches a specialty only from the start of a word ("urologist" no longer matches "Neurologist"). The doctor-name typo check ignores specialty words, because some websites put the specialty in the name.
+- Tests: `search/test_specialties.py` (21); 329 backend tests pass (1 opt-in live browser test skipped). Checked on the running server: "gynecologist", "gynocologist", "women" and "pregnancy" find only the SRM gynecologist; "urologist" finds nobody.
+
 ### Support inbox: Open / Closed only (2026-11-25)
 
 A message gets one reply (the sender can't write back on it), so "Answered" and "Closed" meant the same thing to the sender. Owner decision: keep only **Open / Closed / All**.

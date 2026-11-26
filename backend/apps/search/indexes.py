@@ -28,7 +28,7 @@ SYNONYMS = [
     "bone, joint, fracture, orthopedics, orthopaedics, orthopedic",
     "brain, nerve, neurology, neurologist",
     "ear, nose, throat, ent",
-    "women, pregnancy, gynecology, gynaecology, gynecologist",
+    "women, pregnancy, gynecology, gynaecology, gynecologist, gynaecologist, obstetrics, obstetrician",
     "general, fever, physician, general medicine",
 ]
 

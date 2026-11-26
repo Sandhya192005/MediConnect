@@ -1,4 +1,5 @@
 import logging
+import re
 
 from elasticsearch import ApiError, ConnectionError as ESConnectionError
 from rest_framework import permissions
@@ -83,20 +84,34 @@ def listed_doctors(request):
     Plain PostgreSQL search with a typo-tolerant fallback (pg_trgm).
     """
     from django.contrib.postgres.search import TrigramWordSimilarity
-    from django.db.models import Q
+    from django.db.models import Case, IntegerField, Q, When
 
     from apps.scraper.models import ScrapedDoctor
+
+    from .specialties import matching_specialties, name_words
 
     q = request.query_params.get("q", "").strip()[:80]
     qs = ScrapedDoctor.objects.select_related("hospital")
     if h := request.query_params.get("hospital"):
         qs = qs.filter(hospital_id=h)
     if q:
-        exact = qs.filter(Q(name__icontains=q) | Q(specialization__icontains=q) | Q(hospital__name__icontains=q))
-        qs = exact if exact.exists() else (
-            qs.annotate(sim=TrigramWordSimilarity(q, "specialization") + TrigramWordSimilarity(q, "name"))
-            .filter(sim__gte=0.35).order_by("-sim")
-        )
+        # Specialties are matched by word root and everyday words (specialties.py): letter-similarity on
+        # specialties made "gynecologist" find cardiologists, since both end in "-ologist".
+        # Specialty text only from the start of a word: "urologist" is hidden inside "Neurologist".
+        literal = (Q(name__icontains=q) | Q(specialization__iregex=r"(^|[^a-z])" + re.escape(q))
+                   | Q(hospital__name__icontains=q))
+        specs = matching_specialties(q, qs.order_by().values_list("specialization", flat=True).distinct())
+        found = qs.filter(literal | Q(specialization__in=specs)).annotate(
+            literal_hit=Case(When(literal, then=0), default=1, output_field=IntegerField())
+        ).order_by("literal_hit", "specialization", "name")
+        # Nothing at all: maybe a typo in the doctor's NAME (names only, never specialty words).
+        name_q = name_words(q)
+        if found.exists():
+            qs = found
+        elif name_q:
+            qs = qs.annotate(sim=TrigramWordSimilarity(name_q, "name")).filter(sim__gte=0.5).order_by("-sim")
+        else:
+            qs = qs.none()
     return Response({"results": [
         {"id": d.id, "name": d.name, "specialization": d.specialization, "qualification": d.qualification,
          "timings": d.timings, "hospital_id": d.hospital_id, "hospital_name": d.hospital.name,
