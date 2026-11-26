@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { api, ApiError, errorMessage } from "@/lib/api";
+import { api, ApiError, errorMessage, type User } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { LatLng } from "@/lib/types";
 
@@ -33,7 +33,38 @@ type ChatResponse = {
   emergency_notice: string | null;
 };
 
-const STARTERS = ["Find a heart doctor in Chennai", "Hospitals near me", "Show my upcoming appointments"];
+/** The chatbot answers for the logged-in role (owner request 2026-11-26): its intro and example questions too. */
+type ChatRole = "patient" | "doctor" | "hospital" | "platform";
+const chatRole = (u: User): ChatRole =>
+  u.role === "doctor" ? "doctor" : u.role === "hospital" || u.admin_hospital ? "hospital" : u.is_platform_admin ? "platform" : "patient";
+
+const INTRO: Record<ChatRole, string> = {
+  patient: "I can find doctors, check free slots, help you book, and tell you about your appointments, requests and payments.",
+  doctor: "I can tell you about today's patients and queue, your upcoming visits, requests waiting for you and your working hours.",
+  hospital: "I can explain how to manage appointments, requests, doctors, staff, patients and payments in MediConnect.",
+  platform: "I can explain how to handle connection requests, connected hospitals, appointment requests and support messages.",
+};
+
+const SUBTITLE: Record<ChatRole, string> = {
+  patient: "Finds doctors & slots · not medical advice",
+  doctor: "Your day, queue and requests · read-only",
+  hospital: "How-to help for your hospital · read-only",
+  platform: "How-to help for the platform · read-only",
+};
+
+const PLACEHOLDER: Record<ChatRole, string> = {
+  patient: "Ask about doctors, slots, hospitals…",
+  doctor: "Ask about your patients, queue, requests…",
+  hospital: "Ask how to do something in MediConnect…",
+  platform: "Ask how to do something in MediConnect…",
+};
+
+const STARTERS: Record<ChatRole, string[]> = {
+  patient: ["Find a heart doctor in Chennai", "Hospitals near me", "Is my appointment request confirmed?"],
+  doctor: ["How many patients do I have today?", "Who is next in my queue?", "Any requests waiting for me?"],
+  hospital: ["How do I assign a booking to a doctor?", "How do I add a nurse?", "How do I create a payment slip?"],
+  platform: ["How do I approve a hospital?", "How do I reply to a support message?", "How do I disconnect a hospital?"],
+};
 
 function BookingCard({ p, canBook }: { p: Proposal; canBook: boolean }) {
   const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
@@ -171,7 +202,7 @@ export default function ChatWidget() {
           <header className="bg-brand-gradient flex items-center justify-between px-4 py-3 text-white">
             <div>
               <p className="font-semibold">MediConnect Assistant</p>
-              <p className="text-xs text-teal-100">Finds doctors & slots · not medical advice</p>
+              <p className="text-xs text-teal-100">{SUBTITLE[chatRole(user)]}</p>
             </div>
             <button onClick={newChat} className="rounded-lg bg-white/15 px-2.5 py-1 text-xs font-semibold hover:bg-white/25">
               New chat
@@ -181,9 +212,9 @@ export default function ChatWidget() {
           <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 p-3">
             {messages.length === 0 && (
               <div className="text-sm text-slate-600">
-                <p>Hi {user.first_name || "there"}! I can find doctors, check free slots and help you book. Try:</p>
+                <p>Hi {user.first_name || "there"}! {INTRO[chatRole(user)]} Try:</p>
                 <div className="mt-2 flex flex-col gap-2">
-                  {STARTERS.map((s) => (
+                  {STARTERS[chatRole(user)].map((s) => (
                     <button key={s} onClick={() => send(s)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-left hover:border-teal-400">
                       {s}
                     </button>
@@ -217,7 +248,8 @@ export default function ChatWidget() {
             }}
             className="border-t border-slate-200 p-2"
           >
-            <div className="mb-2 flex items-center gap-2 text-xs">
+            {/* Location only helps patients find hospitals near them. */}
+            {chatRole(user) === "patient" && <div className="mb-2 flex items-center gap-2 text-xs">
               {location ? (
                 <button type="button" onClick={() => setLocation(null)} className="rounded-full bg-teal-50 px-2 py-1 text-teal-700">
                   📍 Location shared · stop
@@ -227,14 +259,14 @@ export default function ChatWidget() {
                   📍 Share my location
                 </button>
               )}
-            </div>
+            </div>}
             <div className="flex gap-2">
               <input
                 className="input"
                 value={input}
                 maxLength={1000}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about doctors, slots, hospitals…"
+                placeholder={PLACEHOLDER[chatRole(user)]}
                 aria-label="Message"
               />
               <button disabled={busy || !input.trim()} className="btn-solid px-3">
