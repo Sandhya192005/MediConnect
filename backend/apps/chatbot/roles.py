@@ -21,7 +21,8 @@ TOOLS = {
     DOCTOR: ["my_schedule", "my_appointments", "requests_waiting_for_me", "my_working_hours"],
     HOSPITAL: ["hospital_summary", "hospital_appointments", "hospital_requests_waiting", "hospital_doctors",
                "hospital_payments"],
-    PLATFORM: [],   # phase 3
+    PLATFORM: ["platform_summary", "platform_growth", "connection_requests_waiting", "support_messages_open",
+               "website_requests_waiting"],
 }
 
 PURPOSE = {
@@ -32,8 +33,9 @@ PURPOSE = {
     HOSPITAL: "You help a HOSPITAL account use MediConnect to run the hospital: its numbers (today's appointments, "
               "what is waiting to be assigned or answered, doctors on duty, staff and patient counts, payments) and "
               "how to do things on its pages. You only ever see this one hospital's data.",
-    PLATFORM: "You help the MediConnect PLATFORM ADMIN: connected hospitals, connection requests, appointment "
-              "requests for website hospitals, support messages and platform reports.",
+    PLATFORM: "You help the MediConnect PLATFORM ADMIN: platform totals and growth (hospitals, patients, doctors, "
+              "appointments), connection requests, open support messages, appointment requests for website "
+              "hospitals, and how to handle them on the platform pages.",
 }
 
 GUIDE = {
@@ -76,7 +78,7 @@ def role_of(user) -> str:
         return DOCTOR
     if user.role == "hospital" or admin_hospital(user):
         return HOSPITAL
-    if is_platform_admin(user):
+    if is_platform_admin(user) or user.role == "admin":  # the platform tools re-check is_platform_admin themselves
         return PLATFORM
     return PATIENT
 

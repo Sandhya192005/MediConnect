@@ -147,9 +147,9 @@ TOOL_SPECS = [
 ]
 
 
-from . import hospital_tools  # noqa: E402  (phase 2: hospital accounts)
+from . import hospital_tools, platform_tools  # noqa: E402  (phase 2: hospital accounts; phase 3: platform admin)
 
-TOOL_SPECS += hospital_tools.SPECS
+TOOL_SPECS += hospital_tools.SPECS + platform_tools.SPECS
 
 
 def specs_for(role: str) -> list[dict]:
@@ -407,6 +407,7 @@ REGISTRY = {
     "requests_waiting_for_me": requests_waiting_for_me,
     "my_working_hours": my_working_hours,
     **hospital_tools.REGISTRY,
+    **platform_tools.REGISTRY,
 }
 
 

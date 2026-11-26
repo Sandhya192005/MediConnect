@@ -55,7 +55,8 @@ def test_each_role_gets_its_own_tools_and_instructions(people):
     assert names(roles.DOCTOR) == {"my_schedule", "my_appointments", "requests_waiting_for_me", "my_working_hours"}
     assert names(roles.HOSPITAL) == {"hospital_summary", "hospital_appointments", "hospital_requests_waiting",
                                      "hospital_doctors", "hospital_payments"}
-    assert names(roles.PLATFORM) == set()  # phase 3
+    assert names(roles.PLATFORM) == {"platform_summary", "platform_growth", "connection_requests_waiting",
+                                     "support_messages_open", "website_requests_waiting"}
 
     doctor_prompt = service.system_prompt(p["doctor_user"], has_location=False)
     assert "a DOCTOR" in doctor_prompt and "Patient queue" in doctor_prompt and "READ-ONLY" in doctor_prompt
@@ -64,7 +65,7 @@ def test_each_role_gets_its_own_tools_and_instructions(people):
     assert "HOSPITAL account" in hospital_prompt and "Doctor management" in hospital_prompt
     assert "never guess a number" not in hospital_prompt  # it has data tools since phase 2
     platform_prompt = service.system_prompt(p["platform"], has_location=False)
-    assert "PLATFORM ADMIN" in platform_prompt and "never guess a number" in platform_prompt  # phase 3
+    assert "PLATFORM ADMIN" in platform_prompt and "Support inbox" in platform_prompt
     assert "propose_booking" in service.system_prompt(p["patient"], has_location=False)
 
 
@@ -199,3 +200,34 @@ def test_hospital_tools_see_only_their_own_hospital(people):
 
     pay = json.loads(run_tool(ctx, "hospital_payments", "{}"))
     assert (pay["pending_total_rupees"], pay["pending_slips"]) == (1200, 1)
+
+
+def test_platform_tools_count_what_waits_for_the_admin(people):
+    from apps.hospitals.models import ConnectionRequest
+    from apps.support.models import SupportRequest
+
+    p = people
+    pending = Hospital.objects.create(name="New Clinic", city="Madurai", is_approved=False)
+    ConnectionRequest.objects.create(hospital=pending, message="Please connect us")
+    SupportRequest.objects.create(user=p["patient"], subject="Can't upload", message="The PDF fails", topic="records")
+    SupportRequest.objects.create(user=p["patient"], subject="Thanks", message="Solved", status="closed")
+    website = Hospital.objects.create(name="Website Hospital", city="Chennai", is_approved=False, source="osm")
+    AppointmentRequest.objects.create(patient=p["patient"], hospital=website, preferred_date=timezone.localdate())
+    # A request for a hospital-added doctor is the hospital's job, not the platform's.
+    AppointmentRequest.objects.create(patient=p["patient"], hospital=p["hospital"], preferred_date=timezone.localdate(),
+                                      for_hospital=True)
+
+    ctx = ToolContext(p["platform"])
+    summary = json.loads(run_tool(ctx, "platform_summary", "{}"))
+    assert summary["waiting_for_you"] == {"connection_requests": 1, "open_support_messages": 1,
+                                          "website_appointment_requests": 1}
+    assert summary["patients"]["total"] == 1 and summary["doctors"]["total"] == 1
+    assert json.loads(run_tool(ctx, "connection_requests_waiting", "{}"))["waiting"][0]["hospital"] == "New Clinic"
+    assert json.loads(run_tool(ctx, "support_messages_open", "{}"))["open"][0]["subject"] == "Can't upload"
+    assert json.loads(run_tool(ctx, "website_requests_waiting", "{}"))["waiting"][0]["hospital"] == "Website Hospital"
+    growth = json.loads(run_tool(ctx, "platform_growth", json.dumps({"months": 3})))["months"]
+    assert len(growth) == 3 and growth[-1]["new_patients"] == 1
+
+    # A role-"admin" account that isn't the platform admin gets nothing.
+    fake_admin = User.objects.create_user("notroot@x.com", "pw", role="admin")
+    assert "Only the MediConnect platform admin" in run_tool(ToolContext(fake_admin), "platform_summary", "{}")

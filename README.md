@@ -448,16 +448,16 @@ Owner decisions: a no-show is marked **by hand** (never automatically: hospitals
 - Fixed: the appointment lists (patient, doctor, hospital) could show an old answer when reloads overlapped (switching to Past while live notifications arrive showed "No past appointments"). Only the newest request fills the list now.
 - Tests: `appointments/test_no_show.py` (12), report tests updated; e2e `no-show.spec.ts` (doctor marks + undoes, hospital marks, reports count it, the patient sees it). `e2e_setup` adds the patient "Mani Noshow" with a visit two days ago.
 
-### Chatbot answers by role (2026-11-26, phases 1–2 of 3)
+### Chatbot answers by role (2026-11-26, all 3 phases)
 
 Owner request: the chatbot is on the patient, doctor, hospital and admin pages, and answers for the logged-in role. Owner decision: **read-only** (it explains where to do things; it never confirms, accepts, declines or deletes).
 - New `chatbot/roles.py`: per role, what the assistant is for, a short "how do I...?" guide with the real menu names, and the tools it may use. The chat loop offers only that role's tools, and `run_tool` refuses any other (a doctor's chat can't reach patient or hospital tools).
 - Patient: as before, plus `my_requests` (appointment requests: status, doctor, confirmed time or decline reason) and `my_payments` (pending/paid totals and slips); `search_doctors` also lists hospital-added doctors (not bookable online, with how to request).
 - Doctor: `my_schedule` (a day's appointments with the queue and who is next), `my_appointments` (requests the hospital hasn't passed on stay hidden, as in the app), `requests_waiting_for_me`, `my_working_hours`.
 - Hospital (phase 2): `chatbot/hospital_tools.py`, always limited to the account's own hospital and counted like its dashboard: `hospital_summary` (staff, patients, today's appointments, waiting now, to assign, waiting for doctors, requests for hospital-added doctors, monthly payroll), `hospital_appointments` (a day's list with counts per status and per doctor), `hospital_requests_waiting`, `hospital_doctors` (department, bookable online or added by the hospital, hours and appointments that day), `hospital_payments` (pending total, paid this month, latest unpaid). Checked against ABC Hospital's real data.
-- Platform admin: the how-to guide only for now; it is told not to guess numbers (data tools in phase 3).
+- Platform admin (phase 3): `chatbot/platform_tools.py`, numbers from `analytics/services.py` like the platform dashboard; each tool re-checks `is_platform_admin`: `platform_summary` (hospital accounts, connected hospitals, patients, doctors, appointments this month, with growth, and what is waiting: connection requests, open support messages, website appointment requests), `platform_growth` (3–12 months), `connection_requests_waiting`, `support_messages_open`, `website_requests_waiting`. Checked against the real database.
 - Chat window: intro, example questions, subtitle and placeholder per role; "Share my location" only for patients.
-- Tests: `chatbot/test_roles.py` (6, incl. a hospital never seeing another hospital's data); all 18 chatbot tests pass; e2e `chatbot.spec.ts` passes.
+- Tests: `chatbot/test_roles.py` (7, incl. a hospital never seeing another hospital's data and a non-superuser getting no platform data); all 19 chatbot tests pass; 345 backend tests pass; e2e `chatbot.spec.ts` passes. Not yet tried with real OpenAI replies (tests use scripted ones).
 
 ### Access history page for patients (2026-11-26)
 
