@@ -101,7 +101,7 @@ export default function HospitalPatientPageView() {
               {p.added_by_you && <button onClick={removeFromList} className="btn-ghost px-3 py-2 text-sm">Remove from my patients</button>}
             </div>
             <p className="flex w-full items-center gap-2 text-xs text-amber-800">
-              <Icon name="eye" className="h-4 w-4" /> Opening this page is shown in the patient&apos;s access log.
+              <Icon name="eye" className="h-4 w-4" /> The patient can see that your hospital opened this page (shown in their &apos;Who opened your records&apos; list).
             </p>
           </section>
 
