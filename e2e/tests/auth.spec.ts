@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { API, e2e, login } from "./helpers";
+import { API, chooseLoginRole, e2e, login } from "./helpers";
 
 test("a new patient can sign up and lands on their dashboard", async ({ page }) => {
   const email = `e2e.new.${Date.now()}@mediconnect.dev`; // deleted by the next e2e_setup
@@ -73,37 +73,41 @@ test("a wrong password shows an error and stays logged out", async ({ page }) =>
   await expect(page.getByRole("button", { name: "Log out" })).toHaveCount(0);
 });
 
-test("an account can only log in on its own tab", async ({ page }) => {
+test("an account can only log in with its own role", async ({ page }) => {
   await page.goto("/login");
-  for (const tab of ["Doctor", "Hospital", "Admin"]) {
-    await page.getByRole("tab", { name: tab }).click();
+  for (const role of ["Doctor", "Hospital", "Admin"] as const) {
+    if (role === "Admin") await chooseLoginRole(page, role);
+    else await page.getByRole("tab", { name: role }).click();
     await page.getByLabel("Email").fill(e2e().patient.email);
     await page.getByLabel("Password", { exact: true }).fill(e2e().password);
-    await page.getByRole("button", { name: "Log in" }).click();
-    await expect(page.getByText("This is a patient account, not")).toContainText("Choose the Patient tab to log in.");
+    await page.getByRole("button", { name: "Log in", exact: true }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "This is a patient account, not" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Log in as Patient" })).toBeVisible();
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole("button", { name: "Log out" })).toHaveCount(0);
   }
   // Nothing was stored: reloading still shows the login page, logged out.
   expect(await page.evaluate(() => localStorage.getItem("mc_access") ?? sessionStorage.getItem("mc_access"))).toBeNull();
 
-  await page.getByRole("tab", { name: "Patient" }).click();
-  await page.getByRole("button", { name: "Log in" }).click();
+  // The error's button logs in with the right role, without typing again.
+  await page.getByRole("button", { name: "Log in as Patient" }).click();
   await expect(page).toHaveURL(/\/patient$/);
 });
 
-test("hospital and platform admins each log in on their own tab", async ({ page }) => {
-  const tryLogin = async (tab: string, email: string) => {
+test("hospital and platform admins each log in with their own role", async ({ page }) => {
+  const tryLogin = async (role: "Hospital" | "Admin", email: string) => {
     await page.goto("/login");
-    await page.getByRole("tab", { name: tab }).click();
+    await chooseLoginRole(page, role);
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password", { exact: true }).fill(e2e().password);
-    await page.getByRole("button", { name: "Log in" }).click();
+    await page.getByRole("button", { name: "Log in", exact: true }).click();
   };
   await tryLogin("Admin", e2e().admin.email);
-  await expect(page.getByText("This is a hospital account, not an admin account. Choose the Hospital tab")).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "This is a hospital account, not an admin account." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Log in as Hospital" })).toBeVisible();
   await tryLogin("Hospital", e2e().platform.email);
-  await expect(page.getByText("This is an admin account, not a hospital account. Choose the Admin tab")).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "This is an admin account, not a hospital account." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Log in as MediConnect team" })).toBeVisible();
 
   await tryLogin("Hospital", e2e().admin.email);
   await expect(page.getByText("Hospital overview")).toBeVisible();

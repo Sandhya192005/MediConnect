@@ -27,12 +27,18 @@ export function e2e(): E2EData {
   return cached!;
 }
 
-/** Log in through the real login form (on the tab that matches the account) and wait for the dashboard. */
+/** On the login page, pick a role: a role card (Patient / Doctor / Hospital), or "Admin" = the small "Team sign-in" link. */
+export async function chooseLoginRole(page: Page, role: "Patient" | "Doctor" | "Hospital" | "Admin") {
+  if (role === "Admin") await page.getByRole("button", { name: "Team sign-in" }).click();
+  else await page.getByRole("tab", { name: role }).click();
+}
+
+/** Log in through the real login form (with the role that matches the account) and wait for the dashboard. */
 export async function login(page: Page, email: string, password = e2e().password) {
   const d = e2e();
   const tab = email === d.doctor.email ? "Doctor" : email === d.admin.email ? "Hospital" : email === d.platform.email ? "Admin" : "Patient";
   await page.goto("/login");
-  await page.getByRole("tab", { name: tab }).click();
+  await chooseLoginRole(page, tab);
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password); // exact: the "Show password" button also matches
   await page.getByRole("button", { name: "Log in" }).click();
