@@ -17,7 +17,7 @@ const NO_SEARCH_PAGES = ["/patient/appointments", "/patient/records", "/patient/
 /**
  * Layout for logged-in users: a sidebar with the role's menu, a top bar with search,
  * notifications and the user, and the page content.
- * Following the reference design, patients get a dark teal sidebar; doctors and admins a light one.
+ * Following the reference design, patients get a dark navy sidebar; doctors and admins a light one.
  */
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();

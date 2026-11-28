@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 /**
  * Small plain-SVG charts for the dashboards and reports (no chart library).
- * Colours validated with the dataviz skill's checker on a light surface: teal #1f4f9e + indigo #0f8f7e.
+ * Colours validated with the dataviz skill's checker on a light surface: blue #1f4f9e + teal #0f8f7e.
  * Their colour-blind separation is in the "needs a second cue" band, so a 2-series line chart also uses
  * marker shapes (circle / square), direct end labels and a legend. One y-axis only; a hidden table
  * gives screen readers the numbers. Charts draw at the card's real width so labels stay 11 px on phones.
