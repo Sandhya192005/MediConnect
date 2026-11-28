@@ -146,7 +146,7 @@ OpenAI chat loop (`chatbot/service.py`) with tools that call our own code. **Rea
 ### Frontend
 
 - `lib/api.ts` (fetch wrapper with JWT refresh), `lib/auth.tsx`, `lib/notifications.tsx` (WebSocket + reconnect), `lib/nav.ts` (menus; an item without `href` shows "Soon").
-- `components/AppChrome.tsx` picks the frame: `/login`, `/register` → `AuthLayout`; logged-in users on `/patient`, `/doctor`, `/admin`, `/doctors`, `/hospitals` → `AppShell` (sidebar + top bar; the patient sidebar is dark navy, the others light); everyone else → `Navbar` + `Footer`. Dashboard blocks are in `DashboardShell.tsx` (`StatCard`, `Panel`, `EmptyState`, `SoonBadge`, `StatusPill`, `IconTile`).
+- `components/AppChrome.tsx` picks the frame: `/login`, `/register` → `AuthLayout`; logged-in users on `/patient`, `/doctor`, `/admin`, `/doctors`, `/hospitals` → `AppShell` (sidebar + top bar; the sidebar is dark navy for every role); everyone else → `Navbar` + `Footer`. Dashboard blocks are in `DashboardShell.tsx` (`StatCard`, `Panel`, `EmptyState`, `SoonBadge`, `StatusPill`, `IconTile`).
 - Dashboards show real numbers from APIs only; planned features show "Soon", never invented numbers.
 - Leaflet components must load with `next/dynamic(..., { ssr: false })`. Map pins are `CircleMarker`s (SVG `path.leaflet-interactive`). `/hospitals` redirects to `/doctors` (keeps the query); `/hospitals/<id>` keeps its own small map. `areaOf()` in `lib/types.ts` gives "area, city" without house numbers or postcodes.
 - Charts: `components/Charts.tsx` (plain SVG; `LineChart` ≤ 2 series, `BarChart`; `StaffChart` wraps `LineChart`), colours blue `#1f4f9e` + teal `#0f8f7e` (dataviz-validated), marker shapes + end labels as the second cue, hidden data table in a `div.sr-only`.

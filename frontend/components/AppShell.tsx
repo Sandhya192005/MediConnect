@@ -17,14 +17,14 @@ const NO_SEARCH_PAGES = ["/patient/appointments", "/patient/records", "/patient/
 /**
  * Layout for logged-in users: a sidebar with the role's menu, a top bar with search,
  * notifications and the user, and the page content.
- * Following the reference design, patients get a dark navy sidebar; doctors and admins a light one.
+ * Every role gets the dark navy sidebar (owner request 2026-11-28; it used to be patients only).
  */
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const role: Role = user?.role ?? (pathname.startsWith("/doctor/") || pathname === "/doctor" ? "doctor" : pathname.startsWith("/admin") ? "hospital" : "patient");
-  const dark = role === "patient";
+  const dark = true; // all roles (owner request 2026-11-28); the light styles below are kept in case that changes
 
   useEffect(() => setMenuOpen(false), [pathname]); // close the phone menu after navigating
 
@@ -194,11 +194,11 @@ function useOpenSupportCount(enabled: boolean): number | null {
 function SupportInboxLink() {
   const open = useOpenSupportCount(true);
   return (
-    <Link href="/admin/support" className="mt-4 flex items-center gap-3 rounded-2xl bg-teal-50 p-4 transition hover:bg-teal-100">
-      <Icon name="chat" className="h-5 w-5 text-teal-700" />
+    <Link href="/admin/support" className="mt-4 flex items-center gap-3 rounded-2xl bg-white/10 p-4 transition hover:bg-white/15">
+      <Icon name="chat" className="h-5 w-5 text-white" />
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-[650] text-[#00295c]">Support inbox</span>
-        <span className="block text-xs text-slate-500">
+        <span className="block text-sm font-[650] text-white">Support inbox</span>
+        <span className="block text-xs text-white/75">
           {open === null ? "Messages from users" : open === 0 ? "No open messages" : `${open} open message${open === 1 ? "" : "s"}`}
         </span>
       </span>

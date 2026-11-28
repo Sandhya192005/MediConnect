@@ -44,22 +44,23 @@ export default function DashboardShell({
 function Greeting({ heading, greeting, subtitle, wave, badge }: { heading: string; greeting?: string; subtitle: string; wave: boolean; badge: boolean }) {
   const { user } = useAuth();
   const hour = new Date().getHours();
-  const hello = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const hello = hour < 12 ? "Good morning" : hour < 16 ? "Good afternoon" : "Good evening";
   const name = user?.first_name || user?.email || "";
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
+    // Dark blue box so the greeting stands out (owner request 2026-11-28), the same blue as the sidebar.
+    <div className="flex flex-wrap items-end justify-between gap-4 rounded-2xl bg-gradient-to-r from-[#00295c] to-[#0b3a78] px-5 py-5 text-white shadow-sm sm:px-6">
       <div>
-        <h1 className="text-xs font-[650] uppercase tracking-[0.14em] text-teal-700">{heading}</h1>
-        <p className="mt-1 text-2xl font-bold tracking-tight text-[#00295c] sm:text-[1.75rem]">
+        <h1 className="text-xs font-[650] uppercase tracking-[0.14em] text-[#b9cdee]">{heading}</h1>
+        <p className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-[1.75rem]">
           {greeting ?? `${hello}, ${name}!`} {wave && <span aria-hidden="true">👋</span>}
         </p>
-        <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
+        <p className="mt-1 text-sm text-white/80">{subtitle}</p>
       </div>
       {badge && (
-        <p className="hidden items-center gap-2 rounded-2xl border border-teal-100 bg-white/80 px-4 py-2.5 text-xs text-slate-500 shadow-sm sm:flex">
-          <Icon name="heart" className="h-5 w-5 text-teal-600" />
+        <p className="hidden items-center gap-2 rounded-2xl bg-white/10 px-4 py-2.5 text-xs text-white/80 sm:flex">
+          <Icon name="heart" className="h-5 w-5 text-white" />
           <span>
-            <span className="block font-[650] text-[#00295c]">Your health</span>
+            <span className="block font-[650] text-white">Your health</span>
             Our priority
           </span>
         </p>
