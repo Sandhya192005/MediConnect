@@ -58,6 +58,15 @@ export default function AuthLayout({ title, subtitle, children }: { title: strin
 
       <div className="flex items-center justify-center px-4 py-10 sm:px-8">
         <div className="w-full max-w-md">
+          {/* Back to the public home page (owner request 2026-11-28). A plain <a>: "/" is the static home page
+              (a rewrite in next.config.ts, no app route), so it needs a full page load. */}
+          <a
+            href="/"
+            className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-medium text-[#00295c] shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+          >
+            <Icon name="arrow" className="h-4 w-4 rotate-180" />
+            Home
+          </a>
           {/* Logo for phones, where the brand panel is hidden */}
           <Link href="/" className="mb-6 flex items-center justify-center gap-2 lg:hidden" aria-label="MediConnect home">
             <Image src="/logo-mark-clear.png" alt="" width={40} height={40} priority />
